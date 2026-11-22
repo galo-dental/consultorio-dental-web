@@ -1162,14 +1162,25 @@ export default function HomePage() {
     );
   }
 
-  function cargarInformacionSeleccionada() {
+  function cargarInformacionSeleccionada(
+    procedimientoForzado?: "caries" | "restauracion"
+  ) {
     if (!pacienteSeleccionadoId) return;
 
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
-        const procActivo = pac.hc.procedimientoActivo;
+        const procActivo: TipoProcedimientoMsp =
+          procedimientoForzado || pac.hc.procedimientoActivo;
         const piezasTarget = pac.hc.piezasSeleccionadas || [];
+
+        const tieneCarasMarcadasEnAlgunaPieza = piezasTarget.some((cod) => {
+          const estadoP = pac.hc.odontogramaMsp[cod];
+          if (!estadoP) return false;
+          return (["O", "V", "L", "M", "D"] as CaraDiente[]).some(
+            (c) => estadoP[c] !== "ninguno"
+          );
+        });
 
         if (piezasTarget.length === 0) {
           setMensajeGuardado("Selecciona al menos una pieza antes de cargar.");
@@ -1215,7 +1226,7 @@ export default function HomePage() {
             const tieneCaraPintada = (
               ["O", "V", "L", "M", "D"] as CaraDiente[]
             ).some((c) => actualizada[c] !== "ninguno");
-            if (!tieneCaraPintada) {
+            if (!tieneCaraPintada && !tieneCarasMarcadasEnAlgunaPieza) {
               const carasTarget =
                 pac.hc.carasSeleccionadas.length > 0
                   ? pac.hc.carasSeleccionadas
@@ -1235,7 +1246,9 @@ export default function HomePage() {
         setMensajeGuardado(
           `Cargado: ${nombreProc} (${
             colorAplicar === "azul" ? "Azul - Realizado" : "Rojo - Por realizar"
-          }) en pieza(s) #${piezasTarget.join(", #")}.`
+          }) en pieza(s) #${piezasTarget.join(
+            ", #"
+          )}. Selección limpia para registrar más novedades.`
         );
 
         return {
@@ -1243,8 +1256,10 @@ export default function HomePage() {
           hc: {
             ...pac.hc,
             odontogramaMsp: nuevoOdontograma,
+            piezaSeleccionada: "",
             piezasSeleccionadas: [],
             carasSeleccionadas: [],
+            procedimientoActivo: "ninguno",
           },
         };
       })
@@ -1315,8 +1330,10 @@ export default function HomePage() {
           hc: {
             ...pac.hc,
             odontogramaMsp: nuevoOdontograma,
+            piezaSeleccionada: "",
             piezasSeleccionadas: [],
             carasSeleccionadas: [],
+            procedimientoActivo: "ninguno",
           },
         };
       })
@@ -1749,18 +1766,21 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* 1. Recuadro aparte: Caries (rojo por defecto) y Restauración (azul por defecto) */}
+        {/* 1. Recuadro aparte: Caries / por realizar y Restauración + botón Cargar */}
         <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
-              1. Caries y Restauración (se marcan al tocar las caras)
+              1. Caries / por realizar y Restauración (se marcan al tocar las
+              caras)
             </span>
             {modoCarasActivo && (
               <span className="text-[11px] font-medium text-slate-600">
                 Modo caras activo:{" "}
                 <strong>
                   {hc.procedimientoActivo === "caries"
-                    ? `Caries (${hc.colorCaries === "rojo" ? "Rojo" : "Azul"})`
+                    ? `Caries / por realizar (${
+                        hc.colorCaries === "rojo" ? "Rojo" : "Azul"
+                      })`
                     : `Restauración (${
                         hc.colorRestauracion === "azul" ? "Azul" : "Rojo"
                       })`}
@@ -1793,25 +1813,39 @@ export default function HomePage() {
                     hc.colorCaries === "rojo" ? "bg-red-500" : "bg-blue-500"
                   }`}
                 />
-                <span>Caries</span>
+                <span>Caries / por realizar</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() =>
-                  cambiarColorCarieORestauracion(
-                    "caries",
-                    hc.colorCaries === "rojo" ? "azul" : "rojo"
-                  )
-                }
-                className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
-                  hc.procedimientoActivo === "caries"
-                    ? "bg-white/15 text-white border-white/30"
-                    : "bg-white text-slate-700 border-slate-300"
-                }`}
-              >
-                {hc.colorCaries === "rojo" ? "Rojo" : "Azul"}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    cambiarColorCarieORestauracion(
+                      "caries",
+                      hc.colorCaries === "rojo" ? "azul" : "rojo"
+                    )
+                  }
+                  className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                    hc.procedimientoActivo === "caries"
+                      ? "bg-white/15 text-white border-white/30"
+                      : "bg-white text-slate-700 border-slate-300"
+                  }`}
+                >
+                  {hc.colorCaries === "rojo" ? "Rojo" : "Azul"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cargarInformacionSeleccionada("caries")}
+                  className={`rounded px-2.5 py-1 text-[11px] font-semibold border transition ${
+                    hc.procedimientoActivo === "caries"
+                      ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600"
+                      : "bg-slate-900 text-white border-slate-900 hover:bg-slate-800"
+                  }`}
+                >
+                  Cargar
+                </button>
+              </div>
             </div>
 
             <div
@@ -1845,22 +1879,36 @@ export default function HomePage() {
                 <span>Restauración</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() =>
-                  cambiarColorCarieORestauracion(
-                    "restauracion",
-                    hc.colorRestauracion === "azul" ? "rojo" : "azul"
-                  )
-                }
-                className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
-                  hc.procedimientoActivo === "restauracion"
-                    ? "bg-white/15 text-white border-white/30"
-                    : "bg-white text-slate-700 border-slate-300"
-                }`}
-              >
-                {hc.colorRestauracion === "azul" ? "Azul" : "Rojo"}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    cambiarColorCarieORestauracion(
+                      "restauracion",
+                      hc.colorRestauracion === "azul" ? "rojo" : "azul"
+                    )
+                  }
+                  className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                    hc.procedimientoActivo === "restauracion"
+                      ? "bg-white/15 text-white border-white/30"
+                      : "bg-white text-slate-700 border-slate-300"
+                  }`}
+                >
+                  {hc.colorRestauracion === "azul" ? "Azul" : "Rojo"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cargarInformacionSeleccionada("restauracion")}
+                  className={`rounded px-2.5 py-1 text-[11px] font-semibold border transition ${
+                    hc.procedimientoActivo === "restauracion"
+                      ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600"
+                      : "bg-slate-900 text-white border-slate-900 hover:bg-slate-800"
+                  }`}
+                >
+                  Cargar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2071,7 +2119,7 @@ export default function HomePage() {
             </button>
             <button
               type="button"
-              onClick={cargarInformacionSeleccionada}
+              onClick={() => cargarInformacionSeleccionada()}
               className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-semibold"
             >
               Cargar
@@ -3674,4 +3722,4 @@ export default function HomePage() {
       )}
     </main>
   );
-} 
+}
