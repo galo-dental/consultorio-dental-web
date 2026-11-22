@@ -797,29 +797,7 @@ export default function HomePage() {
     );
   }
 
-  function seleccionarPiezaOdontograma(codigoPieza: string) {
-    if (!pacienteSeleccionadoId) return;
-    setMensajeGuardado(null);
-    setPacientes((prev) =>
-      prev.map((pac) => {
-        if (pac.id !== pacienteSeleccionadoId) return pac;
-        const piezaData = pac.hc.odontogramaMsp[codigoPieza];
-        return {
-          ...pac,
-          hc: {
-            ...pac.hc,
-            piezaSeleccionada: codigoPieza,
-            procedimientoActivo: piezaData?.simbolo?.tipo || "ninguno",
-            colorMspActivo: piezaData?.simbolo?.color || pac.hc.colorMspActivo,
-            pincelEstado: piezaData?.simbolo?.color
-              ? estadoCaraPorColor(piezaData.simbolo.color)
-              : pac.hc.pincelEstado,
-          },
-        };
-      })
-    );
-  }
-
+  // Paso 1: Elegir simbología o procedimiento (Caries = Rojo, Restauración = Azul)
   function seleccionarProcedimiento(
     procedimiento: Exclude<TipoProcedimientoMsp, "ninguno">
   ) {
@@ -829,38 +807,105 @@ export default function HomePage() {
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
-        const pieza = pac.hc.piezaSeleccionada;
-        const color: ColorMsp =
-          procedimiento === "caries"
+        const esMismo = pac.hc.procedimientoActivo === procedimiento;
+        const siguienteProc: TipoProcedimientoMsp = esMismo
+          ? "ninguno"
+          : procedimiento;
+
+        const colorForzado: ColorMsp | null =
+          siguienteProc === "caries"
             ? "rojo"
-            : procedimiento === "restauracion"
+            : siguienteProc === "restauracion"
             ? "azul"
-            : pac.hc.colorMspActivo;
-        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
-        const estadoCara = estadoCaraPorColor(color);
-        const esMismoProc = actualPieza.simbolo?.tipo === procedimiento;
+            : null;
 
-        const siguienteSimbolo: SimboloAplicado | null = esMismoProc
-          ? null
-          : { tipo: procedimiento, color };
-
-        const siguienteOclusal =
-          procedimiento === "caries" || procedimiento === "restauracion"
-            ? esMismoProc
-              ? "ninguno"
-              : estadoCara
-            : actualPieza.O;
+        const colorFinal = colorForzado || pac.hc.colorMspActivo;
 
         return {
           ...pac,
           hc: {
             ...pac.hc,
-            procedimientoActivo: esMismoProc ? "ninguno" : procedimiento,
+            procedimientoActivo: siguienteProc,
+            colorMspActivo: colorFinal,
+            pincelEstado: estadoCaraPorColor(colorFinal),
+          },
+        };
+      })
+    );
+  }
+
+  // Paso 2: Elegir color (Rojo = Por realizar, Azul = Realizado)
+  function seleccionarColorMsp(color: ColorMsp) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
             colorMspActivo: color,
-            pincelEstado: estadoCara,
+            pincelEstado: estadoCaraPorColor(color),
+          },
+        };
+      })
+    );
+  }
+
+  // Paso 3A: Tocar la pieza aplica el procedimiento/color activo (o selecciona la pieza si no hay procedimiento activo)
+  function tocarPiezaOdontograma(codigoPieza: string) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actualPieza = pac.hc.odontogramaMsp[codigoPieza] || piezaVacia();
+        const procActivo = pac.hc.procedimientoActivo;
+        const colorActivo = pac.hc.colorMspActivo;
+        const estadoCara = estadoCaraPorColor(colorActivo);
+
+        if (procActivo === "ninguno") {
+          return {
+            ...pac,
+            hc: {
+              ...pac.hc,
+              piezaSeleccionada: codigoPieza,
+              colorMspActivo: actualPieza.simbolo?.color || colorActivo,
+              pincelEstado: actualPieza.simbolo?.color
+                ? estadoCaraPorColor(actualPieza.simbolo.color)
+                : pac.hc.pincelEstado,
+            },
+          };
+        }
+
+        const esMismoSimbolo =
+          actualPieza.simbolo?.tipo === procActivo &&
+          actualPieza.simbolo?.color === colorActivo;
+
+        const siguienteSimbolo: SimboloAplicado | null = esMismoSimbolo
+          ? null
+          : { tipo: procActivo, color: colorActivo };
+
+        const pintaOclusal =
+          procActivo === "caries" || procActivo === "restauracion";
+
+        const siguienteOclusal: EstadoColorDiente = pintaOclusal
+          ? esMismoSimbolo
+            ? "ninguno"
+            : estadoCara
+          : actualPieza.O;
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            piezaSeleccionada: codigoPieza,
             odontogramaMsp: {
               ...pac.hc.odontogramaMsp,
-              [pieza]: {
+              [codigoPieza]: {
                 ...actualPieza,
                 O: siguienteOclusal,
                 simbolo: siguienteSimbolo,
@@ -872,112 +917,11 @@ export default function HomePage() {
     );
   }
 
-  function seleccionarColorYaplicarAutomaticamente(color: ColorMsp) {
-    if (!pacienteSeleccionadoId) return;
-    setMensajeGuardado(null);
-    const estadoPincel = estadoCaraPorColor(color);
-
-    setPacientes((prev) =>
-      prev.map((pac) => {
-        if (pac.id !== pacienteSeleccionadoId) return pac;
-        const pieza = pac.hc.piezaSeleccionada;
-        const proc = pac.hc.procedimientoActivo;
-        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
-
-        const tipoFinal: Exclude<TipoProcedimientoMsp, "ninguno"> | null =
-          proc !== "ninguno" ? proc : actualPieza.simbolo?.tipo || null;
-
-        const simboloActualizado: SimboloAplicado | null = tipoFinal
-          ? { tipo: tipoFinal, color }
-          : null;
-
-        const pintaOclusal =
-          tipoFinal === "caries" || tipoFinal === "restauracion";
-
-        const tieneAlgunaCaraMarcada =
-          actualPieza.O !== "ninguno" ||
-          actualPieza.V !== "ninguno" ||
-          actualPieza.L !== "ninguno" ||
-          actualPieza.M !== "ninguno" ||
-          actualPieza.D !== "ninguno";
-
-        const siguienteO =
-          pintaOclusal || actualPieza.O !== "ninguno"
-            ? estadoPincel
-            : actualPieza.O;
-        const siguienteV =
-          actualPieza.V !== "ninguno" ? estadoPincel : actualPieza.V;
-        const siguienteL =
-          actualPieza.L !== "ninguno" ? estadoPincel : actualPieza.L;
-        const siguienteM =
-          actualPieza.M !== "ninguno" ? estadoPincel : actualPieza.M;
-        const siguienteD =
-          actualPieza.D !== "ninguno" ? estadoPincel : actualPieza.D;
-
-        const actualizarCaras =
-          pintaOclusal || tieneAlgunaCaraMarcada
-            ? {
-                O: siguienteO,
-                V: siguienteV,
-                L: siguienteL,
-                M: siguienteM,
-                D: siguienteD,
-              }
-            : {};
-
-        return {
-          ...pac,
-          hc: {
-            ...pac.hc,
-            colorMspActivo: color,
-            pincelEstado: estadoPincel,
-            odontogramaMsp: {
-              ...pac.hc.odontogramaMsp,
-              [pieza]: {
-                ...actualPieza,
-                ...actualizarCaras,
-                simbolo: simboloActualizado,
-              },
-            },
-          },
-        };
-      })
-    );
-  }
-
-  function limpiarRegistroPieza(pieza: string) {
-    if (!pacienteSeleccionadoId) return;
-    setMensajeGuardado(null);
-    setPacientes((prev) =>
-      prev.map((pac) => {
-        if (pac.id !== pacienteSeleccionadoId) return pac;
-        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
-        return {
-          ...pac,
-          hc: {
-            ...pac.hc,
-            procedimientoActivo: "ninguno",
-            odontogramaMsp: {
-              ...pac.hc.odontogramaMsp,
-              [pieza]: {
-                ...actualPieza,
-                O: "ninguno",
-                V: "ninguno",
-                L: "ninguno",
-                M: "ninguno",
-                D: "ninguno",
-                simbolo: null,
-              },
-            },
-          },
-        };
-      })
-    );
-  }
-
+  // Paso 3B: Tocar una cara de la pieza registra novedad/procedimiento y color en esa cara
   function marcarCaraPieza(pieza: string, cara: CaraDiente) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
+
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
@@ -990,6 +934,12 @@ export default function HomePage() {
           pac.hc.procedimientoActivo !== "ninguno"
             ? {
                 tipo: pac.hc.procedimientoActivo,
+                color: pac.hc.colorMspActivo,
+              }
+            : siguienteEstado !== "ninguno"
+            ? actualPieza.simbolo || {
+                tipo:
+                  pac.hc.colorMspActivo === "rojo" ? "caries" : "restauracion",
                 color: pac.hc.colorMspActivo,
               }
             : actualPieza.simbolo;
@@ -1013,6 +963,35 @@ export default function HomePage() {
     );
   }
 
+  function limpiarRegistroPieza(pieza: string) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            odontogramaMsp: {
+              ...pac.hc.odontogramaMsp,
+              [pieza]: {
+                ...actualPieza,
+                O: "ninguno",
+                V: "ninguno",
+                L: "ninguno",
+                M: "ninguno",
+                D: "ninguno",
+                simbolo: null,
+              },
+            },
+          },
+        };
+      })
+    );
+  }
+
   function marcarPiezaCompleta(pieza: string) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1021,6 +1000,14 @@ export default function HomePage() {
         if (pac.id !== pacienteSeleccionadoId) return pac;
         const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
         const color = pac.hc.pincelEstado;
+        const simboloAuto: SimboloAplicado | null =
+          pac.hc.procedimientoActivo !== "ninguno"
+            ? {
+                tipo: pac.hc.procedimientoActivo,
+                color: pac.hc.colorMspActivo,
+              }
+            : actualPieza.simbolo;
+
         return {
           ...pac,
           hc: {
@@ -1035,6 +1022,7 @@ export default function HomePage() {
                 L: color,
                 M: color,
                 D: color,
+                simbolo: simboloAuto,
               },
             },
           },
@@ -1280,9 +1268,9 @@ export default function HomePage() {
     return (
       <div
         key={codigoPieza}
-        onClick={() => seleccionarPiezaOdontograma(codigoPieza)}
+        onClick={() => tocarPiezaOdontograma(codigoPieza)}
         className={`flex flex-col items-center p-1 border cursor-pointer ${
-          temporal ? "rounded-full" : "rounded-lg"
+          temporal ? "rounded-2xl" : "rounded-lg"
         } ${
           seleccionada
             ? "border-slate-900 bg-slate-200/80 ring-1 ring-slate-900"
@@ -1302,50 +1290,42 @@ export default function HomePage() {
         >
           {temporal ? (
             <>
-              <ellipse
-                cx="22"
-                cy="22"
-                rx="20"
-                ry="20"
-                fill="#ffffff"
-                stroke="#1e293b"
-                strokeWidth="1.8"
-              />
+              {/* Ovalo temporal dividido en 4 laterales + 1 central (sin líneas extra) */}
               <path
-                d="M 4 12 Q 22 4 40 12 L 32 17 Q 22 12 12 17 Z"
+                d="M 22 2 C 33 2 42 11 42 22 L 31 22 C 31 17 27 13 22 13 Z"
                 fill={fillPorEstado(d[caraArriba])}
                 stroke="#1e293b"
-                strokeWidth="1.5"
+                strokeWidth="1.6"
                 onClick={(e) => {
                   e.stopPropagation();
                   marcarCaraPieza(codigoPieza, caraArriba);
                 }}
               />
               <path
-                d="M 12 27 Q 22 32 32 27 L 40 32 Q 22 40 4 32 Z"
-                fill={fillPorEstado(d[caraAbajo])}
-                stroke="#1e293b"
-                strokeWidth="1.5"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraAbajo);
-                }}
-              />
-              <path
-                d="M 4 12 L 12 17 Q 10 22 12 27 L 4 32 Q 1 22 4 12 Z"
+                d="M 2 22 C 2 11 11 2 22 2 L 22 13 C 17 13 13 17 13 22 Z"
                 fill={fillPorEstado(d[caraIzq])}
                 stroke="#1e293b"
-                strokeWidth="1.5"
+                strokeWidth="1.6"
                 onClick={(e) => {
                   e.stopPropagation();
                   marcarCaraPieza(codigoPieza, caraIzq);
                 }}
               />
               <path
-                d="M 40 12 Q 43 22 40 32 L 32 27 Q 34 22 32 17 Z"
+                d="M 22 42 C 11 42 2 33 2 22 L 13 22 C 13 27 17 31 22 31 Z"
+                fill={fillPorEstado(d[caraAbajo])}
+                stroke="#1e293b"
+                strokeWidth="1.6"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraAbajo);
+                }}
+              />
+              <path
+                d="M 42 22 C 42 33 33 42 22 42 L 22 31 C 27 31 31 27 31 22 Z"
                 fill={fillPorEstado(d[caraDer])}
                 stroke="#1e293b"
-                strokeWidth="1.5"
+                strokeWidth="1.6"
                 onClick={(e) => {
                   e.stopPropagation();
                   marcarCaraPieza(codigoPieza, caraDer);
@@ -1354,8 +1334,8 @@ export default function HomePage() {
               <ellipse
                 cx="22"
                 cy="22"
-                rx="10"
-                ry="10"
+                rx="9"
+                ry="9"
                 fill={fillPorEstado(d.O)}
                 stroke="#1e293b"
                 strokeWidth="1.6"
@@ -1457,7 +1437,7 @@ export default function HomePage() {
       <div className="border border-indigo-200 rounded-2xl p-3.5 bg-cyan-50/70 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-100/90 border border-indigo-200 rounded-xl px-3 py-2">
           <p className="text-xs font-bold text-slate-900">
-            FLUJO MSP 033: 1) PIEZA · 2) PROCEDIMIENTO / SÍMBOLO · 3) ROJO O AZUL
+            FLUJO MSP 033: 1) SÍMBOLO / PROCEDIMIENTO · 2) COLOR · 3) PIEZA O CARA
           </p>
           <span className="text-xs font-medium text-slate-700">
             Pieza: <strong>#{hc.piezaSeleccionada}</strong>
@@ -1465,75 +1445,25 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Paso 1: Odontograma (seleccionar pieza) */}
-        <div className="bg-white/90 border border-slate-200 rounded-xl p-2 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-800">
-              1. Selecciona la pieza en el odontograma (activa: #
-              {hc.piezaSeleccionada})
-            </span>
-            <button
-              type="button"
-              onClick={() => limpiarRegistroPieza(hc.piezaSeleccionada)}
-              className="rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700"
-            >
-              Limpiar pieza #{hc.piezaSeleccionada}
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <p className="text-[11px] font-semibold text-slate-500 mb-1">
-              Superior permanente (18–28) — Fila inferior: Movilidad / Recesión
-            </p>
-            <div className="flex items-start gap-1 min-w-max">
-              {PIEZAS_PERMANENTES_SUP.map((p) => renderDienteMsp(p, hc, true))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pt-1">
-            <div className="overflow-x-auto border-t border-slate-100 pt-1">
-              <p className="text-[11px] font-semibold text-slate-500 mb-1">
-                Temporal superior (55–65) — Ovaladas
-              </p>
-              <div className="flex items-start gap-1 min-w-max">
-                {PIEZAS_TEMPORALES_SUP.map((p) => renderDienteMsp(p, hc, true))}
-              </div>
-            </div>
-
-            <div className="overflow-x-auto border-t border-slate-100 pt-1">
-              <p className="text-[11px] font-semibold text-slate-500 mb-1">
-                Temporal inferior (85–75) — Ovaladas
-              </p>
-              <div className="flex items-start gap-1 min-w-max">
-                {PIEZAS_TEMPORALES_INF.map((p) => renderDienteMsp(p, hc, false))}
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto border-t border-slate-100 pt-1">
-            <p className="text-[11px] font-semibold text-slate-500 mb-1">
-              Inferior permanente (48–38)
-            </p>
-            <div className="flex items-start gap-1 min-w-max">
-              {PIEZAS_PERMANENTES_INF.map((p) => renderDienteMsp(p, hc, false))}
-            </div>
-          </div>
-        </div>
-
-        {/* Paso 2: Simbología o procedimiento (incluye Caries y Restauración) */}
+        {/* Paso 1: Simbología o procedimiento */}
         <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-bold text-slate-800">
-              2. Selecciona simbología o procedimiento
-              {procActualObj ? ` (${procActualObj.titulo})` : ""}
+              1. Selecciona simbología o procedimiento
+              {procActualObj
+                ? ` (${procActualObj.titulo} → ${
+                    hc.colorMspActivo === "rojo" ? "Rojo" : "Azul"
+                  })`
+                : ""}
+            </span>
+            <span className="text-[11px] text-slate-500">
+              Caries = Rojo · Restauración = Azul
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
             {PROCEDIMIENTOS_MSP.map((proc) => {
-              const seleccionado =
-                hc.procedimientoActivo === proc.id ||
-                piezaAct.simbolo?.tipo === proc.id;
+              const seleccionado = hc.procedimientoActivo === proc.id;
 
               return (
                 <button
@@ -1560,15 +1490,15 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Paso 3: Color Rojo o Azul (carga automáticamente en la pieza activa) */}
+        {/* Paso 2: Color Rojo o Azul */}
         <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
           <span className="text-xs font-bold text-slate-800 mr-1">
-            3. Color (carga automática en #{hc.piezaSeleccionada}):
+            2. Color activo:
           </span>
 
           <button
             type="button"
-            onClick={() => seleccionarColorYaplicarAutomaticamente("rojo")}
+            onClick={() => seleccionarColorMsp("rojo")}
             className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "rojo"
                 ? "bg-red-600 text-white border-red-700"
@@ -1581,7 +1511,7 @@ export default function HomePage() {
 
           <button
             type="button"
-            onClick={() => seleccionarColorYaplicarAutomaticamente("azul")}
+            onClick={() => seleccionarColorMsp("azul")}
             className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "azul"
                 ? "bg-blue-600 text-white border-blue-700"
@@ -1599,6 +1529,88 @@ export default function HomePage() {
           >
             Pintar pieza #{hc.piezaSeleccionada} completa
           </button>
+        </div>
+
+        {/* Paso 3: Marcar la pieza o caras de la pieza + referencia de letras */}
+        <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-800">
+              3. Toca la pieza o sus caras en el odontograma (activa: #
+              {hc.piezaSeleccionada})
+            </span>
+            <button
+              type="button"
+              onClick={() => limpiarRegistroPieza(hc.piezaSeleccionada)}
+              className="rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700"
+            >
+              Limpiar pieza #{hc.piezaSeleccionada}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+            <span>
+              <strong>V</strong> = Vestibular
+            </span>
+            <span>
+              <strong>P</strong> = Palatino (superior) / <strong>L</strong> =
+              Lingual (inferior)
+            </span>
+            <span>
+              <strong>M</strong> = Mesial (hacia línea media)
+            </span>
+            <span>
+              <strong>D</strong> = Distal (hacia posterior)
+            </span>
+            <span>
+              <strong>O</strong> = Oclusal / Central
+            </span>
+          </div>
+
+          {/* Arcada Superior */}
+          <div className="overflow-x-auto space-y-1">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
+              <span>Superior permanente (18–28) · Arriba: V · Abajo: P</span>
+              <span>D ← M | LÍNEA MEDIA | M → D</span>
+            </div>
+            <div className="flex items-start gap-1 min-w-max">
+              {PIEZAS_PERMANENTES_SUP.map((p) => renderDienteMsp(p, hc, true))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pt-1">
+            <div className="overflow-x-auto border-t border-slate-100 pt-1.5">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-1">
+                <span>Temporal superior (55–65) · V arriba / P abajo</span>
+                <span>D ← M | M → D</span>
+              </div>
+              <div className="flex items-start gap-1 min-w-max">
+                {PIEZAS_TEMPORALES_SUP.map((p) => renderDienteMsp(p, hc, true))}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto border-t border-slate-100 pt-1.5">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-1">
+                <span>Temporal inferior (85–75) · L arriba / V abajo</span>
+                <span>D ← M | M → D</span>
+              </div>
+              <div className="flex items-start gap-1 min-w-max">
+                {PIEZAS_TEMPORALES_INF.map((p) =>
+                  renderDienteMsp(p, hc, false)
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Arcada Inferior */}
+          <div className="overflow-x-auto border-t border-slate-100 pt-1.5">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-1">
+              <span>Inferior permanente (48–38) · Arriba: L · Abajo: V</span>
+              <span>D ← M | LÍNEA MEDIA | M → D</span>
+            </div>
+            <div className="flex items-start gap-1 min-w-max">
+              {PIEZAS_PERMANENTES_INF.map((p) => renderDienteMsp(p, hc, false))}
+            </div>
+          </div>
         </div>
 
         {/* Detalle de la pieza seleccionada */}
