@@ -291,15 +291,9 @@ const PROCEDIMIENTOS_MSP: {
   id: Exclude<TipoProcedimientoMsp, "ninguno">;
   titulo: string;
   muestra: string;
-  pintaCarasOclusal?: boolean;
 }[] = [
-  { id: "caries", titulo: "Caries", muestra: "●/○", pintaCarasOclusal: true },
-  {
-    id: "restauracion",
-    titulo: "Restauración",
-    muestra: "■/●",
-    pintaCarasOclusal: true,
-  },
+  { id: "caries", titulo: "Caries", muestra: "●/○" },
+  { id: "restauracion", titulo: "Restauración", muestra: "■/●" },
   { id: "sellante", titulo: "Sellante", muestra: "*" },
   {
     id: "extraccion_perdida_caries",
@@ -322,69 +316,17 @@ const PROCEDIMIENTOS_MSP: {
   { id: "corona", titulo: "Corona", muestra: "▣" },
 ];
 
-const PIEZAS_PERMANENTES_SUP = [
-  "18",
-  "17",
-  "16",
-  "15",
-  "14",
-  "13",
-  "12",
-  "11",
-  "21",
-  "22",
-  "23",
-  "24",
-  "25",
-  "26",
-  "27",
-  "28",
-];
+const SUP_DER_PERM = ["18", "17", "16", "15", "14", "13", "12", "11"];
+const SUP_IZQ_PERM = ["21", "22", "23", "24", "25", "26", "27", "28"];
 
-const PIEZAS_TEMPORALES_SUP = [
-  "55",
-  "54",
-  "53",
-  "52",
-  "51",
-  "61",
-  "62",
-  "63",
-  "64",
-  "65",
-];
+const SUP_DER_TEMP = ["55", "54", "53", "52", "51"];
+const SUP_IZQ_TEMP = ["61", "62", "63", "64", "65"];
 
-const PIEZAS_TEMPORALES_INF = [
-  "85",
-  "84",
-  "83",
-  "82",
-  "81",
-  "71",
-  "72",
-  "73",
-  "74",
-  "75",
-];
+const INF_DER_TEMP = ["85", "84", "83", "82", "81"];
+const INF_IZQ_TEMP = ["71", "72", "73", "74", "75"];
 
-const PIEZAS_PERMANENTES_INF = [
-  "48",
-  "47",
-  "46",
-  "45",
-  "44",
-  "43",
-  "42",
-  "41",
-  "31",
-  "32",
-  "33",
-  "34",
-  "35",
-  "36",
-  "37",
-  "38",
-];
+const INF_DER_PERM = ["48", "47", "46", "45", "44", "43", "42", "41"];
+const INF_IZQ_PERM = ["31", "32", "33", "34", "35", "36", "37", "38"];
 
 function esPiezaTemporal(codigoPieza: string): boolean {
   return (
@@ -393,6 +335,61 @@ function esPiezaTemporal(codigoPieza: string): boolean {
     codigoPieza.startsWith("7") ||
     codigoPieza.startsWith("8")
   );
+}
+
+function esCuadranteDerecho(codigoPieza: string): boolean {
+  return (
+    codigoPieza.startsWith("1") ||
+    codigoPieza.startsWith("4") ||
+    codigoPieza.startsWith("5") ||
+    codigoPieza.startsWith("8")
+  );
+}
+
+function esArcadaSuperior(codigoPieza: string): boolean {
+  return (
+    codigoPieza.startsWith("1") ||
+    codigoPieza.startsWith("2") ||
+    codigoPieza.startsWith("5") ||
+    codigoPieza.startsWith("6")
+  );
+}
+
+// Orientación anatómica de cada cara del SVG según pieza y cuadrante:
+// En piezas temporales centrales (55-65 y 85-75), la cara hacia el centro/plano oclusal
+// actúa como L/P (lingual/palatino) y la exterior hacia el borde libre como V (vestibular).
+function carasPorPieza(codigoPieza: string): {
+  arriba: CaraDiente;
+  abajo: CaraDiente;
+  izq: CaraDiente;
+  der: CaraDiente;
+} {
+  const superior = esArcadaSuperior(codigoPieza);
+  const temporal = esPiezaTemporal(codigoPieza);
+  const derecho = esCuadranteDerecho(codigoPieza);
+
+  // Mesial apunta siempre hacia la línea media vertical (derecha en cuadrante derecho, izquierda en izquierdo)
+  const izq: CaraDiente = derecho ? "D" : "M";
+  const der: CaraDiente = derecho ? "M" : "D";
+
+  if (temporal) {
+    // En la referencia central:
+    // Superior temporal (55-65): arriba = V, abajo = L/P (hacia plano oclusal)
+    // Inferior temporal (85-75): arriba = L/P (hacia plano oclusal), abajo = V
+    return {
+      arriba: superior ? "V" : "L",
+      abajo: superior ? "L" : "V",
+      izq,
+      der,
+    };
+  }
+
+  return {
+    arriba: superior ? "V" : "L",
+    abajo: superior ? "L" : "V",
+    izq,
+    der,
+  };
 }
 
 function piezaVacia(): EstadoPiezaMsp {
@@ -545,24 +542,24 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
         <circle
           cx="22"
           cy="22"
-          r="6"
+          r="5.5"
           fill={stroke}
           stroke="#ffffff"
-          strokeWidth="1.5"
+          strokeWidth="1.4"
           pointerEvents="none"
         />
       );
     case "restauracion":
       return (
         <rect
-          x="16"
-          y="16"
-          width="12"
-          height="12"
+          x="16.5"
+          y="16.5"
+          width="11"
+          height="11"
           rx="2"
           fill={stroke}
           stroke="#ffffff"
-          strokeWidth="1.5"
+          strokeWidth="1.4"
           pointerEvents="none"
         />
       );
@@ -572,7 +569,7 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
           x="22"
           y="28"
           textAnchor="middle"
-          fontSize="22"
+          fontSize="21"
           fontWeight="bold"
           fill={stroke}
           pointerEvents="none"
@@ -1247,23 +1244,12 @@ export default function HomePage() {
     setMotivoCita("");
   }
 
-  function renderDienteMsp(
-    codigoPieza: string,
-    hc: HistoriaClinicaCompleta,
-    superior: boolean
-  ) {
+  function renderDienteMsp(codigoPieza: string, hc: HistoriaClinicaCompleta) {
     const d = hc.odontogramaMsp[codigoPieza] || piezaVacia();
     const seleccionada = hc.piezaSeleccionada === codigoPieza;
     const temporal = esPiezaTemporal(codigoPieza);
-    const caraArriba: CaraDiente = superior ? "V" : "L";
-    const caraAbajo: CaraDiente = superior ? "L" : "V";
-    const esCuadranteIzq =
-      codigoPieza.startsWith("1") ||
-      codigoPieza.startsWith("4") ||
-      codigoPieza.startsWith("5") ||
-      codigoPieza.startsWith("8");
-    const caraIzq: CaraDiente = esCuadranteIzq ? "M" : "D";
-    const caraDer: CaraDiente = esCuadranteIzq ? "D" : "M";
+    const superior = esArcadaSuperior(codigoPieza);
+    const caras = carasPorPieza(codigoPieza);
 
     return (
       <div
@@ -1285,50 +1271,49 @@ export default function HomePage() {
 
         <svg
           viewBox="0 0 44 44"
-          className="w-9 h-9 touch-manipulation select-none"
+          className="w-8 h-8 sm:w-9 sm:h-9 touch-manipulation select-none"
           aria-label={`Pieza ${codigoPieza}`}
         >
           {temporal ? (
             <>
-              {/* Ovalo temporal dividido en 4 laterales + 1 central (sin líneas extra) */}
               <path
                 d="M 22 2 C 33 2 42 11 42 22 L 31 22 C 31 17 27 13 22 13 Z"
-                fill={fillPorEstado(d[caraArriba])}
+                fill={fillPorEstado(d[caras.arriba])}
                 stroke="#1e293b"
                 strokeWidth="1.6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraArriba);
+                  marcarCaraPieza(codigoPieza, caras.arriba);
                 }}
               />
               <path
                 d="M 2 22 C 2 11 11 2 22 2 L 22 13 C 17 13 13 17 13 22 Z"
-                fill={fillPorEstado(d[caraIzq])}
+                fill={fillPorEstado(d[caras.izq])}
                 stroke="#1e293b"
                 strokeWidth="1.6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraIzq);
+                  marcarCaraPieza(codigoPieza, caras.izq);
                 }}
               />
               <path
                 d="M 22 42 C 11 42 2 33 2 22 L 13 22 C 13 27 17 31 22 31 Z"
-                fill={fillPorEstado(d[caraAbajo])}
+                fill={fillPorEstado(d[caras.abajo])}
                 stroke="#1e293b"
                 strokeWidth="1.6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraAbajo);
+                  marcarCaraPieza(codigoPieza, caras.abajo);
                 }}
               />
               <path
                 d="M 42 22 C 42 33 33 42 22 42 L 22 31 C 27 31 31 27 31 22 Z"
-                fill={fillPorEstado(d[caraDer])}
+                fill={fillPorEstado(d[caras.der])}
                 stroke="#1e293b"
                 strokeWidth="1.6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraDer);
+                  marcarCaraPieza(codigoPieza, caras.der);
                 }}
               />
               <ellipse
@@ -1349,42 +1334,42 @@ export default function HomePage() {
             <>
               <polygon
                 points="2,2 42,2 32,12 12,12"
-                fill={fillPorEstado(d[caraArriba])}
+                fill={fillPorEstado(d[caras.arriba])}
                 stroke="#1e293b"
                 strokeWidth="1.8"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraArriba);
+                  marcarCaraPieza(codigoPieza, caras.arriba);
                 }}
               />
               <polygon
                 points="12,32 32,32 42,42 2,42"
-                fill={fillPorEstado(d[caraAbajo])}
+                fill={fillPorEstado(d[caras.abajo])}
                 stroke="#1e293b"
                 strokeWidth="1.8"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraAbajo);
+                  marcarCaraPieza(codigoPieza, caras.abajo);
                 }}
               />
               <polygon
                 points="2,2 12,12 12,32 2,42"
-                fill={fillPorEstado(d[caraIzq])}
+                fill={fillPorEstado(d[caras.izq])}
                 stroke="#1e293b"
                 strokeWidth="1.8"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraIzq);
+                  marcarCaraPieza(codigoPieza, caras.izq);
                 }}
               />
               <polygon
                 points="32,12 42,2 42,42 32,32"
-                fill={fillPorEstado(d[caraDer])}
+                fill={fillPorEstado(d[caras.der])}
                 stroke="#1e293b"
                 strokeWidth="1.8"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caraDer);
+                  marcarCaraPieza(codigoPieza, caras.der);
                 }}
               />
               <rect
@@ -1531,7 +1516,7 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Paso 3: Marcar la pieza o caras de la pieza + referencia de letras */}
+        {/* Paso 3: Marcar la pieza o caras de la pieza + cruz entrecortada de línea media y plano oclusal */}
         <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-bold text-slate-800">
@@ -1552,63 +1537,89 @@ export default function HomePage() {
               <strong>V</strong> = Vestibular
             </span>
             <span>
-              <strong>P</strong> = Palatino (superior) / <strong>L</strong> =
-              Lingual (inferior)
+              <strong>P</strong> = Palatino / <strong>L</strong> = Lingual
             </span>
             <span>
               <strong>M</strong> = Mesial (hacia línea media)
             </span>
             <span>
-              <strong>D</strong> = Distal (hacia posterior)
+              <strong>D</strong> = Distal
             </span>
             <span>
               <strong>O</strong> = Oclusal / Central
             </span>
+            <span className="text-slate-400">
+              · Cruz entrecortada: Línea media (vertical) y Plano oclusal
+              (horizontal)
+            </span>
           </div>
 
-          {/* Arcada Superior */}
-          <div className="overflow-x-auto space-y-1">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
-              <span>Superior permanente (18–28) · Arriba: V · Abajo: P</span>
-              <span>D ← M | LÍNEA MEDIA | M → D</span>
-            </div>
-            <div className="flex items-start gap-1 min-w-max">
-              {PIEZAS_PERMANENTES_SUP.map((p) => renderDienteMsp(p, hc, true))}
-            </div>
-          </div>
+          <div className="overflow-x-auto pb-1">
+            <div className="relative min-w-[780px] py-1">
+              {/* Cruz entrecortada tenue: Línea media (vertical) + Plano oclusal (horizontal) */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 border-l border-dashed border-slate-300/80 z-0"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-300/80 z-0"
+              />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pt-1">
-            <div className="overflow-x-auto border-t border-slate-100 pt-1.5">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-1">
-                <span>Temporal superior (55–65) · V arriba / P abajo</span>
-                <span>D ← M | M → D</span>
-              </div>
-              <div className="flex items-start gap-1 min-w-max">
-                {PIEZAS_TEMPORALES_SUP.map((p) => renderDienteMsp(p, hc, true))}
-              </div>
-            </div>
+              <div className="relative z-10 space-y-2">
+                {/* Arcada superior permanente */}
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <div className="flex items-center justify-end gap-0.5 pr-2">
+                    <span className="text-[10px] font-semibold text-slate-400 mr-1">
+                      V
+                    </span>
+                    {SUP_DER_PERM.map((p) => renderDienteMsp(p, hc))}
+                  </div>
+                  <div className="flex items-center justify-start gap-0.5 pl-2">
+                    {SUP_IZQ_PERM.map((p) => renderDienteMsp(p, hc))}
+                    <span className="text-[10px] font-semibold text-slate-400 ml-1">
+                      V
+                    </span>
+                  </div>
+                </div>
 
-            <div className="overflow-x-auto border-t border-slate-100 pt-1.5">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-1">
-                <span>Temporal inferior (85–75) · L arriba / V abajo</span>
-                <span>D ← M | M → D</span>
-              </div>
-              <div className="flex items-start gap-1 min-w-max">
-                {PIEZAS_TEMPORALES_INF.map((p) =>
-                  renderDienteMsp(p, hc, false)
-                )}
-              </div>
-            </div>
-          </div>
+                {/* Dentición temporal central (superior e inferior en torno al plano oclusal) */}
+                <div className="space-y-1 py-0.5">
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <div className="flex items-center justify-end gap-1 pr-2">
+                      {SUP_DER_TEMP.map((p) => renderDienteMsp(p, hc))}
+                    </div>
+                    <div className="flex items-center justify-start gap-1 pl-2">
+                      {SUP_IZQ_TEMP.map((p) => renderDienteMsp(p, hc))}
+                    </div>
+                  </div>
 
-          {/* Arcada Inferior */}
-          <div className="overflow-x-auto border-t border-slate-100 pt-1.5">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-1">
-              <span>Inferior permanente (48–38) · Arriba: L · Abajo: V</span>
-              <span>D ← M | LÍNEA MEDIA | M → D</span>
-            </div>
-            <div className="flex items-start gap-1 min-w-max">
-              {PIEZAS_PERMANENTES_INF.map((p) => renderDienteMsp(p, hc, false))}
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <div className="flex items-center justify-end gap-1 pr-2">
+                      {INF_DER_TEMP.map((p) => renderDienteMsp(p, hc))}
+                    </div>
+                    <div className="flex items-center justify-start gap-1 pl-2">
+                      {INF_IZQ_TEMP.map((p) => renderDienteMsp(p, hc))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Arcada inferior permanente */}
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <div className="flex items-center justify-end gap-0.5 pr-2">
+                    <span className="text-[10px] font-semibold text-slate-400 mr-1">
+                      V
+                    </span>
+                    {INF_DER_PERM.map((p) => renderDienteMsp(p, hc))}
+                  </div>
+                  <div className="flex items-center justify-start gap-0.5 pl-2">
+                    {INF_IZQ_PERM.map((p) => renderDienteMsp(p, hc))}
+                    <span className="text-[10px] font-semibold text-slate-400 ml-1">
+                      V
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
