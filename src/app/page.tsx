@@ -67,11 +67,16 @@ interface HistoriaClinicaCompleta {
   habitosGenerales: string;
 
   // 4. Antecedentes odontológicos
-  tratamientosPrevios: string;
+  tratamientosPrevios: string[];
+  otrosTratamientosPrevios: string;
   frecuenciaVisitas: string;
+  otraFrecuenciaVisitas: string;
   experienciasAnteriores: string;
+  otraExperienciaAnterior: string;
   ansiedadDental: string;
+  otraAnsiedadDental: string;
   higieneOral: string;
+  otraHigieneOral: string;
 
   // 5. Signos vitales y examen clínico
   presionArterial: string;
@@ -147,6 +152,50 @@ const OPCIONES_ENFERMEDADES = [
   "Otros",
 ];
 
+const OPCIONES_TRATAMIENTOS_PREVIOS = [
+  "Profilaxis / limpieza",
+  "Resinas / obturaciones",
+  "Endodoncia",
+  "Exodoncia",
+  "Prótesis / coronas",
+  "Ortodoncia",
+  "Blanqueamiento",
+  "Ninguno",
+  "Otros",
+];
+
+const OPCIONES_FRECUENCIA_VISITAS = [
+  "Cada 6 meses",
+  "Cada año",
+  "Esporádica / irregular",
+  "Solo cuando hay molestia o dolor",
+  "Primera consulta",
+  "Otros",
+];
+
+const OPCIONES_EXPERIENCIAS_ANTERIORES = [
+  "Positivas / sin molestias",
+  "Aceptables",
+  "Negativas / dolorosas",
+  "Primera experiencia",
+  "Otros",
+];
+
+const OPCIONES_ANSIEDAD_DENTAL = [
+  "Ninguna",
+  "Baja",
+  "Moderada",
+  "Alta",
+  "Otros",
+];
+
+const OPCIONES_HIGIENE_ORAL = [
+  "Buena (cepillado e hilo dental)",
+  "Regular (solo cepillado)",
+  "Deficiente",
+  "Otros",
+];
+
 function nombreCompletoPaciente(hc: HistoriaClinicaCompleta): string {
   const full = `${hc.nombres || ""} ${hc.apellidos || ""}`.trim();
   return full || "Paciente sin nombre";
@@ -184,11 +233,16 @@ function crearHcVacia(
     antecedentesFamiliares: "",
     noRefiereHabitos: false,
     habitosGenerales: "",
-    tratamientosPrevios: "",
+    tratamientosPrevios: [],
+    otrosTratamientosPrevios: "",
     frecuenciaVisitas: "",
+    otraFrecuenciaVisitas: "",
     experienciasAnteriores: "",
+    otraExperienciaAnterior: "",
     ansiedadDental: "",
+    otraAnsiedadDental: "",
     higieneOral: "",
+    otraHigieneOral: "",
     presionArterial: "",
     pulso: "",
     otrosSignosVitales: "",
@@ -445,6 +499,33 @@ export default function HomePage() {
               enfermedad === "Otros" && existe
                 ? ""
                 : pac.hc.otrasEnfermedadesSistemicas,
+          },
+        };
+      })
+    );
+  }
+
+  function toggleTratamientoPrevio(tratamiento: string) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actuales = pac.hc.tratamientosPrevios || [];
+        const existe = actuales.includes(tratamiento);
+        const siguientes = existe
+          ? actuales.filter((item) => item !== tratamiento)
+          : [...actuales, tratamiento];
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            tratamientosPrevios: siguientes,
+            otrosTratamientosPrevios:
+              tratamiento === "Otros" && existe
+                ? ""
+                : pac.hc.otrosTratamientosPrevios,
           },
         };
       })
@@ -1254,89 +1335,210 @@ export default function HomePage() {
                   )}
 
                   {seccionHc === "odontologicos" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                    <div className="space-y-4 text-sm">
+                      {/* Tratamientos previos (selección múltiple + Otros) */}
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
                           Tratamientos odontológicos previos
                         </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.tratamientosPrevios}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "tratamientosPrevios",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Profilaxis, resinas, endodoncias, ortodoncia..."
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {OPCIONES_TRATAMIENTOS_PREVIOS.map((trat) => {
+                            const marcado =
+                              pacienteActivo.hc.tratamientosPrevios.includes(
+                                trat
+                              );
+                            return (
+                              <label
+                                key={trat}
+                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={marcado}
+                                  onChange={() =>
+                                    toggleTratamientoPrevio(trat)
+                                  }
+                                  className="rounded border-slate-300"
+                                />
+                                <span>{trat}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+
+                        {pacienteActivo.hc.tratamientosPrevios.includes(
+                          "Otros"
+                        ) && (
+                          <div className="pt-1">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Especificar otros tratamientos previos
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.otrosTratamientosPrevios}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "otrosTratamientosPrevios",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba a qué tratamientos se refiere..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Frecuencia de visitas al odontólogo
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.frecuenciaVisitas}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "frecuenciaVisitas",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Cada 6 meses, anual, solo por molestia..."
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        {/* Frecuencia de visitas */}
+                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                          <label className="block text-xs font-medium text-slate-600">
+                            Frecuencia de visitas al odontólogo
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.frecuenciaVisitas}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "frecuenciaVisitas",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar opción</option>
+                            {OPCIONES_FRECUENCIA_VISITAS.map((op) => (
+                              <option key={op} value={op}>
+                                {op}
+                              </option>
+                            ))}
+                          </select>
+                          {pacienteActivo.hc.frecuenciaVisitas === "Otros" && (
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.otraFrecuenciaVisitas}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "otraFrecuenciaVisitas",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba a qué se refiere..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          )}
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Experiencias anteriores
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.experienciasAnteriores}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "experienciasAnteriores",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Cómo vivió consultas o procedimientos previos"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        {/* Experiencias anteriores */}
+                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                          <label className="block text-xs font-medium text-slate-600">
+                            Experiencias anteriores
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.experienciasAnteriores}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "experienciasAnteriores",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar opción</option>
+                            {OPCIONES_EXPERIENCIAS_ANTERIORES.map((op) => (
+                              <option key={op} value={op}>
+                                {op}
+                              </option>
+                            ))}
+                          </select>
+                          {pacienteActivo.hc.experienciasAnteriores ===
+                            "Otros" && (
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.otraExperienciaAnterior}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "otraExperienciaAnterior",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba a qué se refiere..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          )}
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Nivel de ansiedad dental
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.ansiedadDental}
-                          onChange={(e) =>
-                            actualizarCampoHc("ansiedadDental", e.target.value)
-                          }
-                          placeholder="Bajo, moderado, alto"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        {/* Nivel de ansiedad dental */}
+                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                          <label className="block text-xs font-medium text-slate-600">
+                            Nivel de ansiedad dental
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.ansiedadDental}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "ansiedadDental",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar opción</option>
+                            {OPCIONES_ANSIEDAD_DENTAL.map((op) => (
+                              <option key={op} value={op}>
+                                {op}
+                              </option>
+                            ))}
+                          </select>
+                          {pacienteActivo.hc.ansiedadDental === "Otros" && (
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.otraAnsiedadDental}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "otraAnsiedadDental",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba a qué se refiere..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          )}
+                        </div>
 
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Higiene oral habitual
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.higieneOral}
-                          onChange={(e) =>
-                            actualizarCampoHc("higieneOral", e.target.value)
-                          }
-                          placeholder="Cepillado diario, uso de hilo dental, enjuague..."
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                        {/* Higiene oral habitual */}
+                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                          <label className="block text-xs font-medium text-slate-600">
+                            Higiene oral habitual
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.higieneOral}
+                            onChange={(e) =>
+                              actualizarCampoHc("higieneOral", e.target.value)
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar opción</option>
+                            {OPCIONES_HIGIENE_ORAL.map((op) => (
+                              <option key={op} value={op}>
+                                {op}
+                              </option>
+                            ))}
+                          </select>
+                          {pacienteActivo.hc.higieneOral === "Otros" && (
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.otraHigieneOral}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "otraHigieneOral",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba a qué se refiere..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
