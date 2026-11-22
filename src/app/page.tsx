@@ -40,7 +40,9 @@ interface HistoriaClinicaCompleta {
   documento: string;
   fechaNacimiento: string;
   genero: string;
+  nacionalidad: string;
   direccion: string;
+  ciudad: string;
   telefono: string;
   correo: string;
   ocupacion: string;
@@ -101,6 +103,37 @@ interface Cita {
   confirmada: boolean;
 }
 
+const PAISES = [
+  "Ecuador",
+  "Colombia",
+  "Perú",
+  "Venezuela",
+  "Argentina",
+  "Bolivia",
+  "Brasil",
+  "Chile",
+  "Costa Rica",
+  "Cuba",
+  "El Salvador",
+  "España",
+  "Estados Unidos",
+  "Guatemala",
+  "Honduras",
+  "México",
+  "Nicaragua",
+  "Panamá",
+  "Paraguay",
+  "Puerto Rico",
+  "República Dominicana",
+  "Uruguay",
+  "Alemania",
+  "Canadá",
+  "Francia",
+  "Italia",
+  "Reino Unido",
+  "Otro país",
+];
+
 function nombreCompletoPaciente(hc: HistoriaClinicaCompleta): string {
   const full = `${hc.nombres || ""} ${hc.apellidos || ""}`.trim();
   return full || "Paciente sin nombre";
@@ -117,7 +150,9 @@ function crearHcVacia(
     documento: "",
     fechaNacimiento: "",
     genero: "",
+    nacionalidad: "Ecuador",
     direccion: "",
+    ciudad: "",
     telefono: telefonoInicial,
     correo: "",
     ocupacion: "",
@@ -191,6 +226,8 @@ export default function HomePage() {
       hc: {
         ...crearHcVacia("Paciente", "Inicial", "0990000000"),
         genero: "Otro",
+        nacionalidad: "Ecuador",
+        ciudad: "Quito",
         seguroConvenio: "Particular",
         motivoConsulta: "Revisión odontológica general",
       },
@@ -747,6 +784,26 @@ export default function HomePage() {
 
                       <div>
                         <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Nacionalidad
+                        </label>
+                        <select
+                          value={pacienteActivo.hc.nacionalidad}
+                          onChange={(e) =>
+                            actualizarCampoHc("nacionalidad", e.target.value)
+                          }
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="">Seleccionar país</option>
+                          {PAISES.map((pais) => (
+                            <option key={pais} value={pais}>
+                              {pais}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
                           Teléfono
                         </label>
                         <input
@@ -790,6 +847,21 @@ export default function HomePage() {
                         />
                       </div>
 
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Ciudad
+                        </label>
+                        <input
+                          type="text"
+                          value={pacienteActivo.hc.ciudad}
+                          onChange={(e) =>
+                            actualizarCampoHc("ciudad", e.target.value)
+                          }
+                          placeholder="Ciudad de residencia"
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+
                       <div className="sm:col-span-2">
                         <label className="block text-xs font-medium text-slate-600 mb-1">
                           Dirección
@@ -800,7 +872,7 @@ export default function HomePage() {
                           onChange={(e) =>
                             actualizarCampoHc("direccion", e.target.value)
                           }
-                          placeholder="Dirección domiciliaria"
+                          placeholder="Calle, sector, referencia"
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                         />
                       </div>
