@@ -864,7 +864,7 @@ export default function HomePage() {
 
                       <div className="sm:col-span-2">
                         <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Dirección
+                          Dirección o sector
                         </label>
                         <input
                           type="text"
