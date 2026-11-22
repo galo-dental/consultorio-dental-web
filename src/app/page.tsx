@@ -17,6 +17,13 @@ interface Perfil {
   nombre_completo?: string | null;
 }
 
+interface Paciente {
+  id: string;
+  nombre: string;
+  telefono: string;
+  observacion: string;
+}
+
 interface Cita {
   id: string;
   paciente: string;
@@ -42,14 +49,29 @@ export default function HomePage() {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [moduloActivo, setModuloActivo] = useState<ModuloActivo>(null);
 
-  // Estado inicial rápido para probar citas y recordatorios
+  // Pacientes e Historias Clínicas
+  const [pacientes, setPacientes] = useState<Paciente[]>([
+    {
+      id: "pac-1",
+      nombre: "Paciente Inicial",
+      telefono: "0990000000",
+      observacion: "Revisión general y profilaxis",
+    },
+  ]);
+  const [nombrePaciente, setNombrePaciente] = useState("");
+  const [telefonoPaciente, setTelefonoPaciente] = useState("");
+  const [observacionPaciente, setObservacionPaciente] = useState("");
+  const [pacienteSeleccionadoId, setPacienteSeleccionadoId] =
+    useState<string>("pac-1");
+
+  // Agenda y Recordatorios
   const [pacienteCita, setPacienteCita] = useState("");
   const [motivoCita, setMotivoCita] = useState("");
   const [horaCita, setHoraCita] = useState("09:00");
   const [citas, setCitas] = useState<Cita[]>([
     {
       id: "1",
-      paciente: "Paciente de ejemplo",
+      paciente: "Paciente Inicial",
       motivo: "Valoración y limpieza",
       hora: "09:00",
       confirmada: false,
@@ -91,7 +113,8 @@ export default function HomePage() {
       setPerfil({
         id: data.id,
         rol: data.rol || inferirRolRespaldo(user.email),
-        nombre_completo: data.nombre_completo || user.email || "Panel del Consultorio",
+        nombre_completo:
+          data.nombre_completo || user.email || "Panel del Consultorio",
       });
     }
 
@@ -130,6 +153,22 @@ export default function HomePage() {
     setPassword("");
   }
 
+  function crearPaciente(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nombrePaciente.trim()) return;
+    const nuevo: Paciente = {
+      id: `pac-${Date.now()}`,
+      nombre: nombrePaciente.trim(),
+      telefono: telefonoPaciente.trim() || "Sin teléfono",
+      observacion: observacionPaciente.trim() || "Sin observaciones iniciales",
+    };
+    setPacientes((prev) => [nuevo, ...prev]);
+    setPacienteSeleccionadoId(nuevo.id);
+    setNombrePaciente("");
+    setTelefonoPaciente("");
+    setObservacionPaciente("");
+  }
+
   function agregarCita(e: React.FormEvent) {
     e.preventDefault();
     if (!pacienteCita.trim() || !motivoCita.trim()) return;
@@ -147,10 +186,15 @@ export default function HomePage() {
     setMotivoCita("");
   }
 
+  const pacienteActivo =
+    pacientes.find((p) => p.id === pacienteSeleccionadoId) || null;
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center p-6">
-        <p className="text-sm text-slate-600">Cargando sistema del consultorio...</p>
+        <p className="text-sm text-slate-600">
+          Cargando sistema del consultorio...
+        </p>
       </main>
     );
   }
@@ -248,7 +292,7 @@ export default function HomePage() {
               Historias Clínicas y Odontograma
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Toca para abrir ficha clínica y registro dental.
+              Crear pacientes ({pacientes.length}), ver ficha y registro dental.
             </p>
           </button>
 
@@ -259,7 +303,7 @@ export default function HomePage() {
           >
             <h2 className="font-medium text-slate-900">Agenda y Recordatorios</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Toca para gestionar citas programadas y confirmaciones.
+              Citas programadas ({citas.length}) y confirmaciones.
             </p>
           </button>
 
@@ -270,7 +314,7 @@ export default function HomePage() {
           >
             <h2 className="font-medium text-slate-900">Presupuestos y Pagos</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Toca para revisar tratamientos, abonos y saldos.
+              Planes de tratamiento, abonos y saldos.
             </p>
           </button>
 
@@ -281,7 +325,7 @@ export default function HomePage() {
           >
             <h2 className="font-medium text-slate-900">Inventario de Insumos</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Toca para controlar existencias y materiales.
+              Existencias y materiales del consultorio.
             </p>
           </button>
         </section>
@@ -289,7 +333,8 @@ export default function HomePage() {
         <section className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h2 className="text-base font-semibold text-slate-900">
-              {moduloActivo === "historias" && "Historias Clínicas y Odontograma"}
+              {moduloActivo === "historias" &&
+                "Historias Clínicas y Odontograma"}
               {moduloActivo === "agenda" && "Agenda y Recordatorios"}
               {moduloActivo === "pagos" && "Presupuestos y Pagos"}
               {moduloActivo === "inventario" && "Inventario de Insumos"}
@@ -303,9 +348,108 @@ export default function HomePage() {
             </button>
           </div>
 
-          {moduloActivo === "agenda" ? (
+          {moduloActivo === "historias" && (
+            <div className="space-y-5">
+              <form
+                onSubmit={crearPaciente}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-slate-50 p-3.5 rounded-xl border border-slate-200"
+              >
+                <input
+                  type="text"
+                  required
+                  value={nombrePaciente}
+                  onChange={(e) => setNombrePaciente(e.target.value)}
+                  placeholder="Nombre completo del paciente"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+                <input
+                  type="text"
+                  value={telefonoPaciente}
+                  onChange={(e) => setTelefonoPaciente(e.target.value)}
+                  placeholder="Teléfono / WhatsApp"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+                <input
+                  type="text"
+                  value={observacionPaciente}
+                  onChange={(e) => setObservacionPaciente(e.target.value)}
+                  placeholder="Motivo o nota clínica"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="sm:col-span-3 rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800"
+                >
+                  + Guardar nuevo paciente
+                </button>
+              </form>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Pacientes registrados ({pacientes.length})
+                  </h3>
+                  <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                    {pacientes.map((pac) => (
+                      <li key={pac.id}>
+                        <button
+                          type="button"
+                          onClick={() => setPacienteSeleccionadoId(pac.id)}
+                          className={`w-full text-left px-3.5 py-2.5 text-sm transition ${
+                            pac.id === pacienteActivo?.id
+                              ? "bg-slate-900 text-white"
+                              : "bg-white text-slate-900 hover:bg-slate-50"
+                          }`}
+                        >
+                          <div className="font-medium">{pac.nombre}</div>
+                          <div
+                            className={`text-xs ${
+                              pac.id === pacienteActivo?.id
+                                ? "text-slate-300"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            {pac.telefono}
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Ficha del paciente seleccionado
+                  </h3>
+                  {pacienteActivo ? (
+                    <div className="space-y-1.5 text-sm text-slate-800">
+                      <p>
+                        <strong>Nombre:</strong> {pacienteActivo.nombre}
+                      </p>
+                      <p>
+                        <strong>Teléfono:</strong> {pacienteActivo.telefono}
+                      </p>
+                      <p>
+                        <strong>Nota clínica:</strong>{" "}
+                        {pacienteActivo.observacion}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">
+                      Selecciona un paciente de la lista.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {moduloActivo === "agenda" && (
             <div className="space-y-4">
-              <form onSubmit={agregarCita} className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+              <form
+                onSubmit={agregarCita}
+                className="grid grid-cols-1 sm:grid-cols-4 gap-2"
+              >
                 <input
                   type="text"
                   required
@@ -369,10 +513,16 @@ export default function HomePage() {
                 ))}
               </ul>
             </div>
-          ) : (
+          )}
+
+          {(moduloActivo === "pagos" || moduloActivo === "inventario") && (
             <p className="text-sm text-slate-600">
-              Módulo abierto correctamente. Dime qué campos o acciones quieres
-              priorizar aquí (por ejemplo: dientes/odontograma, abonos o insumos).
+              Este módulo ya tiene su vista abierta y lista para añadirle
+              campos. Dime si quieres que armemos primero{" "}
+              {moduloActivo === "pagos"
+                ? "el registro de presupuestos y abonos"
+                : "el control de insumos y cantidades"}
+              .
             </p>
           )}
         </section>
