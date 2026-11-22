@@ -330,6 +330,7 @@ const SIMBOLOS_SECUNDARIOS_MSP = PROCEDIMIENTOS_MSP.filter(
 
 const SUP_DER_PERM = ["18", "17", "16", "15", "14", "13", "12", "11"];
 const SUP_IZQ_PERM = ["21", "22", "23", "24", "25", "26", "27", "28"];
+const ARCADA_SUPERIOR_COMPLETA = [...SUP_DER_PERM, ...SUP_IZQ_PERM];
 
 const SUP_DER_TEMP = ["55", "54", "53", "52", "51"];
 const SUP_IZQ_TEMP = ["61", "62", "63", "64", "65"];
@@ -339,6 +340,7 @@ const INF_IZQ_TEMP = ["71", "72", "73", "74", "75"];
 
 const INF_DER_PERM = ["48", "47", "46", "45", "44", "43", "42", "41"];
 const INF_IZQ_PERM = ["31", "32", "33", "34", "35", "36", "37", "38"];
+const ARCADA_INFERIOR_COMPLETA = [...INF_DER_PERM, ...INF_IZQ_PERM];
 
 const LINEA_DIAGRAMA_TENUE = "#94a3b8";
 
@@ -1026,6 +1028,47 @@ export default function HomePage() {
             procedimientoActivo: tipo,
             colorMspActivo: color,
             pincelEstado: estadoCaraPorColor(color),
+          },
+        };
+      })
+    );
+  }
+
+  function alternarArcadaCompleta(arcada: "superior" | "inferior") {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+
+    const piezasArcada =
+      arcada === "superior"
+        ? ARCADA_SUPERIOR_COMPLETA
+        : ARCADA_INFERIOR_COMPLETA;
+
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actuales = pac.hc.piezasSeleccionadas || [];
+        const yaTodaSeleccionada = piezasArcada.every((cod) =>
+          actuales.includes(cod)
+        );
+
+        const siguientes = yaTodaSeleccionada
+          ? actuales.filter((cod) => !piezasArcada.includes(cod))
+          : Array.from(new Set([...actuales, ...piezasArcada]));
+
+        const piezaFoco = siguientes[siguientes.length - 1] || "";
+
+        setMensajeGuardado(
+          yaTodaSeleccionada
+            ? `Se deseleccionó la arcada ${arcada} completa.`
+            : `Arcada ${arcada} completa seleccionada (${piezasArcada.length} piezas). Ideal para prótesis total.`
+        );
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            piezaSeleccionada: piezaFoco,
+            piezasSeleccionadas: siguientes,
           },
         };
       })
@@ -1751,6 +1794,19 @@ export default function HomePage() {
     );
     const modoCarasActivo = esProcedimientoConCaras(hc.procedimientoActivo);
 
+    const superiorCompleta = ARCADA_SUPERIOR_COMPLETA.every((cod) =>
+      piezasSel.includes(cod)
+    );
+    const inferiorCompleta = ARCADA_INFERIOR_COMPLETA.every((cod) =>
+      piezasSel.includes(cod)
+    );
+
+    const procParaCargarCaras: "caries" | "restauracion" | undefined =
+      hc.procedimientoActivo === "caries" ||
+      hc.procedimientoActivo === "restauracion"
+        ? hc.procedimientoActivo
+        : undefined;
+
     return (
       <div className="border border-slate-200 rounded-2xl p-3.5 bg-cyan-50/50 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-100/90 border border-slate-200 rounded-xl px-3 py-2">
@@ -1766,7 +1822,7 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* 1. Recuadro aparte: Caries / por realizar y Restauración + botón Cargar */}
+        {/* 1. Recuadro aparte: Caries / por realizar y Restauración + un solo botón Cargar */}
         <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
@@ -1789,34 +1845,34 @@ export default function HomePage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div
-              className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${
-                hc.procedimientoActivo === "caries"
-                  ? "bg-slate-900 text-white border-slate-900"
-                  : "bg-slate-50/70 text-slate-800 border-slate-200"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  cambiarColorCarieORestauracion("caries", hc.colorCaries)
-                }
-                className="flex items-center gap-2 text-xs font-semibold text-left flex-1"
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+              <div
+                className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${
+                  hc.procedimientoActivo === "caries"
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-slate-50/70 text-slate-800 border-slate-200"
+                }`}
               >
-                <span
-                  className={`w-3 h-3 rounded-sm inline-block border ${
-                    hc.procedimientoActivo === "caries"
-                      ? "border-white"
-                      : "border-slate-300"
-                  } ${
-                    hc.colorCaries === "rojo" ? "bg-red-500" : "bg-blue-500"
-                  }`}
-                />
-                <span>Caries / por realizar</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    cambiarColorCarieORestauracion("caries", hc.colorCaries)
+                  }
+                  className="flex items-center gap-2 text-xs font-semibold text-left flex-1"
+                >
+                  <span
+                    className={`w-3 h-3 rounded-sm inline-block border ${
+                      hc.procedimientoActivo === "caries"
+                        ? "border-white"
+                        : "border-slate-300"
+                    } ${
+                      hc.colorCaries === "rojo" ? "bg-red-500" : "bg-blue-500"
+                    }`}
+                  />
+                  <span>Caries / por realizar</span>
+                </button>
 
-              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() =>
@@ -1825,7 +1881,7 @@ export default function HomePage() {
                       hc.colorCaries === "rojo" ? "azul" : "rojo"
                     )
                   }
-                  className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                  className={`rounded px-2 py-0.5 text-[11px] font-semibold border shrink-0 ${
                     hc.procedimientoActivo === "caries"
                       ? "bg-white/15 text-white border-white/30"
                       : "bg-white text-slate-700 border-slate-300"
@@ -1833,53 +1889,39 @@ export default function HomePage() {
                 >
                   {hc.colorCaries === "rojo" ? "Rojo" : "Azul"}
                 </button>
+              </div>
 
+              <div
+                className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${
+                  hc.procedimientoActivo === "restauracion"
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-slate-50/70 text-slate-800 border-slate-200"
+                }`}
+              >
                 <button
                   type="button"
-                  onClick={() => cargarInformacionSeleccionada("caries")}
-                  className={`rounded px-2.5 py-1 text-[11px] font-semibold border transition ${
-                    hc.procedimientoActivo === "caries"
-                      ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600"
-                      : "bg-slate-900 text-white border-slate-900 hover:bg-slate-800"
-                  }`}
+                  onClick={() =>
+                    cambiarColorCarieORestauracion(
+                      "restauracion",
+                      hc.colorRestauracion
+                    )
+                  }
+                  className="flex items-center gap-2 text-xs font-semibold text-left flex-1"
                 >
-                  Cargar
+                  <span
+                    className={`w-3 h-3 rounded-sm inline-block border ${
+                      hc.procedimientoActivo === "restauracion"
+                        ? "border-white"
+                        : "border-slate-300"
+                    } ${
+                      hc.colorRestauracion === "azul"
+                        ? "bg-blue-500"
+                        : "bg-red-500"
+                    }`}
+                  />
+                  <span>Restauración</span>
                 </button>
-              </div>
-            </div>
 
-            <div
-              className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${
-                hc.procedimientoActivo === "restauracion"
-                  ? "bg-slate-900 text-white border-slate-900"
-                  : "bg-slate-50/70 text-slate-800 border-slate-200"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  cambiarColorCarieORestauracion(
-                    "restauracion",
-                    hc.colorRestauracion
-                  )
-                }
-                className="flex items-center gap-2 text-xs font-semibold text-left flex-1"
-              >
-                <span
-                  className={`w-3 h-3 rounded-sm inline-block border ${
-                    hc.procedimientoActivo === "restauracion"
-                      ? "border-white"
-                      : "border-slate-300"
-                  } ${
-                    hc.colorRestauracion === "azul"
-                      ? "bg-blue-500"
-                      : "bg-red-500"
-                  }`}
-                />
-                <span>Restauración</span>
-              </button>
-
-              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() =>
@@ -1888,7 +1930,7 @@ export default function HomePage() {
                       hc.colorRestauracion === "azul" ? "rojo" : "azul"
                     )
                   }
-                  className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                  className={`rounded px-2 py-0.5 text-[11px] font-semibold border shrink-0 ${
                     hc.procedimientoActivo === "restauracion"
                       ? "bg-white/15 text-white border-white/30"
                       : "bg-white text-slate-700 border-slate-300"
@@ -1896,30 +1938,56 @@ export default function HomePage() {
                 >
                   {hc.colorRestauracion === "azul" ? "Azul" : "Rojo"}
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => cargarInformacionSeleccionada("restauracion")}
-                  className={`rounded px-2.5 py-1 text-[11px] font-semibold border transition ${
-                    hc.procedimientoActivo === "restauracion"
-                      ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600"
-                      : "bg-slate-900 text-white border-slate-900 hover:bg-slate-800"
-                  }`}
-                >
-                  Cargar
-                </button>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => cargarInformacionSeleccionada(procParaCargarCaras)}
+              className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-semibold shrink-0"
+            >
+              Cargar
+            </button>
           </div>
         </div>
 
-        {/* 2. Odontograma */}
+        {/* 2. Odontograma + Selección de arcada completa */}
         <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
               2. Odontograma — Piezas (
               {piezasSel.length > 0 ? `#${piezasSel.join(", #")}` : "ninguna"})
             </span>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => alternarArcadaCompleta("superior")}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border transition ${
+                  superiorCompleta
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                }`}
+              >
+                {superiorCompleta
+                  ? "✓ Arcada superior completa"
+                  : "Seleccionar arcada superior"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => alternarArcadaCompleta("inferior")}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border transition ${
+                  inferiorCompleta
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                }`}
+              >
+                {inferiorCompleta
+                  ? "✓ Arcada inferior completa"
+                  : "Seleccionar arcada inferior"}
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 bg-slate-50/80 border border-slate-200/80 rounded-lg px-2.5 py-1.5">
