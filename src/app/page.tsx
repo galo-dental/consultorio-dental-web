@@ -405,7 +405,7 @@ function piezaVacia(): EstadoPiezaMsp {
 }
 
 function hexPorColorMsp(color: ColorMsp): string {
-  return color === "azul" ? "#5b8def" : "#ef6b6b";
+  return color === "azul" ? "#2563eb" : "#dc2626";
 }
 
 function estadoCaraPorColor(color: ColorMsp): EstadoColorDiente {
@@ -547,7 +547,7 @@ function renderFiguraSimbolo(
         <circle
           cx="22"
           cy="22"
-          r="6"
+          r="6.5"
           fill={stroke}
           stroke="#ffffff"
           strokeWidth="1.4"
@@ -557,10 +557,10 @@ function renderFiguraSimbolo(
     case "restauracion":
       return (
         <rect
-          x="16"
-          y="16"
-          width="12"
-          height="12"
+          x="15.5"
+          y="15.5"
+          width="13"
+          height="13"
           rx="2"
           fill={stroke}
           stroke="#ffffff"
@@ -570,33 +570,36 @@ function renderFiguraSimbolo(
       );
     case "sellante":
       return (
-        <text
-          x="22"
-          y="40"
-          textAnchor="middle"
-          fontSize="48"
-          fontWeight="bold"
-          fill={stroke}
-          stroke="#ffffff"
-          strokeWidth="0.8"
-          pointerEvents="none"
-        >
-          *
-        </text>
+        <g stroke={stroke} strokeWidth="3.4" strokeLinecap="round" pointerEvents="none">
+          <line x1="22" y1="6" x2="22" y2="38" />
+          <line x1="8.1" y1="14" x2="35.9" y2="30" />
+          <line x1="35.9" y1="14" x2="8.1" y2="30" />
+        </g>
       );
     case "extraccion_perdida_caries":
       return (
-        <g stroke={stroke} strokeWidth="3.2" pointerEvents="none">
+        <g
+          stroke={stroke}
+          strokeWidth="3.6"
+          strokeLinecap="round"
+          pointerEvents="none"
+        >
           <line x1="6" y1="6" x2="38" y2="38" />
           <line x1="38" y1="6" x2="6" y2="38" />
         </g>
       );
     case "perdida_otra_causa":
       return (
-        <g stroke={stroke} strokeWidth="2.6" fill="none" pointerEvents="none">
-          <circle cx="22" cy="22" r="15" />
-          <line x1="11" y1="11" x2="33" y2="33" />
-          <line x1="33" y1="11" x2="11" y2="33" />
+        <g
+          stroke={stroke}
+          strokeWidth="3.2"
+          strokeLinecap="round"
+          fill="none"
+          pointerEvents="none"
+        >
+          <circle cx="22" cy="22" r="16" />
+          <line x1="10.5" y1="10.5" x2="33.5" y2="33.5" />
+          <line x1="33.5" y1="10.5" x2="10.5" y2="33.5" />
         </g>
       );
     case "endodoncia":
@@ -612,15 +615,15 @@ function renderFiguraSimbolo(
       );
     case "protesis_fija":
       return (
-        <g stroke={stroke} strokeWidth="2.5" fill="none" pointerEvents="none">
-          <circle cx="6" cy="22" r="3.2" />
+        <g stroke={stroke} strokeWidth="2.8" fill="none" pointerEvents="none">
+          <circle cx="6" cy="22" r="3.4" />
           <line x1="10" y1="22" x2="34" y2="22" strokeDasharray="3 2" />
-          <circle cx="38" cy="22" r="3.2" />
+          <circle cx="38" cy="22" r="3.4" />
         </g>
       );
     case "protesis_removible":
       return (
-        <g stroke={stroke} strokeWidth="2.5" fill="none" pointerEvents="none">
+        <g stroke={stroke} strokeWidth="2.8" fill="none" pointerEvents="none">
           <path d="M 9 8 Q 3 22 9 36" />
           <line x1="12" y1="22" x2="32" y2="22" strokeDasharray="3 2" />
           <path d="M 35 8 Q 41 22 35 36" />
@@ -628,21 +631,21 @@ function renderFiguraSimbolo(
       );
     case "protesis_total":
       return (
-        <g stroke={stroke} strokeWidth="3.2" pointerEvents="none">
+        <g stroke={stroke} strokeWidth="3.4" pointerEvents="none">
           <line x1="6" y1="16" x2="38" y2="16" />
           <line x1="6" y1="28" x2="38" y2="28" />
         </g>
       );
     case "corona":
       return (
-        <g stroke={stroke} strokeWidth="2.5" fill="none" pointerEvents="none">
+        <g stroke={stroke} strokeWidth="2.8" fill="none" pointerEvents="none">
           <rect x="5" y="5" width="34" height="34" />
           <rect x="12" y="12" width="20" height="20" />
         </g>
       );
     case "implante":
       return (
-        <g stroke={stroke} strokeWidth="3.2" fill="none" pointerEvents="none">
+        <g stroke={stroke} strokeWidth="3.4" fill="none" pointerEvents="none">
           <line x1="22" y1="6" x2="22" y2="38" />
           <line x1="10" y1="38" x2="34" y2="38" />
           <line x1="15" y1="15" x2="29" y2="15" />
@@ -651,7 +654,7 @@ function renderFiguraSimbolo(
       );
     case "ortodoncia":
       return (
-        <g stroke={stroke} strokeWidth="2.6" fill="none" pointerEvents="none">
+        <g stroke={stroke} strokeWidth="2.8" fill="none" pointerEvents="none">
           <rect x="10" y="10" width="24" height="24" rx="2" />
           <line x1="2" y1="22" x2="10" y2="22" />
           <line x1="34" y1="22" x2="42" y2="22" />
@@ -925,9 +928,6 @@ export default function HomePage() {
     );
   }
 
-  // Permite acumular múltiples procedimientos en una misma pieza.
-  // Si se repite el mismo procedimiento y color, lo retira; si es otro, lo suma.
-  // Nunca marca caras automáticamente.
   function tocarPiezaOdontograma(codigoPieza: string) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -986,7 +986,6 @@ export default function HomePage() {
     );
   }
 
-  // Únicamente Caries o Restauración marcan las caras de las piezas dentales.
   function marcarCaraPieza(pieza: string, cara: CaraDiente) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1579,12 +1578,12 @@ export default function HomePage() {
             onClick={() => seleccionarColorMsp("rojo")}
             className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "rojo"
-                ? "bg-red-400/90 text-white border-red-400"
-                : "bg-red-50/80 text-red-700 border-red-200"
+                ? "bg-red-600 text-white border-red-600"
+                : "bg-red-50 text-red-700 border-red-200"
             }`}
           >
-            <span className="w-3 h-3 rounded-sm bg-red-400 border border-white inline-block" />
-            Rojo suave (Por realizar)
+            <span className="w-3 h-3 rounded-sm bg-red-600 border border-white inline-block" />
+            Rojo (Por realizar)
           </button>
 
           <button
@@ -1592,12 +1591,12 @@ export default function HomePage() {
             onClick={() => seleccionarColorMsp("azul")}
             className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "azul"
-                ? "bg-blue-400/90 text-white border-blue-400"
-                : "bg-blue-50/80 text-blue-700 border-blue-200"
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-blue-50 text-blue-700 border-blue-200"
             }`}
           >
-            <span className="w-3 h-3 rounded-sm bg-blue-400 border border-white inline-block" />
-            Azul suave (Realizado)
+            <span className="w-3 h-3 rounded-sm bg-blue-600 border border-white inline-block" />
+            Azul (Realizado)
           </button>
 
           {permiteCaras && (
