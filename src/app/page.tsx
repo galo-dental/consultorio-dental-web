@@ -135,6 +135,8 @@ interface HistoriaClinicaCompleta {
   examenesComplementarios: string;
   fotos: RegistroFoto[];
   piezaSeleccionada: string;
+  piezasSeleccionadas: string[];
+  carasSeleccionadas: CaraDiente[];
   procedimientoActivo: TipoProcedimientoMsp;
   colorMspActivo: ColorMsp;
   pincelEstado: EstadoColorDiente;
@@ -332,7 +334,6 @@ const INF_IZQ_TEMP = ["71", "72", "73", "74", "75"];
 const INF_DER_PERM = ["48", "47", "46", "45", "44", "43", "42", "41"];
 const INF_IZQ_PERM = ["31", "32", "33", "34", "35", "36", "37", "38"];
 
-// Color tenue para las líneas de los diagramas dentales
 const LINEA_DIAGRAMA_TENUE = "#94a3b8";
 
 function esPiezaTemporal(codigoPieza: string): boolean {
@@ -405,7 +406,7 @@ function piezaVacia(): EstadoPiezaMsp {
 }
 
 function hexPorColorMsp(color: ColorMsp): string {
-  return color === "azul" ? "#2563eb" : "#dc2626";
+  return color === "azul" ? "#1d4ed8" : "#dc2626";
 }
 
 function estadoCaraPorColor(color: ColorMsp): EstadoColorDiente {
@@ -483,6 +484,8 @@ function crearHcVacia(
     examenesComplementarios: "",
     fotos: [],
     piezaSeleccionada: "16",
+    piezasSeleccionadas: ["16"],
+    carasSeleccionadas: [],
     procedimientoActivo: "ninguno",
     colorMspActivo: "rojo",
     pincelEstado: "por_realizar",
@@ -550,7 +553,7 @@ function renderFiguraSimbolo(
           r="6.5"
           fill={stroke}
           stroke="#ffffff"
-          strokeWidth="1.4"
+          strokeWidth="1.6"
           pointerEvents="none"
         />
       );
@@ -564,49 +567,59 @@ function renderFiguraSimbolo(
           rx="2"
           fill={stroke}
           stroke="#ffffff"
-          strokeWidth="1.4"
+          strokeWidth="1.6"
           pointerEvents="none"
         />
       );
     case "sellante":
       return (
-        <g stroke={stroke} strokeWidth="3.4" strokeLinecap="round" pointerEvents="none">
-          <line x1="22" y1="6" x2="22" y2="38" />
-          <line x1="8.1" y1="14" x2="35.9" y2="30" />
-          <line x1="35.9" y1="14" x2="8.1" y2="30" />
+        <g pointerEvents="none">
+          <g stroke="#ffffff" strokeWidth="6.2" strokeLinecap="round">
+            <line x1="22" y1="6" x2="22" y2="38" />
+            <line x1="8.1" y1="14" x2="35.9" y2="30" />
+            <line x1="35.9" y1="14" x2="8.1" y2="30" />
+          </g>
+          <g stroke={stroke} strokeWidth="3.6" strokeLinecap="round">
+            <line x1="22" y1="6" x2="22" y2="38" />
+            <line x1="8.1" y1="14" x2="35.9" y2="30" />
+            <line x1="35.9" y1="14" x2="8.1" y2="30" />
+          </g>
         </g>
       );
     case "extraccion_perdida_caries":
       return (
-        <g
-          stroke={stroke}
-          strokeWidth="3.6"
-          strokeLinecap="round"
-          pointerEvents="none"
-        >
-          <line x1="6" y1="6" x2="38" y2="38" />
-          <line x1="38" y1="6" x2="6" y2="38" />
+        <g pointerEvents="none">
+          <g stroke="#ffffff" strokeWidth="6.5" strokeLinecap="round">
+            <line x1="6" y1="6" x2="38" y2="38" />
+            <line x1="38" y1="6" x2="6" y2="38" />
+          </g>
+          <g stroke={stroke} strokeWidth="3.8" strokeLinecap="round">
+            <line x1="6" y1="6" x2="38" y2="38" />
+            <line x1="38" y1="6" x2="6" y2="38" />
+          </g>
         </g>
       );
     case "perdida_otra_causa":
       return (
-        <g
-          stroke={stroke}
-          strokeWidth="3.2"
-          strokeLinecap="round"
-          fill="none"
-          pointerEvents="none"
-        >
-          <circle cx="22" cy="22" r="16" />
-          <line x1="10.5" y1="10.5" x2="33.5" y2="33.5" />
-          <line x1="33.5" y1="10.5" x2="10.5" y2="33.5" />
+        <g fill="none" pointerEvents="none">
+          <g stroke="#ffffff" strokeWidth="6" strokeLinecap="round">
+            <circle cx="22" cy="22" r="15.5" />
+            <line x1="11" y1="11" x2="33" y2="33" />
+            <line x1="33" y1="11" x2="11" y2="33" />
+          </g>
+          <g stroke={stroke} strokeWidth="3.2" strokeLinecap="round">
+            <circle cx="22" cy="22" r="15.5" />
+            <line x1="11" y1="11" x2="33" y2="33" />
+            <line x1="33" y1="11" x2="11" y2="33" />
+          </g>
         </g>
       );
     case "endodoncia":
       return (
         <polygon
           points="22,4 40,39 4,39"
-          fill="none"
+          fill="#ffffff"
+          fillOpacity="0.85"
           stroke={stroke}
           strokeWidth="4.2"
           strokeLinejoin="round"
@@ -615,51 +628,144 @@ function renderFiguraSimbolo(
       );
     case "protesis_fija":
       return (
-        <g stroke={stroke} strokeWidth="2.8" fill="none" pointerEvents="none">
-          <circle cx="6" cy="22" r="3.4" />
-          <line x1="10" y1="22" x2="34" y2="22" strokeDasharray="3 2" />
-          <circle cx="38" cy="22" r="3.4" />
+        <g fill="none" pointerEvents="none">
+          <g stroke="#ffffff" strokeWidth="5.5" strokeLinecap="round">
+            <circle cx="6" cy="22" r="3.6" />
+            <line x1="10" y1="22" x2="34" y2="22" />
+            <circle cx="38" cy="22" r="3.6" />
+          </g>
+          <g stroke={stroke} strokeWidth="3" strokeLinecap="round">
+            <circle cx="6" cy="22" r="3.6" />
+            <line x1="10" y1="22" x2="34" y2="22" strokeDasharray="3 2" />
+            <circle cx="38" cy="22" r="3.6" />
+          </g>
         </g>
       );
     case "protesis_removible":
       return (
-        <g stroke={stroke} strokeWidth="2.8" fill="none" pointerEvents="none">
-          <path d="M 9 8 Q 3 22 9 36" />
-          <line x1="12" y1="22" x2="32" y2="22" strokeDasharray="3 2" />
-          <path d="M 35 8 Q 41 22 35 36" />
+        <g fill="none" pointerEvents="none">
+          <g stroke="#ffffff" strokeWidth="5.5" strokeLinecap="round">
+            <path d="M 9 8 Q 3 22 9 36" />
+            <line x1="12" y1="22" x2="32" y2="22" />
+            <path d="M 35 8 Q 41 22 35 36" />
+          </g>
+          <g stroke={stroke} strokeWidth="3" strokeLinecap="round">
+            <path d="M 9 8 Q 3 22 9 36" />
+            <line x1="12" y1="22" x2="32" y2="22" strokeDasharray="3 2" />
+            <path d="M 35 8 Q 41 22 35 36" />
+          </g>
         </g>
       );
     case "protesis_total":
       return (
-        <g stroke={stroke} strokeWidth="3.4" pointerEvents="none">
-          <line x1="6" y1="16" x2="38" y2="16" />
-          <line x1="6" y1="28" x2="38" y2="28" />
+        <g pointerEvents="none">
+          <g stroke="#ffffff" strokeWidth="6.2" strokeLinecap="round">
+            <line x1="5" y1="16" x2="39" y2="16" />
+            <line x1="5" y1="28" x2="39" y2="28" />
+          </g>
+          <g stroke={stroke} strokeWidth="3.6" strokeLinecap="round">
+            <line x1="5" y1="16" x2="39" y2="16" />
+            <line x1="5" y1="28" x2="39" y2="28" />
+          </g>
         </g>
       );
     case "corona":
       return (
-        <g stroke={stroke} strokeWidth="2.8" fill="none" pointerEvents="none">
-          <rect x="5" y="5" width="34" height="34" />
-          <rect x="12" y="12" width="20" height="20" />
+        <g fill="none" pointerEvents="none">
+          <g stroke="#ffffff" strokeWidth="5.5">
+            <rect x="5" y="5" width="34" height="34" />
+            <rect x="12" y="12" width="20" height="20" />
+          </g>
+          <g stroke={stroke} strokeWidth="3">
+            <rect x="5" y="5" width="34" height="34" />
+            <rect x="12" y="12" width="20" height="20" />
+          </g>
         </g>
       );
     case "implante":
       return (
-        <g stroke={stroke} strokeWidth="3.4" fill="none" pointerEvents="none">
-          <line x1="22" y1="6" x2="22" y2="38" />
-          <line x1="10" y1="38" x2="34" y2="38" />
-          <line x1="15" y1="15" x2="29" y2="15" />
-          <line x1="15" y1="23" x2="29" y2="23" />
+        <g fill="none" pointerEvents="none">
+          <line
+            x1="22"
+            y1="6"
+            x2="22"
+            y2="38"
+            stroke="#ffffff"
+            strokeWidth="6"
+          />
+          <line
+            x1="22"
+            y1="6"
+            x2="22"
+            y2="38"
+            stroke={stroke}
+            strokeWidth="3.4"
+          />
+          <line
+            x1="10"
+            y1="38"
+            x2="34"
+            y2="38"
+            stroke={stroke}
+            strokeWidth="3.4"
+          />
+          <line
+            x1="15"
+            y1="15"
+            x2="29"
+            y2="15"
+            stroke={stroke}
+            strokeWidth="3.4"
+          />
+          <line
+            x1="15"
+            y1="23"
+            x2="29"
+            y2="23"
+            stroke={stroke}
+            strokeWidth="3.4"
+          />
         </g>
       );
     case "ortodoncia":
       return (
-        <g stroke={stroke} strokeWidth="2.8" fill="none" pointerEvents="none">
-          <rect x="10" y="10" width="24" height="24" rx="2" />
-          <line x1="2" y1="22" x2="10" y2="22" />
-          <line x1="34" y1="22" x2="42" y2="22" />
-          <line x1="22" y1="10" x2="22" y2="34" />
-          <line x1="10" y1="22" x2="34" y2="22" />
+        <g fill="none" pointerEvents="none">
+          <rect
+            x="10"
+            y="10"
+            width="24"
+            height="24"
+            rx="2"
+            fill="#ffffff"
+            fillOpacity="0.85"
+            stroke={stroke}
+            strokeWidth="3"
+          />
+          <line x1="2" y1="22" x2="10" y2="22" stroke={stroke} strokeWidth="3" />
+          <line
+            x1="34"
+            y1="22"
+            x2="42"
+            y2="22"
+            stroke={stroke}
+            strokeWidth="3"
+          />
+          <line
+            x1="22"
+            y1="10"
+            x2="22"
+            y2="34"
+            stroke={stroke}
+            strokeWidth="3"
+          />
+          <line
+            x1="10"
+            y1="22"
+            x2="34"
+            y2="22"
+            stroke={stroke}
+            strokeWidth="3"
+          />
         </g>
       );
     default:
@@ -671,20 +777,24 @@ function renderSimbolosInternos(simbolos: SimboloAplicado[]) {
   const internos = (simbolos || []).filter((s) => !esSimboloExterno(s.tipo));
   if (internos.length === 0) return null;
 
-  return internos.map((sim, idx) => (
-    <g
-      key={`${sim.tipo}-${sim.color}-${idx}`}
-      transform={
-        internos.length > 1
-          ? `translate(${(idx - (internos.length - 1) / 2) * 3}, ${
-              (idx - (internos.length - 1) / 2) * 2
-            }) scale(0.85) translate(3, 3)`
-          : undefined
-      }
-    >
-      {renderFiguraSimbolo(sim.tipo, sim.color)}
+  return (
+    <g pointerEvents="none">
+      {internos.map((sim, idx) => (
+        <g
+          key={`${sim.tipo}-${sim.color}-${idx}`}
+          transform={
+            internos.length > 1
+              ? `translate(${(idx - (internos.length - 1) / 2) * 3}, ${
+                  (idx - (internos.length - 1) / 2) * 2
+                }) scale(0.85) translate(3, 3)`
+              : undefined
+          }
+        >
+          {renderFiguraSimbolo(sim.tipo, sim.color)}
+        </g>
+      ))}
     </g>
-  ));
+  );
 }
 
 function renderMarcadoresExternosPieza(
@@ -873,42 +983,7 @@ export default function HomePage() {
     );
   }
 
-  function seleccionarProcedimiento(
-    procedimiento: Exclude<TipoProcedimientoMsp, "ninguno">
-  ) {
-    if (!pacienteSeleccionadoId) return;
-    setMensajeGuardado(null);
-
-    setPacientes((prev) =>
-      prev.map((pac) => {
-        if (pac.id !== pacienteSeleccionadoId) return pac;
-        const esMismo = pac.hc.procedimientoActivo === procedimiento;
-        const siguienteProc: TipoProcedimientoMsp = esMismo
-          ? "ninguno"
-          : procedimiento;
-
-        const colorForzado: ColorMsp | null =
-          siguienteProc === "caries"
-            ? "rojo"
-            : siguienteProc === "restauracion"
-            ? "azul"
-            : null;
-
-        const colorFinal = colorForzado || pac.hc.colorMspActivo;
-
-        return {
-          ...pac,
-          hc: {
-            ...pac.hc,
-            procedimientoActivo: siguienteProc,
-            colorMspActivo: colorFinal,
-            pincelEstado: estadoCaraPorColor(colorFinal),
-          },
-        };
-      })
-    );
-  }
-
+  // 1) Seleccionar color
   function seleccionarColorMsp(color: ColorMsp) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -928,71 +1003,56 @@ export default function HomePage() {
     );
   }
 
-  function tocarPiezaOdontograma(codigoPieza: string) {
+  // 2) Seleccionar una o más piezas
+  function alternarSeleccionPieza(codigoPieza: string) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
 
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
-        const actualPieza = pac.hc.odontogramaMsp[codigoPieza] || piezaVacia();
-        const listaActual = actualPieza.simbolos || [];
-        const procActivo = pac.hc.procedimientoActivo;
-        const colorActivo = pac.hc.colorMspActivo;
+        const actuales = pac.hc.piezasSeleccionadas || [];
+        const existe = actuales.includes(codigoPieza);
+        let siguientes: string[];
 
-        if (procActivo === "ninguno") {
-          const ultimo = listaActual[listaActual.length - 1];
-          return {
-            ...pac,
-            hc: {
-              ...pac.hc,
-              piezaSeleccionada: codigoPieza,
-              colorMspActivo: ultimo?.color || colorActivo,
-              pincelEstado: ultimo?.color
-                ? estadoCaraPorColor(ultimo.color)
-                : pac.hc.pincelEstado,
-            },
-          };
+        if (existe) {
+          siguientes =
+            actuales.length > 1
+              ? actuales.filter((p) => p !== codigoPieza)
+              : actuales;
+        } else {
+          siguientes = [...actuales, codigoPieza];
         }
 
-        const existeMismo = listaActual.some(
-          (s) => s.tipo === procActivo && s.color === colorActivo
-        );
-
-        const siguientesSimbolos = existeMismo
-          ? listaActual.filter(
-              (s) => !(s.tipo === procActivo && s.color === colorActivo)
-            )
-          : [
-              ...listaActual.filter((s) => s.tipo !== procActivo),
-              { tipo: procActivo, color: colorActivo },
-            ];
+        const piezaFoco = existe
+          ? siguientes[siguientes.length - 1] || codigoPieza
+          : codigoPieza;
 
         return {
           ...pac,
           hc: {
             ...pac.hc,
-            piezaSeleccionada: codigoPieza,
-            odontogramaMsp: {
-              ...pac.hc.odontogramaMsp,
-              [codigoPieza]: {
-                ...actualPieza,
-                simbolos: siguientesSimbolos,
-              },
-            },
+            piezaSeleccionada: piezaFoco,
+            piezasSeleccionadas: siguientes,
           },
         };
       })
     );
   }
 
-  function marcarCaraPieza(pieza: string, cara: CaraDiente) {
+  // Seleccionar cara (solo útil cuando el procedimiento es Caries o Restauración)
+  function alternarSeleccionCara(pieza: string, cara: CaraDiente) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
 
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
+
+        const piezasActuales = pac.hc.piezasSeleccionadas || [];
+        const siguientesPiezas = piezasActuales.includes(pieza)
+          ? piezasActuales
+          : [...piezasActuales, pieza];
 
         if (!esProcedimientoConCaras(pac.hc.procedimientoActivo)) {
           return {
@@ -1000,107 +1060,201 @@ export default function HomePage() {
             hc: {
               ...pac.hc,
               piezaSeleccionada: pieza,
+              piezasSeleccionadas: siguientesPiezas,
             },
           };
         }
 
-        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
-        const estadoActual = actualPieza[cara];
-        const siguienteEstado: EstadoColorDiente =
-          estadoActual === pac.hc.pincelEstado ? "ninguno" : pac.hc.pincelEstado;
-
-        const nuevoSimbolo: SimboloAplicado = {
-          tipo: pac.hc.procedimientoActivo,
-          color: pac.hc.colorMspActivo,
-        };
-
-        const otrosSimbolos = (actualPieza.simbolos || []).filter(
-          (s) => s.tipo !== "caries" && s.tipo !== "restauracion"
-        );
+        const carasActuales = pac.hc.carasSeleccionadas || [];
+        const existeCara = carasActuales.includes(cara);
+        const siguientesCaras = existeCara
+          ? carasActuales.filter((c) => c !== cara)
+          : [...carasActuales, cara];
 
         return {
           ...pac,
           hc: {
             ...pac.hc,
             piezaSeleccionada: pieza,
-            odontogramaMsp: {
-              ...pac.hc.odontogramaMsp,
-              [pieza]: {
-                ...actualPieza,
-                [cara]: siguienteEstado,
-                simbolos: [...otrosSimbolos, nuevoSimbolo],
-              },
-            },
+            piezasSeleccionadas: siguientesPiezas,
+            carasSeleccionadas: siguientesCaras,
           },
         };
       })
     );
   }
 
-  function limpiarRegistroPieza(pieza: string) {
+  // 3) Seleccionar simbología o procedimiento
+  function seleccionarProcedimiento(
+    procedimiento: Exclude<TipoProcedimientoMsp, "ninguno">
+  ) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
+
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
-        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+        const esMismo = pac.hc.procedimientoActivo === procedimiento;
+        const siguienteProc: TipoProcedimientoMsp = esMismo
+          ? "ninguno"
+          : procedimiento;
+
         return {
           ...pac,
           hc: {
             ...pac.hc,
-            odontogramaMsp: {
-              ...pac.hc.odontogramaMsp,
-              [pieza]: {
-                ...actualPieza,
-                O: "ninguno",
-                V: "ninguno",
-                L: "ninguno",
-                M: "ninguno",
-                D: "ninguno",
-                simbolos: [],
-              },
-            },
+            procedimientoActivo: siguienteProc,
+            carasSeleccionadas: esProcedimientoConCaras(siguienteProc)
+              ? pac.hc.carasSeleccionadas
+              : [],
           },
         };
       })
     );
   }
 
-  function marcarPiezaCompleta(pieza: string) {
+  // 4) Botón CARGAR: aplica el color y simbología a todas las piezas seleccionadas
+  function cargarInformacionSeleccionada() {
     if (!pacienteSeleccionadoId) return;
-    setMensajeGuardado(null);
+
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
-        if (!esProcedimientoConCaras(pac.hc.procedimientoActivo)) return pac;
+        const procActivo = pac.hc.procedimientoActivo;
+        const colorActivo = pac.hc.colorMspActivo;
+        const piezasTarget =
+          pac.hc.piezasSeleccionadas && pac.hc.piezasSeleccionadas.length > 0
+            ? pac.hc.piezasSeleccionadas
+            : [pac.hc.piezaSeleccionada];
 
-        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
-        const color = pac.hc.pincelEstado;
-        const nuevoSimbolo: SimboloAplicado = {
-          tipo: pac.hc.procedimientoActivo,
-          color: pac.hc.colorMspActivo,
-        };
-        const otrosSimbolos = (actualPieza.simbolos || []).filter(
-          (s) => s.tipo !== "caries" && s.tipo !== "restauracion"
+        if (procActivo === "ninguno") {
+          setMensajeGuardado(
+            "Selecciona primero una simbología o procedimiento antes de pulsar Cargar."
+          );
+          return pac;
+        }
+
+        const esCaras = esProcedimientoConCaras(procActivo);
+        const carasTarget: CaraDiente[] = esCaras
+          ? pac.hc.carasSeleccionadas.length > 0
+            ? pac.hc.carasSeleccionadas
+            : ["O", "V", "L", "M", "D"]
+          : [];
+
+        const nuevoOdontograma = { ...pac.hc.odontogramaMsp };
+        const estadoCara = estadoCaraPorColor(colorActivo);
+
+        for (const cod of piezasTarget) {
+          const actualPieza = nuevoOdontograma[cod] || piezaVacia();
+          const listaActual = actualPieza.simbolos || [];
+
+          const simbolosSinDuplicado = listaActual.filter(
+            (s) => s.tipo !== procActivo
+          );
+          const siguientesSimbolos: SimboloAplicado[] = [
+            ...simbolosSinDuplicado,
+            { tipo: procActivo, color: colorActivo },
+          ];
+
+          const actualizada: EstadoPiezaMsp = {
+            ...actualPieza,
+            simbolos: siguientesSimbolos,
+          };
+
+          if (esCaras) {
+            for (const c of carasTarget) {
+              actualizada[c] = estadoCara;
+            }
+          }
+
+          nuevoOdontograma[cod] = actualizada;
+        }
+
+        const nombreProc =
+          PROCEDIMIENTOS_MSP.find((p) => p.id === procActivo)?.titulo ||
+          procActivo;
+        setMensajeGuardado(
+          `Cargado: ${nombreProc} (${
+            colorActivo === "azul" ? "Azul - Realizado" : "Rojo - Por realizar"
+          }) en pieza(s) #${piezasTarget.join(", #")}.`
         );
 
         return {
           ...pac,
           hc: {
             ...pac.hc,
-            piezaSeleccionada: pieza,
-            odontogramaMsp: {
-              ...pac.hc.odontogramaMsp,
-              [pieza]: {
-                ...actualPieza,
-                O: color,
-                V: color,
-                L: color,
-                M: color,
-                D: color,
-                simbolos: [...otrosSimbolos, nuevoSimbolo],
-              },
-            },
+            odontogramaMsp: nuevoOdontograma,
+            carasSeleccionadas: [],
+          },
+        };
+      })
+    );
+  }
+
+  // 5) Botón BORRAR: quita el procedimiento activo o limpia las piezas seleccionadas
+  function borrarInformacionSeleccionada() {
+    if (!pacienteSeleccionadoId) return;
+
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const procActivo = pac.hc.procedimientoActivo;
+        const piezasTarget =
+          pac.hc.piezasSeleccionadas && pac.hc.piezasSeleccionadas.length > 0
+            ? pac.hc.piezasSeleccionadas
+            : [pac.hc.piezaSeleccionada];
+
+        const nuevoOdontograma = { ...pac.hc.odontogramaMsp };
+
+        for (const cod of piezasTarget) {
+          const actualPieza = nuevoOdontograma[cod] || piezaVacia();
+
+          if (procActivo !== "ninguno") {
+            const filtrados = (actualPieza.simbolos || []).filter(
+              (s) => s.tipo !== procActivo
+            );
+            const limpiaCaras =
+              esProcedimientoConCaras(procActivo) &&
+              !filtrados.some((s) => esProcedimientoConCaras(s.tipo));
+
+            nuevoOdontograma[cod] = {
+              ...actualPieza,
+              simbolos: filtrados,
+              O: limpiaCaras ? "ninguno" : actualPieza.O,
+              V: limpiaCaras ? "ninguno" : actualPieza.V,
+              L: limpiaCaras ? "ninguno" : actualPieza.L,
+              M: limpiaCaras ? "ninguno" : actualPieza.M,
+              D: limpiaCaras ? "ninguno" : actualPieza.D,
+            };
+          } else {
+            nuevoOdontograma[cod] = {
+              ...actualPieza,
+              O: "ninguno",
+              V: "ninguno",
+              L: "ninguno",
+              M: "ninguno",
+              D: "ninguno",
+              simbolos: [],
+            };
+          }
+        }
+
+        const detalleBorrado =
+          procActivo !== "ninguno"
+            ? `Se quitó ${
+                PROCEDIMIENTOS_MSP.find((p) => p.id === procActivo)?.titulo
+              } de pieza(s) #${piezasTarget.join(", #")}.`
+            : `Se limpiaron los registros de pieza(s) #${piezasTarget.join(
+                ", #"
+              )}.`;
+        setMensajeGuardado(detalleBorrado);
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            odontogramaMsp: nuevoOdontograma,
+            carasSeleccionadas: [],
           },
         };
       })
@@ -1326,7 +1480,9 @@ export default function HomePage() {
   function renderDienteMsp(codigoPieza: string, hc: HistoriaClinicaCompleta) {
     const d = hc.odontogramaMsp[codigoPieza] || piezaVacia();
     const simbolos = d.simbolos || [];
-    const seleccionada = hc.piezaSeleccionada === codigoPieza;
+    const seleccionada =
+      (hc.piezasSeleccionadas || []).includes(codigoPieza) ||
+      hc.piezaSeleccionada === codigoPieza;
     const temporal = esPiezaTemporal(codigoPieza);
     const superior = esArcadaSuperior(codigoPieza);
     const caras = carasPorPieza(codigoPieza);
@@ -1334,12 +1490,12 @@ export default function HomePage() {
     return (
       <div
         key={codigoPieza}
-        onClick={() => tocarPiezaOdontograma(codigoPieza)}
+        onClick={() => alternarSeleccionPieza(codigoPieza)}
         className={`flex flex-col items-center p-1 border cursor-pointer ${
           temporal ? "rounded-2xl" : "rounded-lg"
         } ${
           seleccionada
-            ? "border-slate-400 bg-slate-100/80 ring-1 ring-slate-400"
+            ? "border-slate-500 bg-slate-100 ring-1 ring-slate-400"
             : "border-transparent hover:border-slate-200"
         }`}
       >
@@ -1368,7 +1524,7 @@ export default function HomePage() {
                 strokeWidth="1.2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.arriba);
+                  alternarSeleccionCara(codigoPieza, caras.arriba);
                 }}
               />
               <path
@@ -1378,7 +1534,7 @@ export default function HomePage() {
                 strokeWidth="1.2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.abajo);
+                  alternarSeleccionCara(codigoPieza, caras.abajo);
                 }}
               />
               <path
@@ -1388,7 +1544,7 @@ export default function HomePage() {
                 strokeWidth="1.2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.izq);
+                  alternarSeleccionCara(codigoPieza, caras.izq);
                 }}
               />
               <path
@@ -1398,7 +1554,7 @@ export default function HomePage() {
                 strokeWidth="1.2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.der);
+                  alternarSeleccionCara(codigoPieza, caras.der);
                 }}
               />
               <circle
@@ -1410,7 +1566,7 @@ export default function HomePage() {
                 strokeWidth="1.2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, "O");
+                  alternarSeleccionCara(codigoPieza, "O");
                 }}
               />
             </>
@@ -1423,7 +1579,7 @@ export default function HomePage() {
                 strokeWidth="1.3"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.arriba);
+                  alternarSeleccionCara(codigoPieza, caras.arriba);
                 }}
               />
               <polygon
@@ -1433,7 +1589,7 @@ export default function HomePage() {
                 strokeWidth="1.3"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.abajo);
+                  alternarSeleccionCara(codigoPieza, caras.abajo);
                 }}
               />
               <polygon
@@ -1443,7 +1599,7 @@ export default function HomePage() {
                 strokeWidth="1.3"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.izq);
+                  alternarSeleccionCara(codigoPieza, caras.izq);
                 }}
               />
               <polygon
@@ -1453,7 +1609,7 @@ export default function HomePage() {
                 strokeWidth="1.3"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.der);
+                  alternarSeleccionCara(codigoPieza, caras.der);
                 }}
               />
               <rect
@@ -1466,7 +1622,7 @@ export default function HomePage() {
                 strokeWidth="1.3"
                 onClick={(e) => {
                   e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, "O");
+                  alternarSeleccionCara(codigoPieza, "O");
                 }}
               />
             </>
@@ -1508,69 +1664,27 @@ export default function HomePage() {
     const procActualObj = PROCEDIMIENTOS_MSP.find(
       (p) => p.id === hc.procedimientoActivo
     );
-    const permiteCaras = esProcedimientoConCaras(hc.procedimientoActivo);
+    const piezasSel =
+      hc.piezasSeleccionadas && hc.piezasSeleccionadas.length > 0
+        ? hc.piezasSeleccionadas
+        : [hc.piezaSeleccionada];
 
     return (
       <div className="border border-slate-200 rounded-2xl p-3.5 bg-cyan-50/50 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-100/90 border border-slate-200 rounded-xl px-3 py-2">
           <p className="text-xs font-semibold text-slate-700">
-            FLUJO MSP 033: 1) SÍMBOLO / PROCEDIMIENTO · 2) COLOR · 3) PIEZA O CARA
+            FLUJO: 1) COLOR · 2) PIEZA(S) · 3) SIMBOLOGÍA · 4) CARGAR / BORRAR
           </p>
           <span className="text-xs text-slate-600">
-            Pieza: <strong>#{hc.piezaSeleccionada}</strong>
+            Piezas: <strong>#{piezasSel.join(", #")}</strong>
             {descripcionPieza ? ` · ${descripcionPieza}` : ""}
           </span>
         </div>
 
-        {/* Paso 1: Simbología o procedimiento */}
-        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-slate-700">
-              1. Selecciona simbología o procedimiento (se acumulan en la pieza)
-              {procActualObj
-                ? ` · ${procActualObj.titulo} (${
-                    hc.colorMspActivo === "rojo" ? "Rojo" : "Azul"
-                  })`
-                : ""}
-            </span>
-            <span className="text-[11px] text-slate-500">
-              Caras solo en Caries / Restauración
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
-            {PROCEDIMIENTOS_MSP.map((proc) => {
-              const seleccionado = hc.procedimientoActivo === proc.id;
-
-              return (
-                <button
-                  key={proc.id}
-                  type="button"
-                  onClick={() => seleccionarProcedimiento(proc.id)}
-                  className={`flex items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition ${
-                    seleccionado
-                      ? "bg-slate-800 text-white border-slate-800 font-semibold"
-                      : "bg-slate-50/70 text-slate-700 border-slate-200 hover:bg-slate-100"
-                  }`}
-                >
-                  <span className="truncate">{proc.titulo}</span>
-                  <span
-                    className={`font-bold shrink-0 ${
-                      seleccionado ? "text-white" : "text-slate-500"
-                    }`}
-                  >
-                    {proc.muestra}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Paso 2: Color Rojo o Azul */}
+        {/* Paso 1: Color */}
         <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
           <span className="text-xs font-semibold text-slate-700 mr-1">
-            2. Color activo:
+            1. Color:
           </span>
 
           <button
@@ -1599,31 +1713,20 @@ export default function HomePage() {
             Azul (Realizado)
           </button>
 
-          {permiteCaras && (
-            <button
-              type="button"
-              onClick={() => marcarPiezaCompleta(hc.piezaSeleccionada)}
-              className="ml-auto rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
-            >
-              Pintar pieza #{hc.piezaSeleccionada} completa
-            </button>
-          )}
+          <span className="ml-auto text-[11px] text-slate-500">
+            Caras solo en Caries / Restauración
+          </span>
         </div>
 
-        {/* Paso 3: Odontograma con líneas tenues */}
+        {/* Paso 2: Selección de piezas */}
         <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
-              3. Toca la pieza o sus caras en el odontograma (activa: #
-              {hc.piezaSeleccionada})
+              2. Selecciona una o más piezas (#{piezasSel.join(", #")})
+              {hc.carasSeleccionadas.length > 0
+                ? ` · Caras: ${hc.carasSeleccionadas.join(", ")}`
+                : ""}
             </span>
-            <button
-              type="button"
-              onClick={() => limpiarRegistroPieza(hc.piezaSeleccionada)}
-              className="rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600"
-            >
-              Limpiar pieza #{hc.piezaSeleccionada}
-            </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 bg-slate-50/80 border border-slate-200/80 rounded-lg px-2.5 py-1.5">
@@ -1714,6 +1817,66 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Paso 3: Simbología o procedimiento */}
+        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-700">
+              3. Simbología o procedimiento
+              {procActualObj
+                ? ` · ${procActualObj.titulo} (${
+                    hc.colorMspActivo === "rojo" ? "Rojo" : "Azul"
+                  })`
+                : ""}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
+            {PROCEDIMIENTOS_MSP.map((proc) => {
+              const seleccionado = hc.procedimientoActivo === proc.id;
+
+              return (
+                <button
+                  key={proc.id}
+                  type="button"
+                  onClick={() => seleccionarProcedimiento(proc.id)}
+                  className={`flex items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition ${
+                    seleccionado
+                      ? "bg-slate-800 text-white border-slate-800 font-semibold"
+                      : "bg-slate-50/70 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="truncate">{proc.titulo}</span>
+                  <span
+                    className={`font-bold shrink-0 ${
+                      seleccionado ? "text-white" : "text-slate-500"
+                    }`}
+                  >
+                    {proc.muestra}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Paso 4: Botones Cargar y Borrar */}
+          <div className="pt-2 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={borrarInformacionSeleccionada}
+              className="rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 px-3.5 py-2 text-xs font-semibold"
+            >
+              Borrar
+            </button>
+            <button
+              type="button"
+              onClick={cargarInformacionSeleccionada}
+              className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-semibold"
+            >
+              Cargar
+            </button>
           </div>
         </div>
 
