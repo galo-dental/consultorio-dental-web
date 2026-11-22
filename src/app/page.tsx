@@ -3093,4 +3093,449 @@ export default function HomePage() {
                       </div>
 
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Tejidos blandos
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {OPCIONES_TEJIDOS_BLANDOS.map((op) => {
+                            const marcada =
+                              pacienteActivo.hc.tejidosBlandos.includes(op);
+                            return (
+                              <label
+                                key={op}
+                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={marcada}
+                                  onChange={() =>
+                                    toggleChecklistClinico(
+                                      "tejidosBlandos",
+                                      "detalleTejidosBlandos",
+                                      op
+                                    )
+                                  }
+                                  className="rounded border-slate-300"
+                                />
+                                <span>{op}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {pacienteActivo.hc.tejidosBlandos.includes("Otros") && (
+                          <div className="pt-1">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Detallar tejidos blandos (Otros)
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.detalleTejidosBlandos}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "detalleTejidosBlandos",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba los hallazgos en tejidos blandos..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Índice CPOD
+                          </label>
+                          <span className="text-xs font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
+                            Total CPOD: {calcularTotalCpod(pacienteActivo.hc)}
+                          </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs border-collapse bg-white rounded-lg overflow-hidden">
+                            <thead>
+                              <tr className="bg-slate-100 text-slate-700">
+                                <th className="border border-slate-200 px-3 py-2 text-center">
+                                  C (Cariados)
+                                </th>
+                                <th className="border border-slate-200 px-3 py-2 text-center">
+                                  P (Perdidos)
+                                </th>
+                                <th className="border border-slate-200 px-3 py-2 text-center">
+                                  O (Obturados)
+                                </th>
+                                <th className="border border-slate-200 px-3 py-2 text-center">
+                                  Total CPOD
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td className="border border-slate-200 p-2 text-center">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={pacienteActivo.hc.cpodCariados}
+                                    onChange={(e) =>
+                                      actualizarCampoHc(
+                                        "cpodCariados",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
+                                  />
+                                </td>
+                                <td className="border border-slate-200 p-2 text-center">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={pacienteActivo.hc.cpodPerdidos}
+                                    onChange={(e) =>
+                                      actualizarCampoHc(
+                                        "cpodPerdidos",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
+                                  />
+                                </td>
+                                <td className="border border-slate-200 p-2 text-center">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={pacienteActivo.hc.cpodObturados}
+                                    onChange={(e) =>
+                                      actualizarCampoHc(
+                                        "cpodObturados",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
+                                  />
+                                </td>
+                                <td className="border border-slate-200 p-2 text-center font-semibold text-slate-900">
+                                  {calcularTotalCpod(pacienteActivo.hc)}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-medium text-slate-600">
+                          Oclusión / Llave de Angle
+                        </label>
+                        <select
+                          value={pacienteActivo.hc.oclusionLlaveAngle}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "oclusionLlaveAngle",
+                              e.target.value
+                            )
+                          }
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="">Seleccionar clasificación</option>
+                          {OPCIONES_OCLUSION_ANGLE.map((op) => (
+                            <option key={op} value={op}>
+                              {op}
+                            </option>
+                          ))}
+                        </select>
+                        {pacienteActivo.hc.oclusionLlaveAngle === "Otros" && (
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.detalleOclusionAngle}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "detalleOclusionAngle",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Detallar clasificación o relación oclusal..."
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {seccionHc === "examenes" && (
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Exámenes complementarios (radiografías, fotografías
+                          clínicas, tomografías, laboratorio)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={pacienteActivo.hc.examenesComplementarios}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "examenesComplementarios",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      {renderOdontogramaMsp(pacienteActivo.hc)}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-800">
+                          Tomar foto con cámara
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+
+                        <label className="cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-100">
+                          Adjuntar foto o imagen
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {pacienteActivo.hc.fotos.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {pacienteActivo.hc.fotos.map((foto) => (
+                            <div
+                              key={foto.id}
+                              className="border border-slate-200 rounded-xl overflow-hidden bg-white"
+                            >
+                              <img
+                                src={foto.dataUrl}
+                                alt={foto.nombreArchivo}
+                                className="w-full h-36 object-cover bg-slate-100"
+                              />
+                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
+                                <div className="truncate">
+                                  <p className="font-medium text-slate-800 truncate">
+                                    {foto.nombreArchivo}
+                                  </p>
+                                  <p className="text-slate-500">{foto.fecha}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarFoto(foto.id)}
+                                  className="text-red-600 hover:underline shrink-0"
+                                >
+                                  Quitar
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {seccionHc === "diagnostico" && (
+                    <div className="space-y-3 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Código CIE-10
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.codigoCie10}
+                            onChange={(e) =>
+                              actualizarCampoHc("codigoCie10", e.target.value)
+                            }
+                            placeholder="Ej. K02.1 (Caries de la dentina)"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Diagnóstico presuntivo o definitivo (CIE-10)
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.diagnostico}
+                            onChange={(e) =>
+                              actualizarCampoHc("diagnostico", e.target.value)
+                            }
+                            placeholder="Diagnóstico clínico según CIE-10"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Plan de tratamiento
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pacienteActivo.hc.planTratamiento}
+                          onChange={(e) =>
+                            actualizarCampoHc("planTratamiento", e.target.value)
+                          }
+                          placeholder="Secuencia de tratamientos y citas propuestas"
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {seccionHc === "odontograma" && (
+                    <div className="space-y-4 text-sm">
+                      {renderOdontogramaMsp(pacienteActivo.hc)}
+
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Resumen general del odontograma
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pacienteActivo.hc.notasOdontograma}
+                          onChange={(e) =>
+                            actualizarCampoHc("notasOdontograma", e.target.value)
+                          }
+                          placeholder="Notas generales de piezas, restauraciones o patologías..."
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Periodontograma
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={pacienteActivo.hc.notasPeriodontograma}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "notasPeriodontograma",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Profundidad de sondaje, sangrado al sondaje, movilidad dental, margen gingival..."
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMensajeGuardado(
+                          "Cambios aplicados en la ficha clínica activa."
+                        )
+                      }
+                      className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-medium hover:bg-slate-800"
+                    >
+                      Confirmar registro de esta sección
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {moduloActivo === "agenda" && (
+            <div className="space-y-4">
+              <form
+                onSubmit={agregarCita}
+                className="grid grid-cols-1 sm:grid-cols-4 gap-2"
+              >
+                <input
+                  type="text"
+                  required
+                  value={pacienteCita}
+                  onChange={(e) => setPacienteCita(e.target.value)}
+                  placeholder="Nombre del paciente"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <input
+                  type="text"
+                  required
+                  value={motivoCita}
+                  onChange={(e) => setMotivoCita(e.target.value)}
+                  placeholder="Motivo de cita"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <input
+                  type="time"
+                  value={horaCita}
+                  onChange={(e) => setHoraCita(e.target.value)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-medium"
+                >
+                  Agregar cita
+                </button>
+              </form>
+
+              <ul className="divide-y divide-slate-100">
+                {citas.map((cita) => (
+                  <li
+                    key={cita.id}
+                    className="py-2.5 flex items-center justify-between gap-2 text-sm"
+                  >
+                    <div>
+                      <strong className="text-slate-900">{cita.hora}</strong> —{" "}
+                      {cita.paciente} ({cita.motivo})
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCitas((prev) =>
+                          prev.map((item) =>
+                            item.id === cita.id
+                              ? { ...item, confirmada: !item.confirmada }
+                              : item
+                          )
+                        )
+                      }
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                        cita.confirmada
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {cita.confirmada ? "Confirmada" : "Marcar recordatorio"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {(moduloActivo === "pagos" || moduloActivo === "inventario") && (
+            <p className="text-sm text-slate-600">
+              Este módulo ya tiene su vista abierta y lista para añadirle
+              campos. Dime si quieres que armemos primero{" "}
+              {moduloActivo === "pagos"
+                ? "el registro de presupuestos y abonos"
+                : "el control de insumos y cantidades"}
+              .
+            </p>
+          )}
+        </section>
+      )}
+    </main>
+  );
+} 
