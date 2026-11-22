@@ -11,17 +11,26 @@ interface Perfil {
   nombre_completo?: string | null;
 }
 
+function inferirRolRespaldo(email?: string | null): RolUsuario {
+  const limpio = (email || "").toLowerCase();
+  if (limpio.includes("asistente")) return "asistente";
+  if (limpio.includes("recep")) return "recepcionista";
+  return "odontologo";
+}
+
 export default function HomePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [avisoPerfil, setAvisoPerfil] = useState<string | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
 
   async function cargarSesion() {
     setLoading(true);
     setErrorMsg(null);
+    setAvisoPerfil(null);
 
     const {
       data: { user },
@@ -38,13 +47,23 @@ export default function HomePage() {
       .from("perfiles")
       .select("id, rol, nombre_completo")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      setErrorMsg("Sesión iniciada, pero no se pudo leer el rol en perfiles.");
-      setPerfil(null);
+    if (error || !data) {
+      setPerfil({
+        id: user.id,
+        rol: inferirRolRespaldo(user.email),
+        nombre_completo: user.email || "Usuario del Consultorio",
+      });
+      setAvisoPerfil(
+        "Acceso concedido con rol temporal (no se pudo leer la fila en perfiles)."
+      );
     } else {
-      setPerfil(data);
+      setPerfil({
+        id: data.id,
+        rol: data.rol || inferirRolRespaldo(user.email),
+        nombre_completo: data.nombre_completo || user.email || "Panel del Consultorio",
+      });
     }
 
     setLoading(false);
@@ -77,6 +96,7 @@ export default function HomePage() {
   async function handleLogout() {
     await supabase.auth.signOut();
     setPerfil(null);
+    setAvisoPerfil(null);
     setPassword("");
   }
 
@@ -157,6 +177,9 @@ export default function HomePage() {
           <h1 className="text-lg font-semibold text-slate-900">
             {perfil.nombre_completo || "Panel del Consultorio"}
           </h1>
+          {avisoPerfil && (
+            <p className="text-xs text-amber-700 mt-1">{avisoPerfil}</p>
+          )}
         </div>
 
         <button
