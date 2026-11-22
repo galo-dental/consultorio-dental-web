@@ -36,7 +36,9 @@ type TipoProcedimientoMsp =
   | "protesis_fija"
   | "protesis_removible"
   | "protesis_total"
-  | "corona";
+  | "corona"
+  | "implante"
+  | "ortodoncia";
 
 interface SimboloAplicado {
   tipo: Exclude<TipoProcedimientoMsp, "ninguno">;
@@ -292,8 +294,8 @@ const PROCEDIMIENTOS_MSP: {
   titulo: string;
   muestra: string;
 }[] = [
-  { id: "caries", titulo: "Caries", muestra: "●/○" },
-  { id: "restauracion", titulo: "Restauración", muestra: "■/●" },
+  { id: "caries", titulo: "Caries", muestra: "●" },
+  { id: "restauracion", titulo: "Restauración", muestra: "■" },
   { id: "sellante", titulo: "Sellante", muestra: "*" },
   {
     id: "extraccion_perdida_caries",
@@ -314,6 +316,8 @@ const PROCEDIMIENTOS_MSP: {
   },
   { id: "protesis_total", titulo: "Prótesis total", muestra: "=" },
   { id: "corona", titulo: "Corona", muestra: "▣" },
+  { id: "implante", titulo: "Implante", muestra: "⊥" },
+  { id: "ortodoncia", titulo: "Ortodoncia", muestra: "⊞" },
 ];
 
 const SUP_DER_PERM = ["18", "17", "16", "15", "14", "13", "12", "11"];
@@ -355,9 +359,10 @@ function esArcadaSuperior(codigoPieza: string): boolean {
   );
 }
 
-// Orientación anatómica de cada cara del SVG según pieza y cuadrante:
-// En piezas temporales centrales (55-65 y 85-75), la cara hacia el centro/plano oclusal
-// actúa como L/P (lingual/palatino) y la exterior hacia el borde libre como V (vestibular).
+// Orientación clara:
+// - Lado izquierdo visual ("izq"): M en cuadrante derecho, D en cuadrante izquierdo
+// - Lado derecho visual ("der"): D en cuadrante derecho, M en cuadrante izquierdo
+// - Arriba ("arriba") y abajo ("abajo"): V / L según arcada superior o inferior
 function carasPorPieza(codigoPieza: string): {
   arriba: CaraDiente;
   abajo: CaraDiente;
@@ -365,30 +370,13 @@ function carasPorPieza(codigoPieza: string): {
   der: CaraDiente;
 } {
   const superior = esArcadaSuperior(codigoPieza);
-  const temporal = esPiezaTemporal(codigoPieza);
   const derecho = esCuadranteDerecho(codigoPieza);
-
-  // Mesial apunta siempre hacia la línea media vertical (derecha en cuadrante derecho, izquierda en izquierdo)
-  const izq: CaraDiente = derecho ? "D" : "M";
-  const der: CaraDiente = derecho ? "M" : "D";
-
-  if (temporal) {
-    // En la referencia central:
-    // Superior temporal (55-65): arriba = V, abajo = L/P (hacia plano oclusal)
-    // Inferior temporal (85-75): arriba = L/P (hacia plano oclusal), abajo = V
-    return {
-      arriba: superior ? "V" : "L",
-      abajo: superior ? "L" : "V",
-      izq,
-      der,
-    };
-  }
 
   return {
     arriba: superior ? "V" : "L",
     abajo: superior ? "L" : "V",
-    izq,
-    der,
+    izq: derecho ? "M" : "D",
+    der: derecho ? "D" : "M",
   };
 }
 
@@ -405,8 +393,9 @@ function piezaVacia(): EstadoPiezaMsp {
   };
 }
 
+// Colores rojo y azul con intensidad suave (tenue)
 function hexPorColorMsp(color: ColorMsp): string {
-  return color === "azul" ? "#2563eb" : "#dc2626";
+  return color === "azul" ? "#5b8def" : "#ef6b6b";
 }
 
 function estadoCaraPorColor(color: ColorMsp): EstadoColorDiente {
@@ -414,8 +403,8 @@ function estadoCaraPorColor(color: ColorMsp): EstadoColorDiente {
 }
 
 function fillPorEstado(estado: EstadoColorDiente): string {
-  if (estado === "realizado") return "#2563eb";
-  if (estado === "por_realizar") return "#dc2626";
+  if (estado === "realizado") return "#93c5fd";
+  if (estado === "por_realizar") return "#fca5a5";
   return "#ffffff";
 }
 
@@ -542,7 +531,7 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
         <circle
           cx="22"
           cy="22"
-          r="5.5"
+          r="6"
           fill={stroke}
           stroke="#ffffff"
           strokeWidth="1.4"
@@ -552,10 +541,10 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
     case "restauracion":
       return (
         <rect
-          x="16.5"
-          y="16.5"
-          width="11"
-          height="11"
+          x="16"
+          y="16"
+          width="12"
+          height="12"
           rx="2"
           fill={stroke}
           stroke="#ffffff"
@@ -564,14 +553,17 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
         />
       );
     case "sellante":
+      // Símbolo grande que abarca prácticamente la totalidad del cuadro dental
       return (
         <text
           x="22"
-          y="28"
+          y="36.5"
           textAnchor="middle"
-          fontSize="21"
+          fontSize="41"
           fontWeight="bold"
           fill={stroke}
+          stroke="#ffffff"
+          strokeWidth="0.9"
           pointerEvents="none"
         >
           *
@@ -580,56 +572,77 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
     case "extraccion_perdida_caries":
       return (
         <g stroke={stroke} strokeWidth="3.2" pointerEvents="none">
-          <line x1="8" y1="8" x2="36" y2="36" />
-          <line x1="36" y1="8" x2="8" y2="36" />
+          <line x1="6" y1="6" x2="38" y2="38" />
+          <line x1="38" y1="6" x2="6" y2="38" />
         </g>
       );
     case "perdida_otra_causa":
       return (
-        <g stroke={stroke} strokeWidth="2.5" fill="none" pointerEvents="none">
-          <circle cx="22" cy="22" r="13" />
-          <line x1="12" y1="12" x2="32" y2="32" />
-          <line x1="32" y1="12" x2="12" y2="32" />
+        <g stroke={stroke} strokeWidth="2.6" fill="none" pointerEvents="none">
+          <circle cx="22" cy="22" r="15" />
+          <line x1="11" y1="11" x2="33" y2="33" />
+          <line x1="33" y1="11" x2="11" y2="33" />
         </g>
       );
     case "endodoncia":
+      // Triángulo de línea gruesa sin relleno abarcando casi toda la pieza
       return (
         <polygon
-          points="22,8 36,34 8,34"
+          points="22,4 40,39 4,39"
           fill="none"
           stroke={stroke}
-          strokeWidth="2.8"
+          strokeWidth="4.2"
+          strokeLinejoin="round"
           pointerEvents="none"
         />
       );
     case "protesis_fija":
       return (
-        <g stroke={stroke} strokeWidth="2.4" fill="none" pointerEvents="none">
-          <circle cx="7" cy="22" r="3" />
-          <line x1="11" y1="22" x2="33" y2="22" strokeDasharray="3 2" />
-          <circle cx="37" cy="22" r="3" />
+        <g stroke={stroke} strokeWidth="2.5" fill="none" pointerEvents="none">
+          <circle cx="6" cy="22" r="3.2" />
+          <line x1="10" y1="22" x2="34" y2="22" strokeDasharray="3 2" />
+          <circle cx="38" cy="22" r="3.2" />
         </g>
       );
     case "protesis_removible":
       return (
-        <g stroke={stroke} strokeWidth="2.4" fill="none" pointerEvents="none">
-          <path d="M 10 10 Q 4 22 10 34" />
-          <line x1="13" y1="22" x2="31" y2="22" strokeDasharray="3 2" />
-          <path d="M 34 10 Q 40 22 34 34" />
+        <g stroke={stroke} strokeWidth="2.5" fill="none" pointerEvents="none">
+          <path d="M 9 8 Q 3 22 9 36" />
+          <line x1="12" y1="22" x2="32" y2="22" strokeDasharray="3 2" />
+          <path d="M 35 8 Q 41 22 35 36" />
         </g>
       );
     case "protesis_total":
       return (
-        <g stroke={stroke} strokeWidth="3" pointerEvents="none">
-          <line x1="8" y1="17" x2="36" y2="17" />
-          <line x1="8" y1="27" x2="36" y2="27" />
+        <g stroke={stroke} strokeWidth="3.2" pointerEvents="none">
+          <line x1="6" y1="16" x2="38" y2="16" />
+          <line x1="6" y1="28" x2="38" y2="28" />
         </g>
       );
     case "corona":
       return (
-        <g stroke={stroke} strokeWidth="2.4" fill="none" pointerEvents="none">
-          <rect x="8" y="8" width="28" height="28" />
-          <rect x="14" y="14" width="16" height="16" />
+        <g stroke={stroke} strokeWidth="2.5" fill="none" pointerEvents="none">
+          <rect x="5" y="5" width="34" height="34" />
+          <rect x="12" y="12" width="20" height="20" />
+        </g>
+      );
+    case "implante":
+      return (
+        <g stroke={stroke} strokeWidth="3.2" fill="none" pointerEvents="none">
+          <line x1="22" y1="6" x2="22" y2="38" />
+          <line x1="10" y1="38" x2="34" y2="38" />
+          <line x1="15" y1="15" x2="29" y2="15" />
+          <line x1="15" y1="23" x2="29" y2="23" />
+        </g>
+      );
+    case "ortodoncia":
+      return (
+        <g stroke={stroke} strokeWidth="2.6" fill="none" pointerEvents="none">
+          <rect x="10" y="10" width="24" height="24" rx="2" />
+          <line x1="2" y1="22" x2="10" y2="22" />
+          <line x1="34" y1="22" x2="42" y2="22" />
+          <line x1="22" y1="10" x2="22" y2="34" />
+          <line x1="10" y1="22" x2="34" y2="22" />
         </g>
       );
     default:
@@ -1259,7 +1272,7 @@ export default function HomePage() {
           temporal ? "rounded-2xl" : "rounded-lg"
         } ${
           seleccionada
-            ? "border-slate-900 bg-slate-200/80 ring-1 ring-slate-900"
+            ? "border-slate-900 bg-slate-200/70 ring-1 ring-slate-900"
             : "border-transparent hover:border-slate-300"
         }`}
       >
@@ -1276,8 +1289,9 @@ export default function HomePage() {
         >
           {temporal ? (
             <>
+              {/* Arriba */}
               <path
-                d="M 22 2 C 33 2 42 11 42 22 L 31 22 C 31 17 27 13 22 13 Z"
+                d="M 2 22 C 2 8 12 2 22 2 C 32 2 42 8 42 22 L 31 22 C 31 15 27 12 22 12 C 17 12 13 15 13 22 Z"
                 fill={fillPorEstado(d[caras.arriba])}
                 stroke="#1e293b"
                 strokeWidth="1.6"
@@ -1286,18 +1300,9 @@ export default function HomePage() {
                   marcarCaraPieza(codigoPieza, caras.arriba);
                 }}
               />
+              {/* Abajo */}
               <path
-                d="M 2 22 C 2 11 11 2 22 2 L 22 13 C 17 13 13 17 13 22 Z"
-                fill={fillPorEstado(d[caras.izq])}
-                stroke="#1e293b"
-                strokeWidth="1.6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  marcarCaraPieza(codigoPieza, caras.izq);
-                }}
-              />
-              <path
-                d="M 22 42 C 11 42 2 33 2 22 L 13 22 C 13 27 17 31 22 31 Z"
+                d="M 2 22 L 13 22 C 13 29 17 32 22 32 C 27 32 31 29 31 22 L 42 22 C 42 36 32 42 22 42 C 12 42 2 36 2 22 Z"
                 fill={fillPorEstado(d[caras.abajo])}
                 stroke="#1e293b"
                 strokeWidth="1.6"
@@ -1306,8 +1311,20 @@ export default function HomePage() {
                   marcarCaraPieza(codigoPieza, caras.abajo);
                 }}
               />
+              {/* Izquierda */}
               <path
-                d="M 42 22 C 42 33 33 42 22 42 L 22 31 C 27 31 31 27 31 22 Z"
+                d="M 2 22 C 2 14 6 8 13 6 L 16 15 C 14 17 13 19 13 22 C 13 25 14 27 16 29 L 13 38 C 6 36 2 30 2 22 Z"
+                fill={fillPorEstado(d[caras.izq])}
+                stroke="#1e293b"
+                strokeWidth="1.6"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caras.izq);
+                }}
+              />
+              {/* Derecha */}
+              <path
+                d="M 42 22 C 42 30 38 36 31 38 L 28 29 C 30 27 31 25 31 22 C 31 19 30 17 28 15 L 31 6 C 38 8 42 14 42 22 Z"
                 fill={fillPorEstado(d[caras.der])}
                 stroke="#1e293b"
                 strokeWidth="1.6"
@@ -1316,11 +1333,11 @@ export default function HomePage() {
                   marcarCaraPieza(codigoPieza, caras.der);
                 }}
               />
-              <ellipse
+              {/* Centro (O) */}
+              <circle
                 cx="22"
                 cy="22"
-                rx="9"
-                ry="9"
+                r="9"
                 fill={fillPorEstado(d.O)}
                 stroke="#1e293b"
                 strokeWidth="1.6"
@@ -1446,7 +1463,7 @@ export default function HomePage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
             {PROCEDIMIENTOS_MSP.map((proc) => {
               const seleccionado = hc.procedimientoActivo === proc.id;
 
@@ -1475,7 +1492,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Paso 2: Color Rojo o Azul */}
+        {/* Paso 2: Color Rojo o Azul (intensidad suave) */}
         <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
           <span className="text-xs font-bold text-slate-800 mr-1">
             2. Color activo:
@@ -1486,12 +1503,12 @@ export default function HomePage() {
             onClick={() => seleccionarColorMsp("rojo")}
             className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "rojo"
-                ? "bg-red-600 text-white border-red-700"
-                : "bg-red-50 text-red-800 border-red-200"
+                ? "bg-red-400/90 text-white border-red-400"
+                : "bg-red-50/80 text-red-700 border-red-200"
             }`}
           >
-            <span className="w-3 h-3 rounded-sm bg-red-600 border border-white inline-block" />
-            Rojo (Por realizar)
+            <span className="w-3 h-3 rounded-sm bg-red-400 border border-white inline-block" />
+            Rojo suave (Por realizar)
           </button>
 
           <button
@@ -1499,12 +1516,12 @@ export default function HomePage() {
             onClick={() => seleccionarColorMsp("azul")}
             className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "azul"
-                ? "bg-blue-600 text-white border-blue-700"
-                : "bg-blue-50 text-blue-800 border-blue-200"
+                ? "bg-blue-400/90 text-white border-blue-400"
+                : "bg-blue-50/80 text-blue-700 border-blue-200"
             }`}
           >
-            <span className="w-3 h-3 rounded-sm bg-blue-600 border border-white inline-block" />
-            Azul (Realizado)
+            <span className="w-3 h-3 rounded-sm bg-blue-400 border border-white inline-block" />
+            Azul suave (Realizado)
           </button>
 
           <button
