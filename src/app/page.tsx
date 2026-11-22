@@ -375,6 +375,13 @@ function esProcedimientoConCaras(
   return tipo === "caries" || tipo === "restauracion";
 }
 
+function esPiezaPerdida(simbolos: SimboloAplicado[]): boolean {
+  return (simbolos || []).some(
+    (s) =>
+      s.tipo === "extraccion_perdida_caries" || s.tipo === "perdida_otra_causa"
+  );
+}
+
 function carasPorPieza(codigoPieza: string): {
   arriba: CaraDiente;
   abajo: CaraDiente;
@@ -406,7 +413,7 @@ function piezaVacia(): EstadoPiezaMsp {
 }
 
 function hexPorColorMsp(color: ColorMsp): string {
-  return color === "azul" ? "#1d4ed8" : "#dc2626";
+  return color === "azul" ? "#3b82f6" : "#ef4444";
 }
 
 function estadoCaraPorColor(color: ColorMsp): EstadoColorDiente {
@@ -483,8 +490,8 @@ function crearHcVacia(
     detalleOclusionAngle: "",
     examenesComplementarios: "",
     fotos: [],
-    piezaSeleccionada: "16",
-    piezasSeleccionadas: ["16"],
+    piezaSeleccionada: "",
+    piezasSeleccionadas: [],
     carasSeleccionadas: [],
     procedimientoActivo: "ninguno",
     colorMspActivo: "rojo",
@@ -553,7 +560,7 @@ function renderFiguraSimbolo(
           r="6.5"
           fill={stroke}
           stroke="#ffffff"
-          strokeWidth="1.6"
+          strokeWidth="1.5"
           pointerEvents="none"
         />
       );
@@ -567,19 +574,19 @@ function renderFiguraSimbolo(
           rx="2"
           fill={stroke}
           stroke="#ffffff"
-          strokeWidth="1.6"
+          strokeWidth="1.5"
           pointerEvents="none"
         />
       );
     case "sellante":
       return (
         <g pointerEvents="none">
-          <g stroke="#ffffff" strokeWidth="6.2" strokeLinecap="round">
+          <g stroke="#ffffff" strokeWidth="6" strokeLinecap="round">
             <line x1="22" y1="6" x2="22" y2="38" />
             <line x1="8.1" y1="14" x2="35.9" y2="30" />
             <line x1="35.9" y1="14" x2="8.1" y2="30" />
           </g>
-          <g stroke={stroke} strokeWidth="3.6" strokeLinecap="round">
+          <g stroke={stroke} strokeWidth="3.5" strokeLinecap="round">
             <line x1="22" y1="6" x2="22" y2="38" />
             <line x1="8.1" y1="14" x2="35.9" y2="30" />
             <line x1="35.9" y1="14" x2="8.1" y2="30" />
@@ -589,11 +596,11 @@ function renderFiguraSimbolo(
     case "extraccion_perdida_caries":
       return (
         <g pointerEvents="none">
-          <g stroke="#ffffff" strokeWidth="6.5" strokeLinecap="round">
+          <g stroke="#ffffff" strokeWidth="6.2" strokeLinecap="round">
             <line x1="6" y1="6" x2="38" y2="38" />
             <line x1="38" y1="6" x2="6" y2="38" />
           </g>
-          <g stroke={stroke} strokeWidth="3.8" strokeLinecap="round">
+          <g stroke={stroke} strokeWidth="3.6" strokeLinecap="round">
             <line x1="6" y1="6" x2="38" y2="38" />
             <line x1="38" y1="6" x2="6" y2="38" />
           </g>
@@ -602,7 +609,7 @@ function renderFiguraSimbolo(
     case "perdida_otra_causa":
       return (
         <g fill="none" pointerEvents="none">
-          <g stroke="#ffffff" strokeWidth="6" strokeLinecap="round">
+          <g stroke="#ffffff" strokeWidth="5.8" strokeLinecap="round">
             <circle cx="22" cy="22" r="15.5" />
             <line x1="11" y1="11" x2="33" y2="33" />
             <line x1="33" y1="11" x2="11" y2="33" />
@@ -621,7 +628,7 @@ function renderFiguraSimbolo(
           fill="#ffffff"
           fillOpacity="0.85"
           stroke={stroke}
-          strokeWidth="4.2"
+          strokeWidth="4"
           strokeLinejoin="round"
           pointerEvents="none"
         />
@@ -659,11 +666,11 @@ function renderFiguraSimbolo(
     case "protesis_total":
       return (
         <g pointerEvents="none">
-          <g stroke="#ffffff" strokeWidth="6.2" strokeLinecap="round">
+          <g stroke="#ffffff" strokeWidth="6" strokeLinecap="round">
             <line x1="5" y1="16" x2="39" y2="16" />
             <line x1="5" y1="28" x2="39" y2="28" />
           </g>
-          <g stroke={stroke} strokeWidth="3.6" strokeLinecap="round">
+          <g stroke={stroke} strokeWidth="3.5" strokeLinecap="round">
             <line x1="5" y1="16" x2="39" y2="16" />
             <line x1="5" y1="28" x2="39" y2="28" />
           </g>
@@ -699,7 +706,7 @@ function renderFiguraSimbolo(
             x2="22"
             y2="38"
             stroke={stroke}
-            strokeWidth="3.4"
+            strokeWidth="3.3"
           />
           <line
             x1="10"
@@ -707,7 +714,7 @@ function renderFiguraSimbolo(
             x2="34"
             y2="38"
             stroke={stroke}
-            strokeWidth="3.4"
+            strokeWidth="3.3"
           />
           <line
             x1="15"
@@ -715,7 +722,7 @@ function renderFiguraSimbolo(
             x2="29"
             y2="15"
             stroke={stroke}
-            strokeWidth="3.4"
+            strokeWidth="3.3"
           />
           <line
             x1="15"
@@ -723,7 +730,7 @@ function renderFiguraSimbolo(
             x2="29"
             y2="23"
             stroke={stroke}
-            strokeWidth="3.4"
+            strokeWidth="3.3"
           />
         </g>
       );
@@ -1013,20 +1020,11 @@ export default function HomePage() {
         if (pac.id !== pacienteSeleccionadoId) return pac;
         const actuales = pac.hc.piezasSeleccionadas || [];
         const existe = actuales.includes(codigoPieza);
-        let siguientes: string[];
+        const siguientes = existe
+          ? actuales.filter((p) => p !== codigoPieza)
+          : [...actuales, codigoPieza];
 
-        if (existe) {
-          siguientes =
-            actuales.length > 1
-              ? actuales.filter((p) => p !== codigoPieza)
-              : actuales;
-        } else {
-          siguientes = [...actuales, codigoPieza];
-        }
-
-        const piezaFoco = existe
-          ? siguientes[siguientes.length - 1] || codigoPieza
-          : codigoPieza;
+        const piezaFoco = siguientes[siguientes.length - 1] || "";
 
         return {
           ...pac,
@@ -1040,7 +1038,7 @@ export default function HomePage() {
     );
   }
 
-  // Seleccionar cara (solo útil cuando el procedimiento es Caries o Restauración)
+  // Seleccionar cara para Caries o Restauración
   function alternarSeleccionCara(pieza: string, cara: CaraDiente) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1113,7 +1111,7 @@ export default function HomePage() {
     );
   }
 
-  // 4) Botón CARGAR: aplica el color y simbología a todas las piezas seleccionadas
+  // 4) Botón CARGAR: aplica color y simbología (y caras si es Caries/Restauración), luego deselecciona piezas
   function cargarInformacionSeleccionada() {
     if (!pacienteSeleccionadoId) return;
 
@@ -1122,14 +1120,16 @@ export default function HomePage() {
         if (pac.id !== pacienteSeleccionadoId) return pac;
         const procActivo = pac.hc.procedimientoActivo;
         const colorActivo = pac.hc.colorMspActivo;
-        const piezasTarget =
-          pac.hc.piezasSeleccionadas && pac.hc.piezasSeleccionadas.length > 0
-            ? pac.hc.piezasSeleccionadas
-            : [pac.hc.piezaSeleccionada];
+        const piezasTarget = pac.hc.piezasSeleccionadas || [];
+
+        if (piezasTarget.length === 0) {
+          setMensajeGuardado("Selecciona al menos una pieza antes de cargar.");
+          return pac;
+        }
 
         if (procActivo === "ninguno") {
           setMensajeGuardado(
-            "Selecciona primero una simbología o procedimiento antes de pulsar Cargar."
+            "Selecciona una simbología o procedimiento antes de pulsar Cargar."
           );
           return pac;
         }
@@ -1184,6 +1184,7 @@ export default function HomePage() {
           hc: {
             ...pac.hc,
             odontogramaMsp: nuevoOdontograma,
+            piezasSeleccionadas: [],
             carasSeleccionadas: [],
           },
         };
@@ -1191,7 +1192,7 @@ export default function HomePage() {
     );
   }
 
-  // 5) Botón BORRAR: quita el procedimiento activo o limpia las piezas seleccionadas
+  // 5) Botón BORRAR: quita procedimiento activo o limpia las piezas seleccionadas y restaura su aspecto normal
   function borrarInformacionSeleccionada() {
     if (!pacienteSeleccionadoId) return;
 
@@ -1199,10 +1200,12 @@ export default function HomePage() {
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
         const procActivo = pac.hc.procedimientoActivo;
-        const piezasTarget =
-          pac.hc.piezasSeleccionadas && pac.hc.piezasSeleccionadas.length > 0
-            ? pac.hc.piezasSeleccionadas
-            : [pac.hc.piezaSeleccionada];
+        const piezasTarget = pac.hc.piezasSeleccionadas || [];
+
+        if (piezasTarget.length === 0) {
+          setMensajeGuardado("Selecciona al menos una pieza para borrar.");
+          return pac;
+        }
 
         const nuevoOdontograma = { ...pac.hc.odontogramaMsp };
 
@@ -1254,6 +1257,7 @@ export default function HomePage() {
           hc: {
             ...pac.hc,
             odontogramaMsp: nuevoOdontograma,
+            piezasSeleccionadas: [],
             carasSeleccionadas: [],
           },
         };
@@ -1266,7 +1270,7 @@ export default function HomePage() {
     campo: "movilidadRecesion" | "observacion",
     valor: string
   ) {
-    if (!pacienteSeleccionadoId) return;
+    if (!pieza || !pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
     setPacientes((prev) =>
       prev.map((pac) => {
@@ -1480,9 +1484,8 @@ export default function HomePage() {
   function renderDienteMsp(codigoPieza: string, hc: HistoriaClinicaCompleta) {
     const d = hc.odontogramaMsp[codigoPieza] || piezaVacia();
     const simbolos = d.simbolos || [];
-    const seleccionada =
-      (hc.piezasSeleccionadas || []).includes(codigoPieza) ||
-      hc.piezaSeleccionada === codigoPieza;
+    const perdida = esPiezaPerdida(simbolos);
+    const seleccionada = (hc.piezasSeleccionadas || []).includes(codigoPieza);
     const temporal = esPiezaTemporal(codigoPieza);
     const superior = esArcadaSuperior(codigoPieza);
     const caras = carasPorPieza(codigoPieza);
@@ -1491,10 +1494,12 @@ export default function HomePage() {
       <div
         key={codigoPieza}
         onClick={() => alternarSeleccionPieza(codigoPieza)}
-        className={`flex flex-col items-center p-1 border cursor-pointer ${
+        className={`flex flex-col items-center p-1 border cursor-pointer transition ${
           temporal ? "rounded-2xl" : "rounded-lg"
         } ${
-          seleccionada
+          perdida
+            ? "opacity-40 border-slate-100 bg-slate-50/40"
+            : seleccionada
             ? "border-slate-500 bg-slate-100 ring-1 ring-slate-400"
             : "border-transparent hover:border-slate-200"
         }`}
@@ -1657,17 +1662,18 @@ export default function HomePage() {
   }
 
   function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
-    const piezaAct = hc.odontogramaMsp[hc.piezaSeleccionada] || piezaVacia();
+    const piezasSel = hc.piezasSeleccionadas || [];
+    const piezaFoco =
+      hc.piezaSeleccionada || piezasSel[piezasSel.length - 1] || "";
+    const piezaAct = piezaFoco
+      ? hc.odontogramaMsp[piezaFoco] || piezaVacia()
+      : piezaVacia();
     const descripcionPieza = describirProcedimientosEnPieza(
       piezaAct.simbolos || []
     );
     const procActualObj = PROCEDIMIENTOS_MSP.find(
       (p) => p.id === hc.procedimientoActivo
     );
-    const piezasSel =
-      hc.piezasSeleccionadas && hc.piezasSeleccionadas.length > 0
-        ? hc.piezasSeleccionadas
-        : [hc.piezaSeleccionada];
 
     return (
       <div className="border border-slate-200 rounded-2xl p-3.5 bg-cyan-50/50 space-y-3">
@@ -1676,12 +1682,15 @@ export default function HomePage() {
             FLUJO: 1) COLOR · 2) PIEZA(S) · 3) SIMBOLOGÍA · 4) CARGAR / BORRAR
           </p>
           <span className="text-xs text-slate-600">
-            Piezas: <strong>#{piezasSel.join(", #")}</strong>
+            Piezas:{" "}
+            <strong>
+              {piezasSel.length > 0 ? `#${piezasSel.join(", #")}` : "Ninguna"}
+            </strong>
             {descripcionPieza ? ` · ${descripcionPieza}` : ""}
           </span>
         </div>
 
-        {/* Paso 1: Color */}
+        {/* Paso 1: Color + recuadro de color activo */}
         <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
           <span className="text-xs font-semibold text-slate-700 mr-1">
             1. Color:
@@ -1692,11 +1701,11 @@ export default function HomePage() {
             onClick={() => seleccionarColorMsp("rojo")}
             className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "rojo"
-                ? "bg-red-600 text-white border-red-600"
-                : "bg-red-50 text-red-700 border-red-200"
+                ? "bg-red-500 text-white border-red-500"
+                : "bg-red-50/70 text-red-700 border-red-200"
             }`}
           >
-            <span className="w-3 h-3 rounded-sm bg-red-600 border border-white inline-block" />
+            <span className="w-3 h-3 rounded-sm bg-red-500 border border-white inline-block" />
             Rojo (Por realizar)
           </button>
 
@@ -1705,24 +1714,41 @@ export default function HomePage() {
             onClick={() => seleccionarColorMsp("azul")}
             className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "azul"
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-blue-50 text-blue-700 border-blue-200"
+                ? "bg-blue-500 text-white border-blue-500"
+                : "bg-blue-50/70 text-blue-700 border-blue-200"
             }`}
           >
-            <span className="w-3 h-3 rounded-sm bg-blue-600 border border-white inline-block" />
+            <span className="w-3 h-3 rounded-sm bg-blue-500 border border-white inline-block" />
             Azul (Realizado)
           </button>
 
-          <span className="ml-auto text-[11px] text-slate-500">
-            Caras solo en Caries / Restauración
-          </span>
+          <div
+            className={`ml-auto flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+              hc.colorMspActivo === "rojo"
+                ? "bg-red-50/80 border-red-300 text-red-800"
+                : "bg-blue-50/80 border-blue-300 text-blue-800"
+            }`}
+          >
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                hc.colorMspActivo === "rojo" ? "bg-red-500" : "bg-blue-500"
+              }`}
+            />
+            <span>
+              Activo:{" "}
+              {hc.colorMspActivo === "rojo"
+                ? "Rojo (Por realizar)"
+                : "Azul (Realizado)"}
+            </span>
+          </div>
         </div>
 
         {/* Paso 2: Selección de piezas */}
         <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
-              2. Selecciona una o más piezas (#{piezasSel.join(", #")})
+              2. Selecciona una o más piezas (
+              {piezasSel.length > 0 ? `#${piezasSel.join(", #")}` : "ninguna"})
               {hc.carasSeleccionadas.length > 0
                 ? ` · Caras: ${hc.carasSeleccionadas.join(", ")}`
                 : ""}
@@ -1880,24 +1906,26 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Detalle de la pieza seleccionada */}
+        {/* Detalle de la pieza */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
           <label className="block text-xs font-semibold text-slate-700">
-            Observación clínica — Pieza #{hc.piezaSeleccionada}
+            Observación clínica
+            {piezaFoco ? ` — Pieza #${piezaFoco}` : ""}
             {descripcionPieza ? ` (${descripcionPieza})` : ""}
           </label>
           <input
             type="text"
-            value={piezaAct.observacion}
+            disabled={!piezaFoco}
+            value={piezaFoco ? piezaAct.observacion : ""}
             onChange={(e) =>
-              actualizarDatoPieza(
-                hc.piezaSeleccionada,
-                "observacion",
-                e.target.value
-              )
+              actualizarDatoPieza(piezaFoco, "observacion", e.target.value)
             }
-            placeholder={`Detalle para pieza #${hc.piezaSeleccionada}...`}
-            className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+            placeholder={
+              piezaFoco
+                ? `Detalle para pieza #${piezaFoco}...`
+                : "Selecciona una pieza para escribir una observación..."
+            }
+            className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm disabled:bg-slate-50 disabled:text-slate-400"
           />
         </div>
       </div>
