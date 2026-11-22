@@ -53,6 +53,7 @@ interface HistoriaClinicaCompleta {
   // 2. Motivo de consulta y enfermedad actual
   motivoConsulta: string;
   enfermedadActual: string;
+  noPresentaDolor: boolean;
   intensidadDolor: string;
 
   // 3. Antecedentes médicos generales
@@ -172,6 +173,7 @@ function crearHcVacia(
     representanteLegal: "",
     motivoConsulta: "",
     enfermedadActual: "",
+    noPresentaDolor: false,
     intensidadDolor: "",
     enfermedadesSistemicas: [],
     otrasEnfermedadesSistemicas: "",
@@ -375,6 +377,25 @@ export default function HomePage() {
           ? { ...pac, hc: { ...pac.hc, [campo]: valor } }
           : pac
       )
+    );
+  }
+
+  function toggleNoPresentaDolor() {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const nuevoEstado = !pac.hc.noPresentaDolor;
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            noPresentaDolor: nuevoEstado,
+            intensidadDolor: nuevoEstado ? "0" : "",
+          },
+        };
+      })
     );
   }
 
@@ -1004,19 +1025,39 @@ export default function HomePage() {
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Intensidad del dolor / molestia (1 al 10)
-                        </label>
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="block text-xs font-medium text-slate-600">
+                            Intensidad del dolor / molestia (1 al 10)
+                          </label>
+                          <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={pacienteActivo.hc.noPresentaDolor}
+                              onChange={toggleNoPresentaDolor}
+                              className="rounded border-slate-300"
+                            />
+                            <span>No presenta dolor</span>
+                          </label>
+                        </div>
+
                         <select
-                          value={pacienteActivo.hc.intensidadDolor}
+                          disabled={pacienteActivo.hc.noPresentaDolor}
+                          value={
+                            pacienteActivo.hc.noPresentaDolor
+                              ? ""
+                              : pacienteActivo.hc.intensidadDolor
+                          }
                           onChange={(e) =>
                             actualizarCampoHc("intensidadDolor", e.target.value)
                           }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
                         >
-                          <option value="">Seleccionar nivel (1 a 10)</option>
-                          <option value="0">0 - Sin dolor</option>
+                          <option value="">
+                            {pacienteActivo.hc.noPresentaDolor
+                              ? "No presenta dolor"
+                              : "Seleccionar nivel (1 a 10)"}
+                          </option>
                           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((nivel) => (
                             <option key={nivel} value={String(nivel)}>
                               {nivel}
