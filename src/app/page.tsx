@@ -359,10 +359,18 @@ function esArcadaSuperior(codigoPieza: string): boolean {
   );
 }
 
-// Orientación clara:
-// - Lado izquierdo visual ("izq"): M en cuadrante derecho, D en cuadrante izquierdo
-// - Lado derecho visual ("der"): D en cuadrante derecho, M en cuadrante izquierdo
-// - Arriba ("arriba") y abajo ("abajo"): V / L según arcada superior o inferior
+function esSimboloExterno(
+  tipo: Exclude<TipoProcedimientoMsp, "ninguno"> | undefined
+): boolean {
+  return tipo === "endodoncia" || tipo === "implante" || tipo === "ortodoncia";
+}
+
+function esProcedimientoConCaras(
+  tipo: TipoProcedimientoMsp
+): tipo is "caries" | "restauracion" {
+  return tipo === "caries" || tipo === "restauracion";
+}
+
 function carasPorPieza(codigoPieza: string): {
   arriba: CaraDiente;
   abajo: CaraDiente;
@@ -393,7 +401,6 @@ function piezaVacia(): EstadoPiezaMsp {
   };
 }
 
-// Colores rojo y azul con intensidad suave (tenue)
 function hexPorColorMsp(color: ColorMsp): string {
   return color === "azul" ? "#5b8def" : "#ef6b6b";
 }
@@ -521,11 +528,13 @@ function describirProcedimientoEnPieza(simbolo: SimboloAplicado | null): string 
   return `${info.titulo} — ${estadoTexto}`;
 }
 
-function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
-  if (!simbolo) return null;
-  const stroke = hexPorColorMsp(simbolo.color);
+function renderFiguraSimbolo(
+  tipo: Exclude<TipoProcedimientoMsp, "ninguno">,
+  color: ColorMsp
+) {
+  const stroke = hexPorColorMsp(color);
 
-  switch (simbolo.tipo) {
+  switch (tipo) {
     case "caries":
       return (
         <circle
@@ -553,17 +562,17 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
         />
       );
     case "sellante":
-      // Símbolo grande que abarca prácticamente la totalidad del cuadro dental
+      // Asterisco grande abarcando la totalidad del cuadro dental
       return (
         <text
           x="22"
-          y="36.5"
+          y="40"
           textAnchor="middle"
-          fontSize="41"
+          fontSize="48"
           fontWeight="bold"
           fill={stroke}
           stroke="#ffffff"
-          strokeWidth="0.9"
+          strokeWidth="0.8"
           pointerEvents="none"
         >
           *
@@ -585,7 +594,7 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
         </g>
       );
     case "endodoncia":
-      // Triángulo de línea gruesa sin relleno abarcando casi toda la pieza
+      // Triángulo de línea gruesa sin relleno
       return (
         <polygon
           points="22,4 40,39 4,39"
@@ -648,6 +657,35 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
     default:
       return null;
   }
+}
+
+function renderSimboloInterno(simbolo: SimboloAplicado | null) {
+  if (!simbolo || esSimboloExterno(simbolo.tipo)) return null;
+  return renderFiguraSimbolo(simbolo.tipo, simbolo.color);
+}
+
+function renderMarcadorExternoPieza(
+  simbolo: SimboloAplicado | null,
+  superior: boolean
+) {
+  if (!simbolo || !esSimboloExterno(simbolo.tipo)) {
+    return <div className="h-5" aria-hidden="true" />;
+  }
+
+  return (
+    <div
+      className={`h-5 flex items-center justify-center ${
+        superior ? "mb-0.5" : "mt-0.5"
+      }`}
+      title={`${simbolo.tipo} (${
+        simbolo.color === "azul" ? "Realizado" : "Por realizar"
+      })`}
+    >
+      <svg viewBox="0 0 44 44" className="w-4 h-4 pointer-events-none">
+        {renderFiguraSimbolo(simbolo.tipo, simbolo.color)}
+      </svg>
+    </div>
+  );
 }
 
 export default function HomePage() {
@@ -807,7 +845,6 @@ export default function HomePage() {
     );
   }
 
-  // Paso 1: Elegir simbología o procedimiento (Caries = Rojo, Restauración = Azul)
   function seleccionarProcedimiento(
     procedimiento: Exclude<TipoProcedimientoMsp, "ninguno">
   ) {
@@ -844,7 +881,6 @@ export default function HomePage() {
     );
   }
 
-  // Paso 2: Elegir color (Rojo = Por realizar, Azul = Realizado)
   function seleccionarColorMsp(color: ColorMsp) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -864,7 +900,9 @@ export default function HomePage() {
     );
   }
 
-  // Paso 3A: Tocar la pieza aplica el procedimiento/color activo (o selecciona la pieza si no hay procedimiento activo)
+  // Al tocar una pieza:
+  // - Si no hay procedimiento activo, selecciona la pieza.
+  // - Si hay simbología activa, registra el símbolo SIN marcar caras automáticamente.
   function tocarPiezaOdontograma(codigoPieza: string) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -875,7 +913,6 @@ export default function HomePage() {
         const actualPieza = pac.hc.odontogramaMsp[codigoPieza] || piezaVacia();
         const procActivo = pac.hc.procedimientoActivo;
         const colorActivo = pac.hc.colorMspActivo;
-        const estadoCara = estadoCaraPorColor(colorActivo);
 
         if (procActivo === "ninguno") {
           return {
@@ -899,15 +936,6 @@ export default function HomePage() {
           ? null
           : { tipo: procActivo, color: colorActivo };
 
-        const pintaOclusal =
-          procActivo === "caries" || procActivo === "restauracion";
-
-        const siguienteOclusal: EstadoColorDiente = pintaOclusal
-          ? esMismoSimbolo
-            ? "ninguno"
-            : estadoCara
-          : actualPieza.O;
-
         return {
           ...pac,
           hc: {
@@ -917,7 +945,6 @@ export default function HomePage() {
               ...pac.hc.odontogramaMsp,
               [codigoPieza]: {
                 ...actualPieza,
-                O: siguienteOclusal,
                 simbolo: siguienteSimbolo,
               },
             },
@@ -927,7 +954,7 @@ export default function HomePage() {
     );
   }
 
-  // Paso 3B: Tocar una cara de la pieza registra novedad/procedimiento y color en esa cara
+  // Las caras solo se pintan cuando se trata de Caries o Restauración
   function marcarCaraPieza(pieza: string, cara: CaraDiente) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -935,24 +962,26 @@ export default function HomePage() {
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
+
+        if (!esProcedimientoConCaras(pac.hc.procedimientoActivo)) {
+          return {
+            ...pac,
+            hc: {
+              ...pac.hc,
+              piezaSeleccionada: pieza,
+            },
+          };
+        }
+
         const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
         const estadoActual = actualPieza[cara];
         const siguienteEstado: EstadoColorDiente =
           estadoActual === pac.hc.pincelEstado ? "ninguno" : pac.hc.pincelEstado;
 
-        const simboloAuto: SimboloAplicado | null =
-          pac.hc.procedimientoActivo !== "ninguno"
-            ? {
-                tipo: pac.hc.procedimientoActivo,
-                color: pac.hc.colorMspActivo,
-              }
-            : siguienteEstado !== "ninguno"
-            ? actualPieza.simbolo || {
-                tipo:
-                  pac.hc.colorMspActivo === "rojo" ? "caries" : "restauracion",
-                color: pac.hc.colorMspActivo,
-              }
-            : actualPieza.simbolo;
+        const simboloCara: SimboloAplicado = {
+          tipo: pac.hc.procedimientoActivo,
+          color: pac.hc.colorMspActivo,
+        };
 
         return {
           ...pac,
@@ -964,7 +993,7 @@ export default function HomePage() {
               [pieza]: {
                 ...actualPieza,
                 [cara]: siguienteEstado,
-                simbolo: simboloAuto,
+                simbolo: simboloCara,
               },
             },
           },
@@ -1008,15 +1037,14 @@ export default function HomePage() {
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
+        if (!esProcedimientoConCaras(pac.hc.procedimientoActivo)) return pac;
+
         const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
         const color = pac.hc.pincelEstado;
-        const simboloAuto: SimboloAplicado | null =
-          pac.hc.procedimientoActivo !== "ninguno"
-            ? {
-                tipo: pac.hc.procedimientoActivo,
-                color: pac.hc.colorMspActivo,
-              }
-            : actualPieza.simbolo;
+        const simboloCara: SimboloAplicado = {
+          tipo: pac.hc.procedimientoActivo,
+          color: pac.hc.colorMspActivo,
+        };
 
         return {
           ...pac,
@@ -1032,7 +1060,7 @@ export default function HomePage() {
                 L: color,
                 M: color,
                 D: color,
-                simbolo: simboloAuto,
+                simbolo: simboloCara,
               },
             },
           },
@@ -1276,10 +1304,15 @@ export default function HomePage() {
             : "border-transparent hover:border-slate-300"
         }`}
       >
-        {superior && (
-          <span className="text-[11px] font-bold text-slate-800 leading-tight mb-0.5">
-            {codigoPieza}
-          </span>
+        {superior ? (
+          <>
+            <span className="text-[11px] font-bold text-slate-800 leading-tight mb-0.5">
+              {codigoPieza}
+            </span>
+            {renderMarcadorExternoPieza(d.simbolo, true)}
+          </>
+        ) : (
+          <div className="h-5 mb-0.5" aria-hidden="true" />
         )}
 
         <svg
@@ -1289,7 +1322,6 @@ export default function HomePage() {
         >
           {temporal ? (
             <>
-              {/* Arriba */}
               <path
                 d="M 2 22 C 2 8 12 2 22 2 C 32 2 42 8 42 22 L 31 22 C 31 15 27 12 22 12 C 17 12 13 15 13 22 Z"
                 fill={fillPorEstado(d[caras.arriba])}
@@ -1300,7 +1332,6 @@ export default function HomePage() {
                   marcarCaraPieza(codigoPieza, caras.arriba);
                 }}
               />
-              {/* Abajo */}
               <path
                 d="M 2 22 L 13 22 C 13 29 17 32 22 32 C 27 32 31 29 31 22 L 42 22 C 42 36 32 42 22 42 C 12 42 2 36 2 22 Z"
                 fill={fillPorEstado(d[caras.abajo])}
@@ -1311,7 +1342,6 @@ export default function HomePage() {
                   marcarCaraPieza(codigoPieza, caras.abajo);
                 }}
               />
-              {/* Izquierda */}
               <path
                 d="M 2 22 C 2 14 6 8 13 6 L 16 15 C 14 17 13 19 13 22 C 13 25 14 27 16 29 L 13 38 C 6 36 2 30 2 22 Z"
                 fill={fillPorEstado(d[caras.izq])}
@@ -1322,7 +1352,6 @@ export default function HomePage() {
                   marcarCaraPieza(codigoPieza, caras.izq);
                 }}
               />
-              {/* Derecha */}
               <path
                 d="M 42 22 C 42 30 38 36 31 38 L 28 29 C 30 27 31 25 31 22 C 31 19 30 17 28 15 L 31 6 C 38 8 42 14 42 22 Z"
                 fill={fillPorEstado(d[caras.der])}
@@ -1333,7 +1362,6 @@ export default function HomePage() {
                   marcarCaraPieza(codigoPieza, caras.der);
                 }}
               />
-              {/* Centro (O) */}
               <circle
                 cx="22"
                 cy="22"
@@ -1404,13 +1432,18 @@ export default function HomePage() {
               />
             </>
           )}
-          {renderSimboloOverlay(d.simbolo)}
+          {renderSimboloInterno(d.simbolo)}
         </svg>
 
-        {!superior && (
-          <span className="text-[11px] font-bold text-slate-800 leading-tight mt-0.5">
-            {codigoPieza}
-          </span>
+        {!superior ? (
+          <>
+            {renderMarcadorExternoPieza(d.simbolo, false)}
+            <span className="text-[11px] font-bold text-slate-800 leading-tight mt-0.5">
+              {codigoPieza}
+            </span>
+          </>
+        ) : (
+          <div className="h-5 mt-0.5" aria-hidden="true" />
         )}
 
         <input
@@ -1434,6 +1467,7 @@ export default function HomePage() {
     const procActualObj = PROCEDIMIENTOS_MSP.find(
       (p) => p.id === hc.procedimientoActivo
     );
+    const permiteCaras = esProcedimientoConCaras(hc.procedimientoActivo);
 
     return (
       <div className="border border-indigo-200 rounded-2xl p-3.5 bg-cyan-50/70 space-y-3">
@@ -1459,7 +1493,7 @@ export default function HomePage() {
                 : ""}
             </span>
             <span className="text-[11px] text-slate-500">
-              Caries = Rojo · Restauración = Azul
+              Caras solo en Caries / Restauración
             </span>
           </div>
 
@@ -1524,13 +1558,15 @@ export default function HomePage() {
             Azul suave (Realizado)
           </button>
 
-          <button
-            type="button"
-            onClick={() => marcarPiezaCompleta(hc.piezaSeleccionada)}
-            className="ml-auto rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-800"
-          >
-            Pintar pieza #{hc.piezaSeleccionada} completa
-          </button>
+          {permiteCaras && (
+            <button
+              type="button"
+              onClick={() => marcarPiezaCompleta(hc.piezaSeleccionada)}
+              className="ml-auto rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-800"
+            >
+              Pintar pieza #{hc.piezaSeleccionada} completa
+            </button>
+          )}
         </div>
 
         {/* Paso 3: Marcar la pieza o caras de la pieza + cruz entrecortada de línea media y plano oclusal */}
@@ -1566,14 +1602,13 @@ export default function HomePage() {
               <strong>O</strong> = Oclusal / Central
             </span>
             <span className="text-slate-400">
-              · Cruz entrecortada: Línea media (vertical) y Plano oclusal
-              (horizontal)
+              · Endodoncia/Implante/Ortodoncia: arriba (superior) / abajo
+              (inferior)
             </span>
           </div>
 
           <div className="overflow-x-auto pb-1">
             <div className="relative min-w-[780px] py-1">
-              {/* Cruz entrecortada tenue: Línea media (vertical) + Plano oclusal (horizontal) */}
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 border-l border-dashed border-slate-300/80 z-0"
@@ -1600,7 +1635,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Dentición temporal central (superior e inferior en torno al plano oclusal) */}
+                {/* Dentición temporal central */}
                 <div className="space-y-1 py-0.5">
                   <div className="grid grid-cols-2 gap-4 items-center">
                     <div className="flex items-center justify-end gap-1 pr-2">
