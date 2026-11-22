@@ -24,12 +24,28 @@ type SeccionHC =
 type EstadoColorDiente = "ninguno" | "realizado" | "por_realizar";
 type CaraDiente = "O" | "V" | "L" | "M" | "D";
 
+type SimboloMsp =
+  | "ninguno"
+  | "sellante_necesario"
+  | "sellante_realizado"
+  | "extraccion_indicada"
+  | "perdida_caries"
+  | "perdida_otra_causa"
+  | "endodoncia"
+  | "protesis_fija"
+  | "protesis_removible"
+  | "protesis_total"
+  | "corona"
+  | "obturado"
+  | "caries";
+
 interface EstadoPiezaMsp {
   O: EstadoColorDiente;
   V: EstadoColorDiente;
   L: EstadoColorDiente;
   M: EstadoColorDiente;
   D: EstadoColorDiente;
+  simbolo: SimboloMsp;
   movilidadRecesion: string;
   observacion: string;
 }
@@ -114,6 +130,7 @@ interface HistoriaClinicaCompleta {
   fotos: RegistroFoto[];
   piezaSeleccionada: string;
   pincelEstado: EstadoColorDiente;
+  simboloActivo: SimboloMsp;
   odontogramaMsp: Record<string, EstadoPiezaMsp>;
 
   // 7. Diagnóstico CIE-10 y plan de tratamiento
@@ -265,6 +282,86 @@ const OPCIONES_OCLUSION_ANGLE = [
   "Otros",
 ];
 
+const SIMBOLOGIA_MSP: {
+  id: SimboloMsp;
+  titulo: string;
+  muestra: string;
+  colorTexto: string;
+}[] = [
+  {
+    id: "sellante_necesario",
+    titulo: "Sellante necesario",
+    muestra: "* rojo",
+    colorTexto: "text-red-600",
+  },
+  {
+    id: "sellante_realizado",
+    titulo: "Sellante realizado",
+    muestra: "* azul",
+    colorTexto: "text-blue-600",
+  },
+  {
+    id: "extraccion_indicada",
+    titulo: "Extracción indicada",
+    muestra: "X rojo",
+    colorTexto: "text-red-600",
+  },
+  {
+    id: "perdida_caries",
+    titulo: "Pérdida por caries",
+    muestra: "X azul",
+    colorTexto: "text-blue-600",
+  },
+  {
+    id: "perdida_otra_causa",
+    titulo: "Pérdida (otra causa)",
+    muestra: "⊗ rojo",
+    colorTexto: "text-red-600",
+  },
+  {
+    id: "endodoncia",
+    titulo: "Endodoncia",
+    muestra: "△ rojo",
+    colorTexto: "text-red-600",
+  },
+  {
+    id: "protesis_fija",
+    titulo: "Prótesis fija",
+    muestra: "o---o rojo",
+    colorTexto: "text-red-600",
+  },
+  {
+    id: "protesis_removible",
+    titulo: "Prótesis removible",
+    muestra: "(---) rojo",
+    colorTexto: "text-red-600",
+  },
+  {
+    id: "protesis_total",
+    titulo: "Prótesis total",
+    muestra: "= rojo",
+    colorTexto: "text-red-600",
+  },
+  {
+    id: "corona",
+    titulo: "Corona",
+    muestra: "▣ rojo",
+    colorTexto: "text-red-600",
+  },
+  {
+    id: "obturado",
+    titulo: "Obturado",
+    muestra: "◯ azul",
+    colorTexto: "text-blue-600",
+  },
+  {
+    id: "caries",
+    titulo: "Caries",
+    muestra: "◯ rojo",
+    colorTexto: "text-red-600",
+  },
+];
+
 const PIEZAS_PERMANENTES_SUP = [
   "18",
   "17",
@@ -284,9 +381,31 @@ const PIEZAS_PERMANENTES_SUP = [
   "28",
 ];
 
-const PIEZAS_TEMPORALES_SUP = ["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"];
+const PIEZAS_TEMPORALES_SUP = [
+  "55",
+  "54",
+  "53",
+  "52",
+  "51",
+  "61",
+  "62",
+  "63",
+  "64",
+  "65",
+];
 
-const PIEZAS_TEMPORALES_INF = ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"];
+const PIEZAS_TEMPORALES_INF = [
+  "85",
+  "84",
+  "83",
+  "82",
+  "81",
+  "71",
+  "72",
+  "73",
+  "74",
+  "75",
+];
 
 const PIEZAS_PERMANENTES_INF = [
   "48",
@@ -314,14 +433,15 @@ function piezaVacia(): EstadoPiezaMsp {
     L: "ninguno",
     M: "ninguno",
     D: "ninguno",
+    simbolo: "ninguno",
     movilidadRecesion: "",
     observacion: "",
   };
 }
 
 function fillPorEstado(estado: EstadoColorDiente): string {
-  if (estado === "realizado") return "#2563eb"; // Azul: tratamiento realizado
-  if (estado === "por_realizar") return "#dc2626"; // Rojo: patología / por realizarse
+  if (estado === "realizado") return "#2563eb";
+  if (estado === "por_realizar") return "#dc2626";
   return "#ffffff";
 }
 
@@ -391,6 +511,7 @@ function crearHcVacia(
     fotos: [],
     piezaSeleccionada: "16",
     pincelEstado: "por_realizar",
+    simboloActivo: "ninguno",
     odontogramaMsp: {},
     codigoCie10: "",
     diagnostico: "",
@@ -425,6 +546,127 @@ function inferirRolRespaldo(email?: string | null): RolUsuario {
   if (limpio.includes("asistente")) return "asistente";
   if (limpio.includes("recep")) return "recepcionista";
   return "odontologo";
+}
+
+function renderSimboloOverlay(simbolo: SimboloMsp) {
+  switch (simbolo) {
+    case "sellante_necesario":
+      return (
+        <text
+          x="22"
+          y="28"
+          textAnchor="middle"
+          fontSize="22"
+          fontWeight="bold"
+          fill="#dc2626"
+          pointerEvents="none"
+        >
+          *
+        </text>
+      );
+    case "sellante_realizado":
+      return (
+        <text
+          x="22"
+          y="28"
+          textAnchor="middle"
+          fontSize="22"
+          fontWeight="bold"
+          fill="#2563eb"
+          pointerEvents="none"
+        >
+          *
+        </text>
+      );
+    case "extraccion_indicada":
+      return (
+        <g stroke="#dc2626" strokeWidth="3.2" pointerEvents="none">
+          <line x1="8" y1="8" x2="36" y2="36" />
+          <line x1="36" y1="8" x2="8" y2="36" />
+        </g>
+      );
+    case "perdida_caries":
+      return (
+        <g stroke="#2563eb" strokeWidth="3.2" pointerEvents="none">
+          <line x1="8" y1="8" x2="36" y2="36" />
+          <line x1="36" y1="8" x2="8" y2="36" />
+        </g>
+      );
+    case "perdida_otra_causa":
+      return (
+        <g stroke="#dc2626" strokeWidth="2.5" fill="none" pointerEvents="none">
+          <circle cx="22" cy="22" r="13" />
+          <line x1="12" y1="12" x2="32" y2="32" />
+          <line x1="32" y1="12" x2="12" y2="32" />
+        </g>
+      );
+    case "endodoncia":
+      return (
+        <polygon
+          points="22,8 36,34 8,34"
+          fill="none"
+          stroke="#dc2626"
+          strokeWidth="2.8"
+          pointerEvents="none"
+        />
+      );
+    case "protesis_fija":
+      return (
+        <g stroke="#dc2626" strokeWidth="2.4" fill="none" pointerEvents="none">
+          <circle cx="7" cy="22" r="3" />
+          <line x1="11" y1="22" x2="33" y2="22" strokeDasharray="3 2" />
+          <circle cx="37" cy="22" r="3" />
+        </g>
+      );
+    case "protesis_removible":
+      return (
+        <g stroke="#dc2626" strokeWidth="2.4" fill="none" pointerEvents="none">
+          <path d="M 10 10 Q 4 22 10 34" />
+          <line x1="13" y1="22" x2="31" y2="22" strokeDasharray="3 2" />
+          <path d="M 34 10 Q 40 22 34 34" />
+        </g>
+      );
+    case "protesis_total":
+      return (
+        <g stroke="#dc2626" strokeWidth="3" pointerEvents="none">
+          <line x1="8" y1="17" x2="36" y2="17" />
+          <line x1="8" y1="27" x2="36" y2="27" />
+        </g>
+      );
+    case "corona":
+      return (
+        <g stroke="#dc2626" strokeWidth="2.4" fill="none" pointerEvents="none">
+          <rect x="8" y="8" width="28" height="28" />
+          <rect x="14" y="14" width="16" height="16" />
+        </g>
+      );
+    case "obturado":
+      return (
+        <circle
+          cx="22"
+          cy="22"
+          r="12"
+          fill="none"
+          stroke="#2563eb"
+          strokeWidth="3.2"
+          pointerEvents="none"
+        />
+      );
+    case "caries":
+      return (
+        <circle
+          cx="22"
+          cy="22"
+          r="12"
+          fill="none"
+          stroke="#dc2626"
+          strokeWidth="3.2"
+          pointerEvents="none"
+        />
+      );
+    default:
+      return null;
+  }
 }
 
 export default function HomePage() {
@@ -584,6 +826,35 @@ export default function HomePage() {
     );
   }
 
+  function aplicarSimboloAPieza(pieza: string, simbolo: SimboloMsp) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+        const siguienteSimbolo: SimboloMsp =
+          actualPieza.simbolo === simbolo ? "ninguno" : simbolo;
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            piezaSeleccionada: pieza,
+            simboloActivo: siguienteSimbolo,
+            odontogramaMsp: {
+              ...pac.hc.odontogramaMsp,
+              [pieza]: {
+                ...actualPieza,
+                simbolo: siguienteSimbolo,
+              },
+            },
+          },
+        };
+      })
+    );
+  }
+
   function marcarCaraPieza(pieza: string, cara: CaraDiente) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -594,6 +865,10 @@ export default function HomePage() {
         const estadoActual = actualPieza[cara];
         const siguienteEstado: EstadoColorDiente =
           estadoActual === pac.hc.pincelEstado ? "ninguno" : pac.hc.pincelEstado;
+        const siguienteSimbolo =
+          pac.hc.simboloActivo !== "ninguno"
+            ? pac.hc.simboloActivo
+            : actualPieza.simbolo;
 
         return {
           ...pac,
@@ -605,6 +880,7 @@ export default function HomePage() {
               [pieza]: {
                 ...actualPieza,
                 [cara]: siguienteEstado,
+                simbolo: siguienteSimbolo,
               },
             },
           },
@@ -868,6 +1144,11 @@ export default function HomePage() {
     const seleccionada = hc.piezaSeleccionada === codigoPieza;
     const caraArriba: CaraDiente = superior ? "V" : "L";
     const caraAbajo: CaraDiente = superior ? "L" : "V";
+    const esCuadranteIzq =
+      codigoPieza.startsWith("1") ||
+      codigoPieza.startsWith("4") ||
+      codigoPieza.startsWith("5") ||
+      codigoPieza.startsWith("8");
 
     return (
       <div
@@ -893,7 +1174,6 @@ export default function HomePage() {
           className="w-9 h-9 touch-manipulation select-none"
           aria-label={`Pieza ${codigoPieza}`}
         >
-          {/* Cara superior (V en superiores, L en inferiores) */}
           <polygon
             points="2,2 42,2 32,12 12,12"
             fill={fillPorEstado(d[caraArriba])}
@@ -902,7 +1182,6 @@ export default function HomePage() {
             className="cursor-pointer"
             onClick={() => marcarCaraPieza(codigoPieza, caraArriba)}
           />
-          {/* Cara inferior (L en superiores, V en inferiores) */}
           <polygon
             points="12,32 32,32 42,42 2,42"
             fill={fillPorEstado(d[caraAbajo])}
@@ -911,63 +1190,26 @@ export default function HomePage() {
             className="cursor-pointer"
             onClick={() => marcarCaraPieza(codigoPieza, caraAbajo)}
           />
-          {/* Cara izquierda (M en cuadrantes 1,4,5,8; D en 2,3,6,7) */}
           <polygon
             points="2,2 12,12 12,32 2,42"
-            fill={
-              fillPorEstado(
-                codigoPieza.startsWith("1") ||
-                  codigoPieza.startsWith("4") ||
-                  codigoPieza.startsWith("5") ||
-                  codigoPieza.startsWith("8")
-                  ? d.M
-                  : d.D
-              )
-            }
+            fill={fillPorEstado(esCuadranteIzq ? d.M : d.D)}
             stroke="#1e293b"
             strokeWidth="1.8"
             className="cursor-pointer"
             onClick={() =>
-              marcarCaraPieza(
-                codigoPieza,
-                codigoPieza.startsWith("1") ||
-                  codigoPieza.startsWith("4") ||
-                  codigoPieza.startsWith("5") ||
-                  codigoPieza.startsWith("8")
-                  ? "M"
-                  : "D"
-              )
+              marcarCaraPieza(codigoPieza, esCuadranteIzq ? "M" : "D")
             }
           />
-          {/* Cara derecha (D en cuadrantes 1,4,5,8; M en 2,3,6,7) */}
           <polygon
             points="32,12 42,2 42,42 32,32"
-            fill={
-              fillPorEstado(
-                codigoPieza.startsWith("1") ||
-                  codigoPieza.startsWith("4") ||
-                  codigoPieza.startsWith("5") ||
-                  codigoPieza.startsWith("8")
-                  ? d.D
-                  : d.M
-              )
-            }
+            fill={fillPorEstado(esCuadranteIzq ? d.D : d.M)}
             stroke="#1e293b"
             strokeWidth="1.8"
             className="cursor-pointer"
             onClick={() =>
-              marcarCaraPieza(
-                codigoPieza,
-                codigoPieza.startsWith("1") ||
-                  codigoPieza.startsWith("4") ||
-                  codigoPieza.startsWith("5") ||
-                  codigoPieza.startsWith("8")
-                  ? "D"
-                  : "M"
-              )
+              marcarCaraPieza(codigoPieza, esCuadranteIzq ? "D" : "M")
             }
           />
-          {/* Centro (Oclusal / Incisal) */}
           <rect
             x="12"
             y="12"
@@ -979,6 +1221,7 @@ export default function HomePage() {
             className="cursor-pointer"
             onClick={() => marcarCaraPieza(codigoPieza, "O")}
           />
+          {renderSimboloOverlay(d.simbolo)}
         </svg>
 
         {!superior && (
@@ -1007,22 +1250,26 @@ export default function HomePage() {
 
   function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
     const piezaAct = hc.odontogramaMsp[hc.piezaSeleccionada] || piezaVacia();
+    const simboloActualObj = SIMBOLOGIA_MSP.find(
+      (s) => s.id === piezaAct.simbolo
+    );
 
     return (
       <div className="border border-indigo-200 rounded-2xl p-3.5 bg-cyan-50/70 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-100/90 border border-indigo-200 rounded-xl px-3 py-2">
           <p className="text-xs font-bold text-slate-900">
-            ODONTOGRAMA MSP 033 — AZUL: TRATAMIENTO REALIZADO · ROJO: PATOLOGÍA / POR REALIZARSE[span_3](start_span)[span_3](end_span)
+            ODONTOGRAMA MSP 033 — AZUL: TRATAMIENTO REALIZADO · ROJO: PATOLOGÍA / POR REALIZARSE
           </p>
           <span className="text-xs font-medium text-slate-700">
             Pieza activa: <strong>#{hc.piezaSeleccionada}</strong>
+            {simboloActualObj ? ` · ${simboloActualObj.titulo}` : ""}
           </span>
         </div>
 
         {/* Barra de color (Azul / Rojo / Borrar) + Pieza completa */}
         <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
           <span className="text-xs font-semibold text-slate-600 mr-1">
-            Color activo:
+            Color de caras:
           </span>
 
           <button
@@ -1035,7 +1282,7 @@ export default function HomePage() {
             }`}
           >
             <span className="w-3 h-3 rounded-sm bg-blue-600 border border-white inline-block" />
-            Azul (Realizado)[span_4](start_span)[span_4](end_span)
+            Azul (Realizado)
           </button>
 
           <button
@@ -1048,7 +1295,7 @@ export default function HomePage() {
             }`}
           >
             <span className="w-3 h-3 rounded-sm bg-red-600 border border-white inline-block" />
-            Rojo (Por realizarse)[span_5](start_span)[span_5](end_span)
+            Rojo (Por realizarse)
           </button>
 
           <button
@@ -1072,10 +1319,53 @@ export default function HomePage() {
           </button>
         </div>
 
+        {/* 9 Simbología del Odontograma MSP 033 */}
+        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-800">
+              9. Simbología del Odontograma (aplicar a pieza #{hc.piezaSeleccionada})
+            </span>
+            <button
+              type="button"
+              onClick={() => aplicarSimboloAPieza(hc.piezaSeleccionada, "ninguno")}
+              className="rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700"
+            >
+              Quitar símbolo de pieza #{hc.piezaSeleccionada}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+            {SIMBOLOGIA_MSP.map((sim) => {
+              const activa = piezaAct.simbolo === sim.id;
+              return (
+                <button
+                  key={sim.id}
+                  type="button"
+                  onClick={() => aplicarSimboloAPieza(hc.piezaSeleccionada, sim.id)}
+                  className={`flex items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition ${
+                    activa
+                      ? "bg-slate-900 text-white border-slate-900 font-semibold"
+                      : "bg-slate-50/80 text-slate-800 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="truncate">{sim.titulo}</span>
+                  <span
+                    className={`font-bold shrink-0 ${
+                      activa ? "text-white" : sim.colorTexto
+                    }`}
+                  >
+                    {sim.muestra}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Arcada superior permanente */}
         <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
           <p className="text-[11px] font-semibold text-slate-500 mb-1">
-            Superior permanente (18–28) — Fila inferior de cada diente: Movilidad / Recesión[span_6](start_span)[span_6](end_span)
+            Superior permanente (18–28) — Fila inferior de cada diente: Movilidad / Recesión
           </p>
           <div className="flex items-start gap-1 min-w-max">
             {PIEZAS_PERMANENTES_SUP.map((p) => renderDienteMsp(p, hc, true))}
@@ -1086,7 +1376,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
           <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
             <p className="text-[11px] font-semibold text-slate-500 mb-1">
-              Temporal superior (55–65)[span_7](start_span)[span_7](end_span)
+              Temporal superior (55–65)
             </p>
             <div className="flex items-start gap-1 min-w-max">
               {PIEZAS_TEMPORALES_SUP.map((p) => renderDienteMsp(p, hc, true))}
@@ -1095,7 +1385,7 @@ export default function HomePage() {
 
           <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
             <p className="text-[11px] font-semibold text-slate-500 mb-1">
-              Temporal inferior (85–75)[span_8](start_span)[span_8](end_span)
+              Temporal inferior (85–75)
             </p>
             <div className="flex items-start gap-1 min-w-max">
               {PIEZAS_TEMPORALES_INF.map((p) => renderDienteMsp(p, hc, false))}
@@ -1106,7 +1396,7 @@ export default function HomePage() {
         {/* Arcada inferior permanente */}
         <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
           <p className="text-[11px] font-semibold text-slate-500 mb-1">
-            Inferior permanente (48–38)[span_9](start_span)[span_9](end_span)
+            Inferior permanente (48–38)
           </p>
           <div className="flex items-start gap-1 min-w-max">
             {PIEZAS_PERMANENTES_INF.map((p) => renderDienteMsp(p, hc, false))}
@@ -1117,6 +1407,7 @@ export default function HomePage() {
         <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
           <label className="block text-xs font-semibold text-slate-700">
             Observación clínica — Pieza #{hc.piezaSeleccionada}
+            {simboloActualObj ? ` (${simboloActualObj.titulo})` : ""}
           </label>
           <input
             type="text"
@@ -1128,7 +1419,7 @@ export default function HomePage() {
                 e.target.value
               )
             }
-            placeholder={`Ej. Resina oclusal en azul / caries o endodoncia por realizar en rojo (#${hc.piezaSeleccionada})`}
+            placeholder={`Detalle para pieza #${hc.piezaSeleccionada}...`}
             className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
           />
         </div>
@@ -2449,261 +2740,4 @@ export default function HomePage() {
                             )
                           }
                           placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      {/* Odontograma interactivo MSP 033 integrado en Exámenes y fotos */}
-                      {renderOdontogramaMsp(pacienteActivo.hc)}
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                        <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-800">
-                          Tomar foto con cámara
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-
-                        <label className="cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-100">
-                          Adjuntar foto o imagen
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-
-                      {pacienteActivo.hc.fotos.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {pacienteActivo.hc.fotos.map((foto) => (
-                            <div
-                              key={foto.id}
-                              className="border border-slate-200 rounded-xl overflow-hidden bg-white"
-                            >
-                              <img
-                                src={foto.dataUrl}
-                                alt={foto.nombreArchivo}
-                                className="w-full h-36 object-cover bg-slate-100"
-                              />
-                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
-                                <div className="truncate">
-                                  <p className="font-medium text-slate-800 truncate">
-                                    {foto.nombreArchivo}
-                                  </p>
-                                  <p className="text-slate-500">{foto.fecha}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarFoto(foto.id)}
-                                  className="text-red-600 hover:underline shrink-0"
-                                >
-                                  Quitar
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {seccionHc === "diagnostico" && (
-                    <div className="space-y-3 text-sm">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Código CIE-10
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.codigoCie10}
-                            onChange={(e) =>
-                              actualizarCampoHc("codigoCie10", e.target.value)
-                            }
-                            placeholder="Ej. K02.1 (Caries de la dentina)"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        <div className="sm:col-span-2">
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Diagnóstico presuntivo o definitivo (CIE-10)
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.diagnostico}
-                            onChange={(e) =>
-                              actualizarCampoHc("diagnostico", e.target.value)
-                            }
-                            placeholder="Diagnóstico clínico según CIE-10"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Plan de tratamiento
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={pacienteActivo.hc.planTratamiento}
-                          onChange={(e) =>
-                            actualizarCampoHc("planTratamiento", e.target.value)
-                          }
-                          placeholder="Secuencia de tratamientos y citas propuestas"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {seccionHc === "odontograma" && (
-                    <div className="space-y-4 text-sm">
-                      {renderOdontogramaMsp(pacienteActivo.hc)}
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Resumen general del odontograma
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={pacienteActivo.hc.notasOdontograma}
-                          onChange={(e) =>
-                            actualizarCampoHc("notasOdontograma", e.target.value)
-                          }
-                          placeholder="Notas generales de piezas, restauraciones o patologías..."
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Periodontograma
-                        </label>
-                        <textarea
-                          rows={4}
-                          value={pacienteActivo.hc.notasPeriodontograma}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "notasPeriodontograma",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Profundidad de sondaje, sangrado al sondaje, movilidad dental, margen gingival..."
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMensajeGuardado(
-                          "Cambios aplicados en la ficha clínica activa."
-                        )
-                      }
-                      className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-medium hover:bg-slate-800"
-                    >
-                      Confirmar registro de esta sección
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {moduloActivo === "agenda" && (
-            <div className="space-y-4">
-              <form
-                onSubmit={agregarCita}
-                className="grid grid-cols-1 sm:grid-cols-4 gap-2"
-              >
-                <input
-                  type="text"
-                  required
-                  value={pacienteCita}
-                  onChange={(e) => setPacienteCita(e.target.value)}
-                  placeholder="Nombre del paciente"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-                <input
-                  type="text"
-                  required
-                  value={motivoCita}
-                  onChange={(e) => setMotivoCita(e.target.value)}
-                  placeholder="Motivo de cita"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-                <input
-                  type="time"
-                  value={horaCita}
-                  onChange={(e) => setHoraCita(e.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-medium"
-                >
-                  Agregar cita
-                </button>
-              </form>
-
-              <ul className="divide-y divide-slate-100">
-                {citas.map((cita) => (
-                  <li
-                    key={cita.id}
-                    className="py-2.5 flex items-center justify-between gap-2 text-sm"
-                  >
-                    <div>
-                      <strong className="text-slate-900">{cita.hora}</strong> —{" "}
-                      {cita.paciente} ({cita.motivo})
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCitas((prev) =>
-                          prev.map((item) =>
-                            item.id === cita.id
-                              ? { ...item, confirmada: !item.confirmada }
-                              : item
-                          )
-                        )
-                      }
-                      className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
-                        cita.confirmada
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      {cita.confirmada ? "Confirmada" : "Marcar recordatorio"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {(moduloActivo === "pagos" || moduloActivo === "inventario") && (
-            <p className="text-sm text-slate-600">
-              Este módulo ya tiene su vista abierta y lista para añadirle
-              campos. Dime si quieres que armemos primero{" "}
-              {moduloActivo === "pagos"
-                ? "el registro de presupuestos y abonos"
-                : "el control de insumos y cantidades"}
-              .
-            </p>
-          )}
-        </section>
-      )}
-    </main>
-  );
-}
+                          className
