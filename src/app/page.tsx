@@ -18,7 +18,8 @@ type SeccionHC =
   | "odontologicos"
   | "clinico"
   | "examenes"
-  | "diagnostico";
+  | "diagnostico"
+  | "odontograma";
 
 interface Perfil {
   id: string;
@@ -81,12 +82,19 @@ interface HistoriaClinicaCompleta {
   // 5. Signos vitales y examen clínico
   presionArterial: string;
   pulso: string;
-  otrosSignosVitales: string;
-  examenExtraoral: string;
-  examenIntraoral: string;
-  tejidosBlandos: string;
-  notasPeriodontograma: string;
-  notasOdontograma: string;
+  temperatura: string;
+  frecuenciaRespiratoria: string;
+  examenExtraoral: string[];
+  detalleExamenExtraoral: string;
+  examenIntraoral: string[];
+  detalleExamenIntraoral: string;
+  tejidosBlandos: string[];
+  detalleTejidosBlandos: string;
+  cpodCariados: string;
+  cpodPerdidos: string;
+  cpodObturados: string;
+  oclusionLlaveAngle: string;
+  detalleOclusionAngle: string;
 
   // 6. Exámenes complementarios y fotos
   examenesComplementarios: string;
@@ -96,6 +104,11 @@ interface HistoriaClinicaCompleta {
   codigoCie10: string;
   diagnostico: string;
   planTratamiento: string;
+
+  // 8. Odontograma y periodontograma
+  piezaSeleccionada: string;
+  notasOdontograma: string;
+  notasPeriodontograma: string;
 }
 
 interface Paciente {
@@ -196,6 +209,85 @@ const OPCIONES_HIGIENE_ORAL = [
   "Otros",
 ];
 
+const OPCIONES_EXAMEN_EXTRAORAL = [
+  "Sin alteraciones aparentes",
+  "Asimetría facial",
+  "Alteración en ATM (ruidos, dolor o limitación)",
+  "Adenopatías / ganglios palpables",
+  "Lesión cutánea o en labios",
+  "Otros",
+];
+
+const OPCIONES_EXAMEN_INTRAORAL = [
+  "Sin alteraciones aparentes",
+  "Caries dental visible",
+  "Restauraciones desadaptadas o filtradas",
+  "Cálculo dental / placa abundante",
+  "Desgaste dental / atrición / erosión",
+  "Edentulismo parcial o total",
+  "Otros",
+];
+
+const OPCIONES_TEJIDOS_BLANDOS = [
+  "Normales / sin patología",
+  "Gingivitis / inflamación gingival",
+  "Úlcera / afta",
+  "Lesión en lengua",
+  "Lesión en mucosa yugal o paladar",
+  "Alteración en piso de boca",
+  "Otros",
+];
+
+const OPCIONES_OCLUSION_ANGLE = [
+  "Clase I de Angle",
+  "Clase II División 1",
+  "Clase II División 2",
+  "Clase III de Angle",
+  "Borde a borde",
+  "Mordida abierta",
+  "Mordida cruzada",
+  "No valorable / edéntulo",
+  "Otros",
+];
+
+const PIEZAS_FDI_SUPERIOR = [
+  "18",
+  "17",
+  "16",
+  "15",
+  "14",
+  "13",
+  "12",
+  "11",
+  "21",
+  "22",
+  "23",
+  "24",
+  "25",
+  "26",
+  "27",
+  "28",
+];
+
+const PIEZAS_FDI_INFERIOR = [
+  "48",
+  "47",
+  "46",
+  "45",
+  "44",
+  "43",
+  "42",
+  "41",
+  "31",
+  "32",
+  "33",
+  "34",
+  "35",
+  "36",
+  "37",
+  "38",
+];
+
 function nombreCompletoPaciente(hc: HistoriaClinicaCompleta): string {
   const full = `${hc.nombres || ""} ${hc.apellidos || ""}`.trim();
   return full || "Paciente sin nombre";
@@ -245,17 +337,27 @@ function crearHcVacia(
     otraHigieneOral: "",
     presionArterial: "",
     pulso: "",
-    otrosSignosVitales: "",
-    examenExtraoral: "",
-    examenIntraoral: "",
-    tejidosBlandos: "",
-    notasPeriodontograma: "",
-    notasOdontograma: "",
+    temperatura: "",
+    frecuenciaRespiratoria: "",
+    examenExtraoral: [],
+    detalleExamenExtraoral: "",
+    examenIntraoral: [],
+    detalleExamenIntraoral: "",
+    tejidosBlandos: [],
+    detalleTejidosBlandos: "",
+    cpodCariados: "",
+    cpodPerdidos: "",
+    cpodObturados: "",
+    oclusionLlaveAngle: "",
+    detalleOclusionAngle: "",
     examenesComplementarios: "",
     fotos: [],
     codigoCie10: "",
     diagnostico: "",
     planTratamiento: "",
+    piezaSeleccionada: "11",
+    notasOdontograma: "",
+    notasPeriodontograma: "",
   };
 }
 
@@ -270,6 +372,13 @@ function calcularEdad(fechaNacimiento: string): string {
     edad--;
   }
   return edad >= 0 ? `${edad} años` : "—";
+}
+
+function calcularTotalCpod(hc: HistoriaClinicaCompleta): number {
+  const c = parseInt(hc.cpodCariados || "0", 10) || 0;
+  const p = parseInt(hc.cpodPerdidos || "0", 10) || 0;
+  const o = parseInt(hc.cpodObturados || "0", 10) || 0;
+  return Math.max(0, c) + Math.max(0, p) + Math.max(0, o);
 }
 
 function inferirRolRespaldo(email?: string | null): RolUsuario {
@@ -532,6 +641,38 @@ export default function HomePage() {
     );
   }
 
+  function toggleChecklistClinico(
+    campoLista: "examenExtraoral" | "examenIntraoral" | "tejidosBlandos",
+    campoDetalle:
+      | "detalleExamenExtraoral"
+      | "detalleExamenIntraoral"
+      | "detalleTejidosBlandos",
+    opcion: string
+  ) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actuales = pac.hc[campoLista] || [];
+        const existe = actuales.includes(opcion);
+        const siguientes = existe
+          ? actuales.filter((item) => item !== opcion)
+          : [...actuales, opcion];
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            [campoLista]: siguientes,
+            [campoDetalle]:
+              opcion === "Otros" && existe ? "" : pac.hc[campoDetalle],
+          },
+        };
+      })
+    );
+  }
+
   function handleSubirFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
     if (!archivo || !pacienteSeleccionadoId) return;
@@ -672,6 +813,7 @@ export default function HomePage() {
     { id: "clinico", titulo: "5. Signos y examen" },
     { id: "examenes", titulo: "6. Exámenes y fotos" },
     { id: "diagnostico", titulo: "7. Diagnóstico CIE-10 y plan" },
+    { id: "odontograma", titulo: "8. Odontograma y periodontograma" },
   ];
 
   return (
@@ -1336,7 +1478,6 @@ export default function HomePage() {
 
                   {seccionHc === "odontologicos" && (
                     <div className="space-y-4 text-sm">
-                      {/* Tratamientos previos (selección múltiple + Otros) */}
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
                         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
                           Tratamientos odontológicos previos
@@ -1390,7 +1531,6 @@ export default function HomePage() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        {/* Frecuencia de visitas */}
                         <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
                           <label className="block text-xs font-medium text-slate-600">
                             Frecuencia de visitas al odontólogo
@@ -1428,7 +1568,6 @@ export default function HomePage() {
                           )}
                         </div>
 
-                        {/* Experiencias anteriores */}
                         <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
                           <label className="block text-xs font-medium text-slate-600">
                             Experiencias anteriores
@@ -1467,7 +1606,6 @@ export default function HomePage() {
                           )}
                         </div>
 
-                        {/* Nivel de ansiedad dental */}
                         <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
                           <label className="block text-xs font-medium text-slate-600">
                             Nivel de ansiedad dental
@@ -1505,7 +1643,6 @@ export default function HomePage() {
                           )}
                         </div>
 
-                        {/* Higiene oral habitual */}
                         <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
                           <label className="block text-xs font-medium text-slate-600">
                             Higiene oral habitual
@@ -1544,8 +1681,9 @@ export default function HomePage() {
                   )}
 
                   {seccionHc === "clinico" && (
-                    <div className="space-y-3 text-sm">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-4 text-sm">
+                      {/* Signos vitales (solo PA, Pulso, Temperatura, FR) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">
                             Presión arterial
@@ -1581,96 +1719,318 @@ export default function HomePage() {
 
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Otros signos vitales
+                            Temperatura
                           </label>
                           <input
                             type="text"
-                            value={pacienteActivo.hc.otrosSignosVitales}
+                            value={pacienteActivo.hc.temperatura}
                             onChange={(e) =>
-                              actualizarCampoHc(
-                                "otrosSignosVitales",
-                                e.target.value
-                              )
+                              actualizarCampoHc("temperatura", e.target.value)
                             }
-                            placeholder="Temperatura, saturación, etc."
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Examen extraoral
-                          </label>
-                          <textarea
-                            rows={2}
-                            value={pacienteActivo.hc.examenExtraoral}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "examenExtraoral",
-                                e.target.value
-                              )
-                            }
-                            placeholder="ATM, ganglios, asimetría facial..."
+                            placeholder="Ej. 36.6 °C"
                             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Examen intraoral y tejidos blandos
+                            Frecuencia respiratoria
                           </label>
-                          <textarea
-                            rows={2}
-                            value={pacienteActivo.hc.examenIntraoral}
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.frecuenciaRespiratoria}
                             onChange={(e) =>
                               actualizarCampoHc(
-                                "examenIntraoral",
+                                "frecuenciaRespiratoria",
                                 e.target.value
                               )
                             }
-                            placeholder="Mucosas, encía, lengua, paladar, piso de boca..."
+                            placeholder="Ej. 16 rpm"
                             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                           />
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Periodontograma (si aplica)
+                      {/* Examen extraoral (checks + detalle en Otros) */}
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Examen extraoral
                         </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.notasPeriodontograma}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "notasPeriodontograma",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Profundidad de sondaje, sangrado, movilidad..."
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {OPCIONES_EXAMEN_EXTRAORAL.map((op) => {
+                            const marcada =
+                              pacienteActivo.hc.examenExtraoral.includes(op);
+                            return (
+                              <label
+                                key={op}
+                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={marcada}
+                                  onChange={() =>
+                                    toggleChecklistClinico(
+                                      "examenExtraoral",
+                                      "detalleExamenExtraoral",
+                                      op
+                                    )
+                                  }
+                                  className="rounded border-slate-300"
+                                />
+                                <span>{op}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {pacienteActivo.hc.examenExtraoral.includes(
+                          "Otros"
+                        ) && (
+                          <div className="pt-1">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Detallar examen extraoral (Otros)
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.detalleExamenExtraoral}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "detalleExamenExtraoral",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba los hallazgos extraorales..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Registro del odontograma (estado actual, patologías y
-                          tratamientos previos)
+                      {/* Examen intraoral (checks + detalle en Otros) */}
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Examen intraoral
                         </label>
-                        <textarea
-                          rows={3}
-                          value={pacienteActivo.hc.notasOdontograma}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {OPCIONES_EXAMEN_INTRAORAL.map((op) => {
+                            const marcada =
+                              pacienteActivo.hc.examenIntraoral.includes(op);
+                            return (
+                              <label
+                                key={op}
+                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={marcada}
+                                  onChange={() =>
+                                    toggleChecklistClinico(
+                                      "examenIntraoral",
+                                      "detalleExamenIntraoral",
+                                      op
+                                    )
+                                  }
+                                  className="rounded border-slate-300"
+                                />
+                                <span>{op}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {pacienteActivo.hc.examenIntraoral.includes(
+                          "Otros"
+                        ) && (
+                          <div className="pt-1">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Detallar examen intraoral (Otros)
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.detalleExamenIntraoral}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "detalleExamenIntraoral",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba los hallazgos intraorales..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tejidos blandos (checks + detalle en Otros) */}
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Tejidos blandos
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {OPCIONES_TEJIDOS_BLANDOS.map((op) => {
+                            const marcada =
+                              pacienteActivo.hc.tejidosBlandos.includes(op);
+                            return (
+                              <label
+                                key={op}
+                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={marcada}
+                                  onChange={() =>
+                                    toggleChecklistClinico(
+                                      "tejidosBlandos",
+                                      "detalleTejidosBlandos",
+                                      op
+                                    )
+                                  }
+                                  className="rounded border-slate-300"
+                                />
+                                <span>{op}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {pacienteActivo.hc.tejidosBlandos.includes("Otros") && (
+                          <div className="pt-1">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Detallar tejidos blandos (Otros)
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.detalleTejidosBlandos}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "detalleTejidosBlandos",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba los hallazgos en tejidos blandos..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Cuadro para Índice CPOD */}
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Índice CPOD
+                          </label>
+                          <span className="text-xs font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
+                            Total CPOD: {calcularTotalCpod(pacienteActivo.hc)}
+                          </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs border-collapse bg-white rounded-lg overflow-hidden">
+                            <thead>
+                              <tr className="bg-slate-100 text-slate-700">
+                                <th className="border border-slate-200 px-3 py-2 text-center">
+                                  C (Cariados)
+                                </th>
+                                <th className="border border-slate-200 px-3 py-2 text-center">
+                                  P (Perdidos)
+                                </th>
+                                <th className="border border-slate-200 px-3 py-2 text-center">
+                                  O (Obturados)
+                                </th>
+                                <th className="border border-slate-200 px-3 py-2 text-center">
+                                  Total CPOD
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td className="border border-slate-200 p-2 text-center">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={pacienteActivo.hc.cpodCariados}
+                                    onChange={(e) =>
+                                      actualizarCampoHc(
+                                        "cpodCariados",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
+                                  />
+                                </td>
+                                <td className="border border-slate-200 p-2 text-center">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={pacienteActivo.hc.cpodPerdidos}
+                                    onChange={(e) =>
+                                      actualizarCampoHc(
+                                        "cpodPerdidos",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
+                                  />
+                                </td>
+                                <td className="border border-slate-200 p-2 text-center">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={pacienteActivo.hc.cpodObturados}
+                                    onChange={(e) =>
+                                      actualizarCampoHc(
+                                        "cpodObturados",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
+                                  />
+                                </td>
+                                <td className="border border-slate-200 p-2 text-center font-semibold text-slate-900">
+                                  {calcularTotalCpod(pacienteActivo.hc)}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Oclusión / Llave de Angle (lista desplegable + detalle en Otros) */}
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-medium text-slate-600">
+                          Oclusión / Llave de Angle
+                        </label>
+                        <select
+                          value={pacienteActivo.hc.oclusionLlaveAngle}
                           onChange={(e) =>
                             actualizarCampoHc(
-                              "notasOdontograma",
+                              "oclusionLlaveAngle",
                               e.target.value
                             )
                           }
-                          placeholder="Piezas dentales, caries, restauraciones, ausencias..."
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="">Seleccionar clasificación</option>
+                          {OPCIONES_OCLUSION_ANGLE.map((op) => (
+                            <option key={op} value={op}>
+                              {op}
+                            </option>
+                          ))}
+                        </select>
+                        {pacienteActivo.hc.oclusionLlaveAngle === "Otros" && (
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.detalleOclusionAngle}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "detalleOclusionAngle",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Detallar clasificación o relación oclusal..."
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          />
+                        )}
                       </div>
                     </div>
                   )}
@@ -1799,6 +2159,109 @@ export default function HomePage() {
                           }
                           placeholder="Secuencia de tratamientos y citas propuestas"
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {seccionHc === "odontograma" && (
+                    <div className="space-y-4 text-sm">
+                      {/* Selector rápido de pieza FDI */}
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Odontograma — Pieza seleccionada: #
+                            {pacienteActivo.hc.piezaSeleccionada}
+                          </label>
+                          <span className="text-xs text-slate-500">
+                            Toque una pieza para enfocar el registro
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <p className="text-[11px] font-medium text-slate-500">
+                            Arcada superior (18–28)
+                          </p>
+                          <div className="grid grid-cols-8 sm:grid-cols-16 gap-1">
+                            {PIEZAS_FDI_SUPERIOR.map((pieza) => (
+                              <button
+                                key={pieza}
+                                type="button"
+                                onClick={() =>
+                                  actualizarCampoHc("piezaSeleccionada", pieza)
+                                }
+                                className={`rounded border py-1.5 text-xs font-medium ${
+                                  pacienteActivo.hc.piezaSeleccionada === pieza
+                                    ? "bg-slate-900 text-white border-slate-900"
+                                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                                }`}
+                              >
+                                {pieza}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 pt-1">
+                          <p className="text-[11px] font-medium text-slate-500">
+                            Arcada inferior (48–38)
+                          </p>
+                          <div className="grid grid-cols-8 sm:grid-cols-16 gap-1">
+                            {PIEZAS_FDI_INFERIOR.map((pieza) => (
+                              <button
+                                key={pieza}
+                                type="button"
+                                onClick={() =>
+                                  actualizarCampoHc("piezaSeleccionada", pieza)
+                                }
+                                className={`rounded border py-1.5 text-xs font-medium ${
+                                  pacienteActivo.hc.piezaSeleccionada === pieza
+                                    ? "bg-slate-900 text-white border-slate-900"
+                                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                                }`}
+                              >
+                                {pieza}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="pt-2">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Registro del odontograma (estado actual, patologías y
+                            tratamientos)
+                          </label>
+                          <textarea
+                            rows={4}
+                            value={pacienteActivo.hc.notasOdontograma}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "notasOdontograma",
+                                e.target.value
+                              )
+                            }
+                            placeholder={`Ej. Pieza #${pacienteActivo.hc.piezaSeleccionada}: caries oclusal / restauración / ausencia...`}
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Periodontograma */}
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Periodontograma
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={pacienteActivo.hc.notasPeriodontograma}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "notasPeriodontograma",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Profundidad de sondaje, sangrado al sondaje, movilidad dental, margen gingival..."
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                         />
                       </div>
                     </div>
