@@ -386,6 +386,15 @@ const PIEZAS_PERMANENTES_INF = [
   "38",
 ];
 
+function esPiezaTemporal(codigoPieza: string): boolean {
+  return (
+    codigoPieza.startsWith("5") ||
+    codigoPieza.startsWith("6") ||
+    codigoPieza.startsWith("7") ||
+    codigoPieza.startsWith("8")
+  );
+}
+
 function piezaVacia(): EstadoPiezaMsp {
   return {
     O: "ninguno",
@@ -802,6 +811,9 @@ export default function HomePage() {
             piezaSeleccionada: codigoPieza,
             procedimientoActivo: piezaData?.simbolo?.tipo || "ninguno",
             colorMspActivo: piezaData?.simbolo?.color || pac.hc.colorMspActivo,
+            pincelEstado: piezaData?.simbolo?.color
+              ? estadoCaraPorColor(piezaData.simbolo.color)
+              : pac.hc.pincelEstado,
           },
         };
       })
@@ -818,7 +830,12 @@ export default function HomePage() {
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
         const pieza = pac.hc.piezaSeleccionada;
-        const color = pac.hc.colorMspActivo;
+        const color: ColorMsp =
+          procedimiento === "caries"
+            ? "rojo"
+            : procedimiento === "restauracion"
+            ? "azul"
+            : pac.hc.colorMspActivo;
         const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
         const estadoCara = estadoCaraPorColor(color);
         const esMismoProc = actualPieza.simbolo?.tipo === procedimiento;
@@ -839,6 +856,8 @@ export default function HomePage() {
           hc: {
             ...pac.hc,
             procedimientoActivo: esMismoProc ? "ninguno" : procedimiento,
+            colorMspActivo: color,
+            pincelEstado: estadoCara,
             odontogramaMsp: {
               ...pac.hc.odontogramaMsp,
               [pieza]: {
@@ -1247,6 +1266,7 @@ export default function HomePage() {
   ) {
     const d = hc.odontogramaMsp[codigoPieza] || piezaVacia();
     const seleccionada = hc.piezaSeleccionada === codigoPieza;
+    const temporal = esPiezaTemporal(codigoPieza);
     const caraArriba: CaraDiente = superior ? "V" : "L";
     const caraAbajo: CaraDiente = superior ? "L" : "V";
     const esCuadranteIzq =
@@ -1254,12 +1274,16 @@ export default function HomePage() {
       codigoPieza.startsWith("4") ||
       codigoPieza.startsWith("5") ||
       codigoPieza.startsWith("8");
+    const caraIzq: CaraDiente = esCuadranteIzq ? "M" : "D";
+    const caraDer: CaraDiente = esCuadranteIzq ? "D" : "M";
 
     return (
       <div
         key={codigoPieza}
         onClick={() => seleccionarPiezaOdontograma(codigoPieza)}
-        className={`flex flex-col items-center rounded-lg p-1 border cursor-pointer ${
+        className={`flex flex-col items-center p-1 border cursor-pointer ${
+          temporal ? "rounded-full" : "rounded-lg"
+        } ${
           seleccionada
             ? "border-slate-900 bg-slate-200/80 ring-1 ring-slate-900"
             : "border-transparent hover:border-slate-300"
@@ -1276,59 +1300,128 @@ export default function HomePage() {
           className="w-9 h-9 touch-manipulation select-none"
           aria-label={`Pieza ${codigoPieza}`}
         >
-          <polygon
-            points="2,2 42,2 32,12 12,12"
-            fill={fillPorEstado(d[caraArriba])}
-            stroke="#1e293b"
-            strokeWidth="1.8"
-            onClick={(e) => {
-              e.stopPropagation();
-              marcarCaraPieza(codigoPieza, caraArriba);
-            }}
-          />
-          <polygon
-            points="12,32 32,32 42,42 2,42"
-            fill={fillPorEstado(d[caraAbajo])}
-            stroke="#1e293b"
-            strokeWidth="1.8"
-            onClick={(e) => {
-              e.stopPropagation();
-              marcarCaraPieza(codigoPieza, caraAbajo);
-            }}
-          />
-          <polygon
-            points="2,2 12,12 12,32 2,42"
-            fill={fillPorEstado(esCuadranteIzq ? d.M : d.D)}
-            stroke="#1e293b"
-            strokeWidth="1.8"
-            onClick={(e) => {
-              e.stopPropagation();
-              marcarCaraPieza(codigoPieza, esCuadranteIzq ? "M" : "D");
-            }}
-          />
-          <polygon
-            points="32,12 42,2 42,42 32,32"
-            fill={fillPorEstado(esCuadranteIzq ? d.D : d.M)}
-            stroke="#1e293b"
-            strokeWidth="1.8"
-            onClick={(e) => {
-              e.stopPropagation();
-              marcarCaraPieza(codigoPieza, esCuadranteIzq ? "D" : "M");
-            }}
-          />
-          <rect
-            x="12"
-            y="12"
-            width="20"
-            height="20"
-            fill={fillPorEstado(d.O)}
-            stroke="#1e293b"
-            strokeWidth="1.8"
-            onClick={(e) => {
-              e.stopPropagation();
-              marcarCaraPieza(codigoPieza, "O");
-            }}
-          />
+          {temporal ? (
+            <>
+              <ellipse
+                cx="22"
+                cy="22"
+                rx="20"
+                ry="20"
+                fill="#ffffff"
+                stroke="#1e293b"
+                strokeWidth="1.8"
+              />
+              <path
+                d="M 4 12 Q 22 4 40 12 L 32 17 Q 22 12 12 17 Z"
+                fill={fillPorEstado(d[caraArriba])}
+                stroke="#1e293b"
+                strokeWidth="1.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraArriba);
+                }}
+              />
+              <path
+                d="M 12 27 Q 22 32 32 27 L 40 32 Q 22 40 4 32 Z"
+                fill={fillPorEstado(d[caraAbajo])}
+                stroke="#1e293b"
+                strokeWidth="1.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraAbajo);
+                }}
+              />
+              <path
+                d="M 4 12 L 12 17 Q 10 22 12 27 L 4 32 Q 1 22 4 12 Z"
+                fill={fillPorEstado(d[caraIzq])}
+                stroke="#1e293b"
+                strokeWidth="1.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraIzq);
+                }}
+              />
+              <path
+                d="M 40 12 Q 43 22 40 32 L 32 27 Q 34 22 32 17 Z"
+                fill={fillPorEstado(d[caraDer])}
+                stroke="#1e293b"
+                strokeWidth="1.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraDer);
+                }}
+              />
+              <ellipse
+                cx="22"
+                cy="22"
+                rx="10"
+                ry="10"
+                fill={fillPorEstado(d.O)}
+                stroke="#1e293b"
+                strokeWidth="1.6"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, "O");
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <polygon
+                points="2,2 42,2 32,12 12,12"
+                fill={fillPorEstado(d[caraArriba])}
+                stroke="#1e293b"
+                strokeWidth="1.8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraArriba);
+                }}
+              />
+              <polygon
+                points="12,32 32,32 42,42 2,42"
+                fill={fillPorEstado(d[caraAbajo])}
+                stroke="#1e293b"
+                strokeWidth="1.8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraAbajo);
+                }}
+              />
+              <polygon
+                points="2,2 12,12 12,32 2,42"
+                fill={fillPorEstado(d[caraIzq])}
+                stroke="#1e293b"
+                strokeWidth="1.8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraIzq);
+                }}
+              />
+              <polygon
+                points="32,12 42,2 42,42 32,32"
+                fill={fillPorEstado(d[caraDer])}
+                stroke="#1e293b"
+                strokeWidth="1.8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, caraDer);
+                }}
+              />
+              <rect
+                x="12"
+                y="12"
+                width="20"
+                height="20"
+                fill={fillPorEstado(d.O)}
+                stroke="#1e293b"
+                strokeWidth="1.8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  marcarCaraPieza(codigoPieza, "O");
+                }}
+              />
+            </>
+          )}
           {renderSimboloOverlay(d.simbolo)}
         </svg>
 
@@ -1400,7 +1493,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pt-1">
             <div className="overflow-x-auto border-t border-slate-100 pt-1">
               <p className="text-[11px] font-semibold text-slate-500 mb-1">
-                Temporal superior (55–65)
+                Temporal superior (55–65) — Ovaladas
               </p>
               <div className="flex items-start gap-1 min-w-max">
                 {PIEZAS_TEMPORALES_SUP.map((p) => renderDienteMsp(p, hc, true))}
@@ -1409,7 +1502,7 @@ export default function HomePage() {
 
             <div className="overflow-x-auto border-t border-slate-100 pt-1">
               <p className="text-[11px] font-semibold text-slate-500 mb-1">
-                Temporal inferior (85–75)
+                Temporal inferior (85–75) — Ovaladas
               </p>
               <div className="flex items-start gap-1 min-w-max">
                 {PIEZAS_TEMPORALES_INF.map((p) => renderDienteMsp(p, hc, false))}
