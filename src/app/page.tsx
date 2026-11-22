@@ -1126,18 +1126,3 @@ export default function HomePage() {
   }
 
   function seleccionarProcedimiento(
-    procedimiento: Exclude<TipoProcedimientoMsp, "ninguno">
-  ) {
-    if (!pacienteSeleccionadoId) return;
-    setMensajeGuardado(null);
-
-    setPacientes((prev) =>
-      prev.map((pac) => {
-        if (pac.id !== pacienteSeleccionadoId) return pac;
-        const esMismo = pac.hc.procedimientoActivo === procedimiento;
-        const siguienteProc: TipoProcedimientoMsp = esMismo
-          ? "ninguno"
-          : procedimiento;
-
-        const colorAsociado =
-          siguienteProc ===
