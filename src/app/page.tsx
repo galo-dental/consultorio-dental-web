@@ -39,12 +39,12 @@ interface HistoriaClinicaCompleta {
   apellidos: string;
   documento: string;
   fechaNacimiento: string;
-  sexo: string;
+  genero: string;
   direccion: string;
   telefono: string;
   correo: string;
   ocupacion: string;
-  contactoEmergencia: string;
+  contactoAdicional: string;
   seguroConvenio: string;
   representanteLegal: string;
 
@@ -116,12 +116,12 @@ function crearHcVacia(
     apellidos,
     documento: "",
     fechaNacimiento: "",
-    sexo: "",
+    genero: "",
     direccion: "",
     telefono: telefonoInicial,
     correo: "",
     ocupacion: "",
-    contactoEmergencia: "",
+    contactoAdicional: "",
     seguroConvenio: "",
     representanteLegal: "",
     motivoConsulta: "",
@@ -190,7 +190,8 @@ export default function HomePage() {
       id: "pac-1",
       hc: {
         ...crearHcVacia("Paciente", "Inicial", "0990000000"),
-        sexo: "No especificado",
+        genero: "Otro",
+        seguroConvenio: "Particular",
         motivoConsulta: "Revisión odontológica general",
       },
     },
@@ -728,17 +729,20 @@ export default function HomePage() {
 
                       <div>
                         <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Sexo
+                          Género
                         </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.sexo}
+                        <select
+                          value={pacienteActivo.hc.genero}
                           onChange={(e) =>
-                            actualizarCampoHc("sexo", e.target.value)
+                            actualizarCampoHc("genero", e.target.value)
                           }
-                          placeholder="Femenino / Masculino / Otro"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="">Seleccionar género</option>
+                          <option value="Masculino">Masculino</option>
+                          <option value="Femenino">Femenino</option>
+                          <option value="Otro">Otro</option>
+                        </select>
                       </div>
 
                       <div>
@@ -803,18 +807,18 @@ export default function HomePage() {
 
                       <div>
                         <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Contacto de emergencia
+                          Contacto adicional
                         </label>
                         <input
                           type="text"
-                          value={pacienteActivo.hc.contactoEmergencia}
+                          value={pacienteActivo.hc.contactoAdicional}
                           onChange={(e) =>
                             actualizarCampoHc(
-                              "contactoEmergencia",
+                              "contactoAdicional",
                               e.target.value
                             )
                           }
-                          placeholder="Nombre y teléfono de emergencia"
+                          placeholder="Nombre y teléfono de contacto adicional"
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                         />
                       </div>
@@ -823,15 +827,18 @@ export default function HomePage() {
                         <label className="block text-xs font-medium text-slate-600 mb-1">
                           Seguro o convenio médico
                         </label>
-                        <input
-                          type="text"
+                        <select
                           value={pacienteActivo.hc.seguroConvenio}
                           onChange={(e) =>
                             actualizarCampoHc("seguroConvenio", e.target.value)
                           }
-                          placeholder="Particular / Seguro / Convenio"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="">Seleccionar opción</option>
+                          <option value="Particular">Particular</option>
+                          <option value="Seguro">Seguro</option>
+                          <option value="Convenio">Convenio</option>
+                        </select>
                       </div>
 
                       <div className="sm:col-span-2">
@@ -1244,7 +1251,6 @@ export default function HomePage() {
                         />
                       </div>
 
-                      {/* Tomar foto desde cámara o adjuntar desde archivo/galería */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                         <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-800">
                           Tomar foto con cámara
