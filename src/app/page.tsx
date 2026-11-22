@@ -25,8 +25,10 @@ type ColorMsp = "rojo" | "azul";
 type EstadoColorDiente = "ninguno" | "realizado" | "por_realizar";
 type CaraDiente = "O" | "V" | "L" | "M" | "D";
 
-type TipoSimboloMsp =
+type TipoProcedimientoMsp =
   | "ninguno"
+  | "caries"
+  | "restauracion"
   | "sellante"
   | "extraccion_perdida_caries"
   | "perdida_otra_causa"
@@ -34,11 +36,10 @@ type TipoSimboloMsp =
   | "protesis_fija"
   | "protesis_removible"
   | "protesis_total"
-  | "corona"
-  | "obturacion_caries";
+  | "corona";
 
 interface SimboloAplicado {
-  tipo: TipoSimboloMsp;
+  tipo: Exclude<TipoProcedimientoMsp, "ninguno">;
   color: ColorMsp;
 }
 
@@ -132,9 +133,9 @@ interface HistoriaClinicaCompleta {
   examenesComplementarios: string;
   fotos: RegistroFoto[];
   piezaSeleccionada: string;
+  procedimientoActivo: TipoProcedimientoMsp;
   colorMspActivo: ColorMsp;
   pincelEstado: EstadoColorDiente;
-  simboloSeleccionado: TipoSimboloMsp;
   odontogramaMsp: Record<string, EstadoPiezaMsp>;
 
   // 7. Diagnóstico CIE-10 y plan de tratamiento
@@ -286,11 +287,19 @@ const OPCIONES_OCLUSION_ANGLE = [
   "Otros",
 ];
 
-const SIMBOLOS_GENERALES: {
-  id: Exclude<TipoSimboloMsp, "ninguno">;
+const PROCEDIMIENTOS_MSP: {
+  id: Exclude<TipoProcedimientoMsp, "ninguno">;
   titulo: string;
   muestra: string;
+  pintaCarasOclusal?: boolean;
 }[] = [
+  { id: "caries", titulo: "Caries", muestra: "●/○", pintaCarasOclusal: true },
+  {
+    id: "restauracion",
+    titulo: "Restauración",
+    muestra: "■/●",
+    pintaCarasOclusal: true,
+  },
   { id: "sellante", titulo: "Sellante", muestra: "*" },
   {
     id: "extraccion_perdida_caries",
@@ -311,11 +320,6 @@ const SIMBOLOS_GENERALES: {
   },
   { id: "protesis_total", titulo: "Prótesis total", muestra: "=" },
   { id: "corona", titulo: "Corona", muestra: "▣" },
-  {
-    id: "obturacion_caries",
-    titulo: "Obturación / Caries",
-    muestra: "◯",
-  },
 ];
 
 const PIEZAS_PERMANENTES_SUP = [
@@ -399,6 +403,10 @@ function hexPorColorMsp(color: ColorMsp): string {
   return color === "azul" ? "#2563eb" : "#dc2626";
 }
 
+function estadoCaraPorColor(color: ColorMsp): EstadoColorDiente {
+  return color === "azul" ? "realizado" : "por_realizar";
+}
+
 function fillPorEstado(estado: EstadoColorDiente): string {
   if (estado === "realizado") return "#2563eb";
   if (estado === "por_realizar") return "#dc2626";
@@ -470,9 +478,9 @@ function crearHcVacia(
     examenesComplementarios: "",
     fotos: [],
     piezaSeleccionada: "16",
+    procedimientoActivo: "ninguno",
     colorMspActivo: "rojo",
     pincelEstado: "por_realizar",
-    simboloSeleccionado: "ninguno",
     odontogramaMsp: {},
     codigoCie10: "",
     diagnostico: "",
@@ -509,9 +517,9 @@ function inferirRolRespaldo(email?: string | null): RolUsuario {
   return "odontologo";
 }
 
-function describirSimboloPieza(simbolo: SimboloAplicado | null): string {
+function describirProcedimientoEnPieza(simbolo: SimboloAplicado | null): string {
   if (!simbolo || simbolo.tipo === "ninguno") return "";
-  const info = SIMBOLOS_GENERALES.find((s) => s.id === simbolo.tipo);
+  const info = PROCEDIMIENTOS_MSP.find((p) => p.id === simbolo.tipo);
   if (!info) return "";
   const estadoTexto =
     simbolo.color === "azul" ? "Realizado (Azul)" : "Por realizar (Rojo)";
@@ -523,6 +531,32 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
   const stroke = hexPorColorMsp(simbolo.color);
 
   switch (simbolo.tipo) {
+    case "caries":
+      return (
+        <circle
+          cx="22"
+          cy="22"
+          r="6"
+          fill={stroke}
+          stroke="#ffffff"
+          strokeWidth="1.5"
+          pointerEvents="none"
+        />
+      );
+    case "restauracion":
+      return (
+        <rect
+          x="16"
+          y="16"
+          width="12"
+          height="12"
+          rx="2"
+          fill={stroke}
+          stroke="#ffffff"
+          strokeWidth="1.5"
+          pointerEvents="none"
+        />
+      );
     case "sellante":
       return (
         <text
@@ -591,18 +625,6 @@ function renderSimboloOverlay(simbolo: SimboloAplicado | null) {
           <rect x="8" y="8" width="28" height="28" />
           <rect x="14" y="14" width="16" height="16" />
         </g>
-      );
-    case "obturacion_caries":
-      return (
-        <circle
-          cx="22"
-          cy="22"
-          r="12"
-          fill="none"
-          stroke={stroke}
-          strokeWidth="3.2"
-          pointerEvents="none"
-        />
       );
     default:
       return null;
@@ -766,43 +788,28 @@ export default function HomePage() {
     );
   }
 
-  function seleccionarColorMsp(color: ColorMsp) {
+  function seleccionarPiezaOdontograma(codigoPieza: string) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
-    const estadoPincel: EstadoColorDiente =
-      color === "azul" ? "realizado" : "por_realizar";
-
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
-        const piezaAct =
-          pac.hc.odontogramaMsp[pac.hc.piezaSeleccionada] || piezaVacia();
-        const simboloActualizado =
-          piezaAct.simbolo && piezaAct.simbolo.tipo !== "ninguno"
-            ? { ...piezaAct.simbolo, color }
-            : piezaAct.simbolo;
-
+        const piezaData = pac.hc.odontogramaMsp[codigoPieza];
         return {
           ...pac,
           hc: {
             ...pac.hc,
-            colorMspActivo: color,
-            pincelEstado: estadoPincel,
-            odontogramaMsp: {
-              ...pac.hc.odontogramaMsp,
-              [pac.hc.piezaSeleccionada]: {
-                ...piezaAct,
-                simbolo: simboloActualizado,
-              },
-            },
+            piezaSeleccionada: codigoPieza,
+            procedimientoActivo: piezaData?.simbolo?.tipo || "ninguno",
+            colorMspActivo: piezaData?.simbolo?.color || pac.hc.colorMspActivo,
           },
         };
       })
     );
   }
 
-  function seleccionarYaplicarSimbolo(
-    tipoSimbolo: Exclude<TipoSimboloMsp, "ninguno">
+  function seleccionarProcedimiento(
+    procedimiento: Exclude<TipoProcedimientoMsp, "ninguno">
   ) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -813,24 +820,31 @@ export default function HomePage() {
         const pieza = pac.hc.piezaSeleccionada;
         const color = pac.hc.colorMspActivo;
         const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
-        const esMismoSimboloYColor =
-          actualPieza.simbolo?.tipo === tipoSimbolo &&
-          actualPieza.simbolo?.color === color;
+        const estadoCara = estadoCaraPorColor(color);
+        const esMismoProc = actualPieza.simbolo?.tipo === procedimiento;
 
-        const nuevoSimbolo: SimboloAplicado | null = esMismoSimboloYColor
+        const siguienteSimbolo: SimboloAplicado | null = esMismoProc
           ? null
-          : { tipo: tipoSimbolo, color };
+          : { tipo: procedimiento, color };
+
+        const siguienteOclusal =
+          procedimiento === "caries" || procedimiento === "restauracion"
+            ? esMismoProc
+              ? "ninguno"
+              : estadoCara
+            : actualPieza.O;
 
         return {
           ...pac,
           hc: {
             ...pac.hc,
-            simboloSeleccionado: esMismoSimboloYColor ? "ninguno" : tipoSimbolo,
+            procedimientoActivo: esMismoProc ? "ninguno" : procedimiento,
             odontogramaMsp: {
               ...pac.hc.odontogramaMsp,
               [pieza]: {
                 ...actualPieza,
-                simbolo: nuevoSimbolo,
+                O: siguienteOclusal,
+                simbolo: siguienteSimbolo,
               },
             },
           },
@@ -839,7 +853,82 @@ export default function HomePage() {
     );
   }
 
-  function limpiarSimboloPieza(pieza: string) {
+  function seleccionarColorYaplicarAutomaticamente(color: ColorMsp) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    const estadoPincel = estadoCaraPorColor(color);
+
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const pieza = pac.hc.piezaSeleccionada;
+        const proc = pac.hc.procedimientoActivo;
+        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+
+        const tipoFinal: Exclude<TipoProcedimientoMsp, "ninguno"> | null =
+          proc !== "ninguno"
+            ? proc
+            : actualPieza.simbolo?.tipo || null;
+
+        const simboloActualizado: SimboloAplicado | null = tipoFinal
+          ? { tipo: tipoFinal, color }
+          : null;
+
+        const pintaOclusal =
+          tipoFinal === "caries" || tipoFinal === "restauracion";
+
+        const tieneAlgunaCaraMarcada =
+          actualPieza.O !== "ninguno" ||
+          actualPieza.V !== "ninguno" ||
+          actualPieza.L !== "ninguno" ||
+          actualPieza.M !== "ninguno" ||
+          actualPieza.D !== "ninguno";
+
+        const siguienteO =
+          pintaOclusal || actualPieza.O !== "ninguno"
+            ? estadoPincel
+            : actualPieza.O;
+        const siguienteV =
+          actualPieza.V !== "ninguno" ? estadoPincel : actualPieza.V;
+        const siguienteL =
+          actualPieza.L !== "ninguno" ? estadoPincel : actualPieza.L;
+        const siguienteM =
+          actualPieza.M !== "ninguno" ? estadoPincel : actualPieza.M;
+        const siguienteD =
+          actualPieza.D !== "ninguno" ? estadoPincel : actualPieza.D;
+
+        const actualizarCaras =
+          pintaOclusal || tieneAlgunaCaraMarcada
+            ? {
+                O: siguienteO,
+                V: siguienteV,
+                L: siguienteL,
+                M: siguienteM,
+                D: siguienteD,
+              }
+            : {};
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            colorMspActivo: color,
+            pincelEstado: estadoPincel,
+            odontogramaMsp: {
+              ...pac.hc.odontogramaMsp,
+              [pieza]: {
+                ...actualPieza,
+                ...actualizarCaras,
+                simbolo: simboloActualizado,
+              },
+            },
+          },
+        };
+      })
+    );
+  }
+
+  function limpiarRegistroPieza(pieza: string) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
     setPacientes((prev) =>
@@ -850,11 +939,16 @@ export default function HomePage() {
           ...pac,
           hc: {
             ...pac.hc,
-            simboloSeleccionado: "ninguno",
+            procedimientoActivo: "ninguno",
             odontogramaMsp: {
               ...pac.hc.odontogramaMsp,
               [pieza]: {
                 ...actualPieza,
+                O: "ninguno",
+                V: "ninguno",
+                L: "ninguno",
+                M: "ninguno",
+                D: "ninguno",
                 simbolo: null,
               },
             },
@@ -875,6 +969,14 @@ export default function HomePage() {
         const siguienteEstado: EstadoColorDiente =
           estadoActual === pac.hc.pincelEstado ? "ninguno" : pac.hc.pincelEstado;
 
+        const simboloAuto: SimboloAplicado | null =
+          pac.hc.procedimientoActivo !== "ninguno"
+            ? {
+                tipo: pac.hc.procedimientoActivo,
+                color: pac.hc.colorMspActivo,
+              }
+            : actualPieza.simbolo;
+
         return {
           ...pac,
           hc: {
@@ -885,6 +987,7 @@ export default function HomePage() {
               [pieza]: {
                 ...actualPieza,
                 [cara]: siguienteEstado,
+                simbolo: simboloAuto,
               },
             },
           },
@@ -1157,20 +1260,17 @@ export default function HomePage() {
     return (
       <div
         key={codigoPieza}
-        className={`flex flex-col items-center rounded-lg p-1 border ${
+        onClick={() => seleccionarPiezaOdontograma(codigoPieza)}
+        className={`flex flex-col items-center rounded-lg p-1 border cursor-pointer ${
           seleccionada
-            ? "border-slate-900 bg-slate-100"
+            ? "border-slate-900 bg-slate-200/80 ring-1 ring-slate-900"
             : "border-transparent hover:border-slate-300"
         }`}
       >
         {superior && (
-          <button
-            type="button"
-            onClick={() => actualizarCampoHc("piezaSeleccionada", codigoPieza)}
-            className="text-[11px] font-bold text-slate-800 leading-tight mb-0.5"
-          >
+          <span className="text-[11px] font-bold text-slate-800 leading-tight mb-0.5">
             {codigoPieza}
-          </button>
+          </span>
         )}
 
         <svg
@@ -1183,36 +1283,40 @@ export default function HomePage() {
             fill={fillPorEstado(d[caraArriba])}
             stroke="#1e293b"
             strokeWidth="1.8"
-            className="cursor-pointer"
-            onClick={() => marcarCaraPieza(codigoPieza, caraArriba)}
+            onClick={(e) => {
+              e.stopPropagation();
+              marcarCaraPieza(codigoPieza, caraArriba);
+            }}
           />
           <polygon
             points="12,32 32,32 42,42 2,42"
             fill={fillPorEstado(d[caraAbajo])}
             stroke="#1e293b"
             strokeWidth="1.8"
-            className="cursor-pointer"
-            onClick={() => marcarCaraPieza(codigoPieza, caraAbajo)}
+            onClick={(e) => {
+              e.stopPropagation();
+              marcarCaraPieza(codigoPieza, caraAbajo);
+            }}
           />
           <polygon
             points="2,2 12,12 12,32 2,42"
             fill={fillPorEstado(esCuadranteIzq ? d.M : d.D)}
             stroke="#1e293b"
             strokeWidth="1.8"
-            className="cursor-pointer"
-            onClick={() =>
-              marcarCaraPieza(codigoPieza, esCuadranteIzq ? "M" : "D")
-            }
+            onClick={(e) => {
+              e.stopPropagation();
+              marcarCaraPieza(codigoPieza, esCuadranteIzq ? "M" : "D");
+            }}
           />
           <polygon
             points="32,12 42,2 42,42 32,32"
             fill={fillPorEstado(esCuadranteIzq ? d.D : d.M)}
             stroke="#1e293b"
             strokeWidth="1.8"
-            className="cursor-pointer"
-            onClick={() =>
-              marcarCaraPieza(codigoPieza, esCuadranteIzq ? "D" : "M")
-            }
+            onClick={(e) => {
+              e.stopPropagation();
+              marcarCaraPieza(codigoPieza, esCuadranteIzq ? "D" : "M");
+            }}
           />
           <rect
             x="12"
@@ -1222,25 +1326,24 @@ export default function HomePage() {
             fill={fillPorEstado(d.O)}
             stroke="#1e293b"
             strokeWidth="1.8"
-            className="cursor-pointer"
-            onClick={() => marcarCaraPieza(codigoPieza, "O")}
+            onClick={(e) => {
+              e.stopPropagation();
+              marcarCaraPieza(codigoPieza, "O");
+            }}
           />
           {renderSimboloOverlay(d.simbolo)}
         </svg>
 
         {!superior && (
-          <button
-            type="button"
-            onClick={() => actualizarCampoHc("piezaSeleccionada", codigoPieza)}
-            className="text-[11px] font-bold text-slate-800 leading-tight mt-0.5"
-          >
+          <span className="text-[11px] font-bold text-slate-800 leading-tight mt-0.5">
             {codigoPieza}
-          </button>
+          </span>
         )}
 
         <input
           type="text"
           value={d.movilidadRecesion}
+          onClick={(e) => e.stopPropagation()}
           onChange={(e) =>
             actualizarDatoPieza(codigoPieza, "movilidadRecesion", e.target.value)
           }
@@ -1254,30 +1357,128 @@ export default function HomePage() {
 
   function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
     const piezaAct = hc.odontogramaMsp[hc.piezaSeleccionada] || piezaVacia();
-    const descripcionSimboloPieza = describirSimboloPieza(piezaAct.simbolo);
+    const descripcionPieza = describirProcedimientoEnPieza(piezaAct.simbolo);
+    const procActualObj = PROCEDIMIENTOS_MSP.find(
+      (p) => p.id === hc.procedimientoActivo
+    );
 
     return (
       <div className="border border-indigo-200 rounded-2xl p-3.5 bg-cyan-50/70 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-100/90 border border-indigo-200 rounded-xl px-3 py-2">
           <p className="text-xs font-bold text-slate-900">
-            ODONTOGRAMA MSP 033 — 1) ELIGE ROJO (POR REALIZAR) O AZUL (REALIZADO) · 2) ELIGE SÍMBOLO O CARA
+            FLUJO MSP 033: 1) PIEZA · 2) PROCEDIMIENTO / SÍMBOLO · 3) ROJO O AZUL
           </p>
           <span className="text-xs font-medium text-slate-700">
-            Pieza activa: <strong>#{hc.piezaSeleccionada}</strong>
-            {descripcionSimboloPieza ? ` · ${descripcionSimboloPieza}` : ""}
+            Pieza: <strong>#{hc.piezaSeleccionada}</strong>
+            {descripcionPieza ? ` · ${descripcionPieza}` : ""}
           </span>
         </div>
 
-        {/* Paso 1: Selector principal de color (Rojo = Por realizar / Azul = Realizado) */}
+        {/* Paso 1: Odontograma (seleccionar pieza) */}
+        <div className="bg-white/90 border border-slate-200 rounded-xl p-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800">
+              1. Selecciona la pieza en el odontograma (activa: #
+              {hc.piezaSeleccionada})
+            </span>
+            <button
+              type="button"
+              onClick={() => limpiarRegistroPieza(hc.piezaSeleccionada)}
+              className="rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700"
+            >
+              Limpiar pieza #{hc.piezaSeleccionada}
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <p className="text-[11px] font-semibold text-slate-500 mb-1">
+              Superior permanente (18–28) — Fila inferior: Movilidad / Recesión
+            </p>
+            <div className="flex items-start gap-1 min-w-max">
+              {PIEZAS_PERMANENTES_SUP.map((p) => renderDienteMsp(p, hc, true))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pt-1">
+            <div className="overflow-x-auto border-t border-slate-100 pt-1">
+              <p className="text-[11px] font-semibold text-slate-500 mb-1">
+                Temporal superior (55–65)
+              </p>
+              <div className="flex items-start gap-1 min-w-max">
+                {PIEZAS_TEMPORALES_SUP.map((p) => renderDienteMsp(p, hc, true))}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto border-t border-slate-100 pt-1">
+              <p className="text-[11px] font-semibold text-slate-500 mb-1">
+                Temporal inferior (85–75)
+              </p>
+              <div className="flex items-start gap-1 min-w-max">
+                {PIEZAS_TEMPORALES_INF.map((p) => renderDienteMsp(p, hc, false))}
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto border-t border-slate-100 pt-1">
+            <p className="text-[11px] font-semibold text-slate-500 mb-1">
+              Inferior permanente (48–38)
+            </p>
+            <div className="flex items-start gap-1 min-w-max">
+              {PIEZAS_PERMANENTES_INF.map((p) => renderDienteMsp(p, hc, false))}
+            </div>
+          </div>
+        </div>
+
+        {/* Paso 2: Simbología o procedimiento (incluye Caries y Restauración) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-800">
+              2. Selecciona simbología o procedimiento
+              {procActualObj ? ` (${procActualObj.titulo})` : ""}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+            {PROCEDIMIENTOS_MSP.map((proc) => {
+              const seleccionado =
+                hc.procedimientoActivo === proc.id ||
+                piezaAct.simbolo?.tipo === proc.id;
+
+              return (
+                <button
+                  key={proc.id}
+                  type="button"
+                  onClick={() => seleccionarProcedimiento(proc.id)}
+                  className={`flex items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition ${
+                    seleccionado
+                      ? "bg-slate-900 text-white border-slate-900 font-semibold"
+                      : "bg-slate-50/80 text-slate-800 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="truncate">{proc.titulo}</span>
+                  <span
+                    className={`font-bold shrink-0 ${
+                      seleccionado ? "text-white" : "text-slate-600"
+                    }`}
+                  >
+                    {proc.muestra}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Paso 3: Color Rojo o Azul (carga automáticamente en la pieza activa) */}
         <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
-          <span className="text-xs font-semibold text-slate-700 mr-1">
-            1. Color:
+          <span className="text-xs font-bold text-slate-800 mr-1">
+            3. Color (carga automática en #{hc.piezaSeleccionada}):
           </span>
 
           <button
             type="button"
-            onClick={() => seleccionarColorMsp("rojo")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border ${
+            onClick={() => seleccionarColorYaplicarAutomaticamente("rojo")}
+            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "rojo"
                 ? "bg-red-600 text-white border-red-700"
                 : "bg-red-50 text-red-800 border-red-200"
@@ -1289,8 +1490,8 @@ export default function HomePage() {
 
           <button
             type="button"
-            onClick={() => seleccionarColorMsp("azul")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border ${
+            onClick={() => seleccionarColorYaplicarAutomaticamente("azul")}
+            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
               hc.colorMspActivo === "azul"
                 ? "bg-blue-600 text-white border-blue-700"
                 : "bg-blue-50 text-blue-800 border-blue-200"
@@ -1302,18 +1503,6 @@ export default function HomePage() {
 
           <button
             type="button"
-            onClick={() => actualizarCampoHc("pincelEstado", "ninguno")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${
-              hc.pincelEstado === "ninguno"
-                ? "bg-slate-900 text-white border-slate-900"
-                : "bg-slate-100 text-slate-700 border-slate-300"
-            }`}
-          >
-            Borrar cara
-          </button>
-
-          <button
-            type="button"
             onClick={() => marcarPiezaCompleta(hc.piezaSeleccionada)}
             className="ml-auto rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-800"
           >
@@ -1321,115 +1510,11 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Paso 2: Simbología general (se aplica con el color rojo o azul seleccionado) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-bold text-slate-800">
-              2. Simbología general (en{" "}
-              <span
-                className={
-                  hc.colorMspActivo === "azul"
-                    ? "text-blue-600"
-                    : "text-red-600"
-                }
-              >
-                {hc.colorMspActivo === "azul"
-                  ? "AZUL — realizado"
-                  : "ROJO — por realizar"}
-              </span>
-              ) — Pieza #{hc.piezaSeleccionada}
-            </span>
-            <button
-              type="button"
-              onClick={() => limpiarSimboloPieza(hc.piezaSeleccionada)}
-              className="rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700"
-            >
-              Quitar símbolo
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-            {SIMBOLOS_GENERALES.map((sim) => {
-              const activaEnPieza = piezaAct.simbolo?.tipo === sim.id;
-              const colorMuestra = activaEnPieza
-                ? piezaAct.simbolo?.color === "azul"
-                  ? "text-blue-600"
-                  : "text-red-600"
-                : hc.colorMspActivo === "azul"
-                ? "text-blue-600"
-                : "text-red-600";
-
-              return (
-                <button
-                  key={sim.id}
-                  type="button"
-                  onClick={() => seleccionarYaplicarSimbolo(sim.id)}
-                  className={`flex items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition ${
-                    activaEnPieza
-                      ? "bg-slate-900 text-white border-slate-900 font-semibold"
-                      : "bg-slate-50/80 text-slate-800 border-slate-200 hover:bg-slate-100"
-                  }`}
-                >
-                  <span className="truncate">{sim.titulo}</span>
-                  <span
-                    className={`font-bold shrink-0 ${
-                      activaEnPieza ? "text-white" : colorMuestra
-                    }`}
-                  >
-                    {sim.muestra}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Arcada superior permanente */}
-        <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
-          <p className="text-[11px] font-semibold text-slate-500 mb-1">
-            Superior permanente (18–28) — Fila inferior de cada diente: Movilidad / Recesión
-          </p>
-          <div className="flex items-start gap-1 min-w-max">
-            {PIEZAS_PERMANENTES_SUP.map((p) => renderDienteMsp(p, hc, true))}
-          </div>
-        </div>
-
-        {/* Dentición temporal superior e inferior */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-          <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
-            <p className="text-[11px] font-semibold text-slate-500 mb-1">
-              Temporal superior (55–65)
-            </p>
-            <div className="flex items-start gap-1 min-w-max">
-              {PIEZAS_TEMPORALES_SUP.map((p) => renderDienteMsp(p, hc, true))}
-            </div>
-          </div>
-
-          <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
-            <p className="text-[11px] font-semibold text-slate-500 mb-1">
-              Temporal inferior (85–75)
-            </p>
-            <div className="flex items-start gap-1 min-w-max">
-              {PIEZAS_TEMPORALES_INF.map((p) => renderDienteMsp(p, hc, false))}
-            </div>
-          </div>
-        </div>
-
-        {/* Arcada inferior permanente */}
-        <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
-          <p className="text-[11px] font-semibold text-slate-500 mb-1">
-            Inferior permanente (48–38)
-          </p>
-          <div className="flex items-start gap-1 min-w-max">
-            {PIEZAS_PERMANENTES_INF.map((p) => renderDienteMsp(p, hc, false))}
-          </div>
-        </div>
-
         {/* Detalle de la pieza seleccionada */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
           <label className="block text-xs font-semibold text-slate-700">
             Observación clínica — Pieza #{hc.piezaSeleccionada}
-            {descripcionSimboloPieza ? ` (${descripcionSimboloPieza})` : ""}
+            {descripcionPieza ? ` (${descripcionPieza})` : ""}
           </label>
           <input
             type="text"
