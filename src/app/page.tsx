@@ -138,6 +138,8 @@ interface HistoriaClinicaCompleta {
   piezasSeleccionadas: string[];
   carasSeleccionadas: CaraDiente[];
   procedimientoActivo: TipoProcedimientoMsp;
+  colorCaries: ColorMsp;
+  colorRestauracion: ColorMsp;
   colorMspActivo: ColorMsp;
   pincelEstado: EstadoColorDiente;
   odontogramaMsp: Record<string, EstadoPiezaMsp>;
@@ -322,6 +324,10 @@ const PROCEDIMIENTOS_MSP: {
   { id: "ortodoncia", titulo: "Ortodoncia", muestra: "⊞" },
 ];
 
+const SIMBOLOS_SECUNDARIOS_MSP = PROCEDIMIENTOS_MSP.filter(
+  (p) => p.id !== "caries" && p.id !== "restauracion"
+);
+
 const SUP_DER_PERM = ["18", "17", "16", "15", "14", "13", "12", "11"];
 const SUP_IZQ_PERM = ["21", "22", "23", "24", "25", "26", "27", "28"];
 
@@ -494,6 +500,8 @@ function crearHcVacia(
     piezasSeleccionadas: [],
     carasSeleccionadas: [],
     procedimientoActivo: "ninguno",
+    colorCaries: "rojo",
+    colorRestauracion: "azul",
     colorMspActivo: "rojo",
     pincelEstado: "por_realizar",
     odontogramaMsp: {},
@@ -990,7 +998,6 @@ export default function HomePage() {
     );
   }
 
-  // 1) Seleccionar color
   function seleccionarColorMsp(color: ColorMsp) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1004,13 +1011,44 @@ export default function HomePage() {
             ...pac.hc,
             colorMspActivo: color,
             pincelEstado: estadoCaraPorColor(color),
+            colorCaries:
+              pac.hc.procedimientoActivo === "caries" ? color : pac.hc.colorCaries,
+            colorRestauracion:
+              pac.hc.procedimientoActivo === "restauracion"
+                ? color
+                : pac.hc.colorRestauracion,
           },
         };
       })
     );
   }
 
-  // 2) Seleccionar una o más piezas
+  function cambiarColorCarieORestauracion(
+    tipo: "caries" | "restauracion",
+    color: ColorMsp
+  ) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            colorCaries: tipo === "caries" ? color : pac.hc.colorCaries,
+            colorRestauracion:
+              tipo === "restauracion" ? color : pac.hc.colorRestauracion,
+            procedimientoActivo: tipo,
+            colorMspActivo: color,
+            pincelEstado: estadoCaraPorColor(color),
+          },
+        };
+      })
+    );
+  }
+
   function alternarSeleccionPieza(codigoPieza: string) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1038,7 +1076,7 @@ export default function HomePage() {
     );
   }
 
-  // Seleccionar cara para Caries o Restauración
+  // Marcado inmediato en las caras al tocarlas cuando está activo Caries o Restauración
   function alternarSeleccionCara(pieza: string, cara: CaraDiente) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1052,7 +1090,8 @@ export default function HomePage() {
           ? piezasActuales
           : [...piezasActuales, pieza];
 
-        if (!esProcedimientoConCaras(pac.hc.procedimientoActivo)) {
+        const procActivo = pac.hc.procedimientoActivo;
+        if (!esProcedimientoConCaras(procActivo)) {
           return {
             ...pac,
             hc: {
@@ -1062,6 +1101,23 @@ export default function HomePage() {
             },
           };
         }
+
+        const colorAplicar: ColorMsp =
+          procActivo === "caries" ? pac.hc.colorCaries : pac.hc.colorRestauracion;
+        const estadoObjetivo = estadoCaraPorColor(colorAplicar);
+
+        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+        const estadoActualCara = actualPieza[cara];
+        const siguienteEstadoCara: EstadoColorDiente =
+          estadoActualCara === estadoObjetivo ? "ninguno" : estadoObjetivo;
+
+        const nuevoOdontograma = {
+          ...pac.hc.odontogramaMsp,
+          [pieza]: {
+            ...actualPieza,
+            [cara]: siguienteEstadoCara,
+          },
+        };
 
         const carasActuales = pac.hc.carasSeleccionadas || [];
         const existeCara = carasActuales.includes(cara);
@@ -1076,13 +1132,15 @@ export default function HomePage() {
             piezaSeleccionada: pieza,
             piezasSeleccionadas: siguientesPiezas,
             carasSeleccionadas: siguientesCaras,
+            colorMspActivo: colorAplicar,
+            pincelEstado: estadoObjetivo,
+            odontogramaMsp: nuevoOdontograma,
           },
         };
       })
     );
   }
 
-  // 3) Seleccionar simbología o procedimiento
   function seleccionarProcedimiento(
     procedimiento: Exclude<TipoProcedimientoMsp, "ninguno">
   ) {
@@ -1097,11 +1155,20 @@ export default function HomePage() {
           ? "ninguno"
           : procedimiento;
 
+        const colorAsociado =
+          siguienteProc === "caries"
+            ? pac.hc.colorCaries
+            : siguienteProc === "restauracion"
+            ? pac.hc.colorRestauracion
+            : pac.hc.colorMspActivo;
+
         return {
           ...pac,
           hc: {
             ...pac.hc,
             procedimientoActivo: siguienteProc,
+            colorMspActivo: colorAsociado,
+            pincelEstado: estadoCaraPorColor(colorAsociado),
             carasSeleccionadas: esProcedimientoConCaras(siguienteProc)
               ? pac.hc.carasSeleccionadas
               : [],
@@ -1111,7 +1178,7 @@ export default function HomePage() {
     );
   }
 
-  // 4) Botón CARGAR: aplica color y simbología (y caras si es Caries/Restauración), luego deselecciona piezas
+  // Botón CARGAR: registra el procedimiento/símbolo en las piezas seleccionadas y deselecciona
   function cargarInformacionSeleccionada() {
     if (!pacienteSeleccionadoId) return;
 
@@ -1119,7 +1186,6 @@ export default function HomePage() {
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
         const procActivo = pac.hc.procedimientoActivo;
-        const colorActivo = pac.hc.colorMspActivo;
         const piezasTarget = pac.hc.piezasSeleccionadas || [];
 
         if (piezasTarget.length === 0) {
@@ -1129,20 +1195,21 @@ export default function HomePage() {
 
         if (procActivo === "ninguno") {
           setMensajeGuardado(
-            "Selecciona una simbología o procedimiento antes de pulsar Cargar."
+            "Selecciona un procedimiento o simbología antes de pulsar Cargar."
           );
           return pac;
         }
 
-        const esCaras = esProcedimientoConCaras(procActivo);
-        const carasTarget: CaraDiente[] = esCaras
-          ? pac.hc.carasSeleccionadas.length > 0
-            ? pac.hc.carasSeleccionadas
-            : ["O", "V", "L", "M", "D"]
-          : [];
+        const colorAplicar: ColorMsp =
+          procActivo === "caries"
+            ? pac.hc.colorCaries
+            : procActivo === "restauracion"
+            ? pac.hc.colorRestauracion
+            : pac.hc.colorMspActivo;
 
+        const esCaras = esProcedimientoConCaras(procActivo);
+        const estadoCara = estadoCaraPorColor(colorAplicar);
         const nuevoOdontograma = { ...pac.hc.odontogramaMsp };
-        const estadoCara = estadoCaraPorColor(colorActivo);
 
         for (const cod of piezasTarget) {
           const actualPieza = nuevoOdontograma[cod] || piezaVacia();
@@ -1153,7 +1220,7 @@ export default function HomePage() {
           );
           const siguientesSimbolos: SimboloAplicado[] = [
             ...simbolosSinDuplicado,
-            { tipo: procActivo, color: colorActivo },
+            { tipo: procActivo, color: colorAplicar },
           ];
 
           const actualizada: EstadoPiezaMsp = {
@@ -1162,8 +1229,17 @@ export default function HomePage() {
           };
 
           if (esCaras) {
-            for (const c of carasTarget) {
-              actualizada[c] = estadoCara;
+            const tieneCaraPintada = (["O", "V", "L", "M", "D"] as CaraDiente[]).some(
+              (c) => actualizada[c] !== "ninguno"
+            );
+            if (!tieneCaraPintada) {
+              const carasTarget =
+                pac.hc.carasSeleccionadas.length > 0
+                  ? pac.hc.carasSeleccionadas
+                  : (["O", "V", "L", "M", "D"] as CaraDiente[]);
+              for (const c of carasTarget) {
+                actualizada[c] = estadoCara;
+              }
             }
           }
 
@@ -1175,7 +1251,7 @@ export default function HomePage() {
           procActivo;
         setMensajeGuardado(
           `Cargado: ${nombreProc} (${
-            colorActivo === "azul" ? "Azul - Realizado" : "Rojo - Por realizar"
+            colorAplicar === "azul" ? "Azul - Realizado" : "Rojo - Por realizar"
           }) en pieza(s) #${piezasTarget.join(", #")}.`
         );
 
@@ -1192,7 +1268,7 @@ export default function HomePage() {
     );
   }
 
-  // 5) Botón BORRAR: quita procedimiento activo o limpia las piezas seleccionadas y restaura su aspecto normal
+  // Botón BORRAR: quita procedimiento activo o limpia las piezas seleccionadas
   function borrarInformacionSeleccionada() {
     if (!pacienteSeleccionadoId) return;
 
@@ -1674,12 +1750,13 @@ export default function HomePage() {
     const procActualObj = PROCEDIMIENTOS_MSP.find(
       (p) => p.id === hc.procedimientoActivo
     );
+    const modoCarasActivo = esProcedimientoConCaras(hc.procedimientoActivo);
 
     return (
       <div className="border border-slate-200 rounded-2xl p-3.5 bg-cyan-50/50 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-100/90 border border-slate-200 rounded-xl px-3 py-2">
           <p className="text-xs font-semibold text-slate-700">
-            FLUJO: 1) COLOR · 2) PIEZA(S) · 3) SIMBOLOGÍA · 4) CARGAR / BORRAR
+            1) CARIES / RESTAURACIÓN · 2) ODONTOGRAMA · 3) SIMBOLOGÍA · 4) COLOR · 5) CARGAR / BORRAR
           </p>
           <span className="text-xs text-slate-600">
             Piezas:{" "}
@@ -1690,68 +1767,128 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Paso 1: Color + recuadro de color activo */}
-        <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
-          <span className="text-xs font-semibold text-slate-700 mr-1">
-            1. Color:
-          </span>
-
-          <button
-            type="button"
-            onClick={() => seleccionarColorMsp("rojo")}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
-              hc.colorMspActivo === "rojo"
-                ? "bg-red-500 text-white border-red-500"
-                : "bg-red-50/70 text-red-700 border-red-200"
-            }`}
-          >
-            <span className="w-3 h-3 rounded-sm bg-red-500 border border-white inline-block" />
-            Rojo (Por realizar)
-          </button>
-
-          <button
-            type="button"
-            onClick={() => seleccionarColorMsp("azul")}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
-              hc.colorMspActivo === "azul"
-                ? "bg-blue-500 text-white border-blue-500"
-                : "bg-blue-50/70 text-blue-700 border-blue-200"
-            }`}
-          >
-            <span className="w-3 h-3 rounded-sm bg-blue-500 border border-white inline-block" />
-            Azul (Realizado)
-          </button>
-
-          <div
-            className={`ml-auto flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
-              hc.colorMspActivo === "rojo"
-                ? "bg-red-50/80 border-red-300 text-red-800"
-                : "bg-blue-50/80 border-blue-300 text-blue-800"
-            }`}
-          >
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                hc.colorMspActivo === "rojo" ? "bg-red-500" : "bg-blue-500"
-              }`}
-            />
-            <span>
-              Activo:{" "}
-              {hc.colorMspActivo === "rojo"
-                ? "Rojo (Por realizar)"
-                : "Azul (Realizado)"}
+        {/* 1. Recuadro aparte: Caries (rojo por defecto) y Restauración (azul por defecto) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-700">
+              1. Caries y Restauración (se marcan al tocar las caras)
             </span>
+            {modoCarasActivo && (
+              <span className="text-[11px] font-medium text-slate-600">
+                Modo caras activo:{" "}
+                <strong>
+                  {hc.procedimientoActivo === "caries"
+                    ? `Caries (${hc.colorCaries === "rojo" ? "Rojo" : "Azul"})`
+                    : `Restauración (${
+                        hc.colorRestauracion === "azul" ? "Azul" : "Rojo"
+                      })`}
+                </strong>
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div
+              className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${
+                hc.procedimientoActivo === "caries"
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-slate-50/70 text-slate-800 border-slate-200"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  cambiarColorCarieORestauracion("caries", hc.colorCaries)
+                }
+                className="flex items-center gap-2 text-xs font-semibold text-left flex-1"
+              >
+                <span
+                  className={`w-3 h-3 rounded-full inline-block border ${
+                    hc.procedimientoActivo === "caries"
+                      ? "border-white"
+                      : "border-slate-300"
+                  } ${
+                    hc.colorCaries === "rojo" ? "bg-red-500" : "bg-blue-500"
+                  }`}
+                />
+                <span>Caries (●)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  cambiarColorCarieORestauracion(
+                    "caries",
+                    hc.colorCaries === "rojo" ? "azul" : "rojo"
+                  )
+                }
+                className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                  hc.procedimientoActivo === "caries"
+                    ? "bg-white/15 text-white border-white/30"
+                    : "bg-white text-slate-700 border-slate-300"
+                }`}
+              >
+                {hc.colorCaries === "rojo" ? "Rojo" : "Azul"}
+              </button>
+            </div>
+
+            <div
+              className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${
+                hc.procedimientoActivo === "restauracion"
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-slate-50/70 text-slate-800 border-slate-200"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  cambiarColorCarieORestauracion(
+                    "restauracion",
+                    hc.colorRestauracion
+                  )
+                }
+                className="flex items-center gap-2 text-xs font-semibold text-left flex-1"
+              >
+                <span
+                  className={`w-3 h-3 rounded-sm inline-block border ${
+                    hc.procedimientoActivo === "restauracion"
+                      ? "border-white"
+                      : "border-slate-300"
+                  } ${
+                    hc.colorRestauracion === "azul"
+                      ? "bg-blue-500"
+                      : "bg-red-500"
+                  }`}
+                />
+                <span>Restauración (■)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  cambiarColorCarieORestauracion(
+                    "restauracion",
+                    hc.colorRestauracion === "azul" ? "rojo" : "azul"
+                  )
+                }
+                className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                  hc.procedimientoActivo === "restauracion"
+                    ? "bg-white/15 text-white border-white/30"
+                    : "bg-white text-slate-700 border-slate-300"
+                }`}
+              >
+                {hc.colorRestauracion === "azul" ? "Azul" : "Rojo"}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Paso 2: Selección de piezas */}
+        {/* 2. Odontograma */}
         <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
-              2. Selecciona una o más piezas (
+              2. Odontograma — Piezas (
               {piezasSel.length > 0 ? `#${piezasSel.join(", #")}` : "ninguna"})
-              {hc.carasSeleccionadas.length > 0
-                ? ` · Caras: ${hc.carasSeleccionadas.join(", ")}`
-                : ""}
             </span>
           </div>
 
@@ -1846,21 +1983,21 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Paso 3: Simbología o procedimiento */}
+        {/* 3. Simbología o procedimiento */}
         <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
-              3. Simbología o procedimiento
+              3. Simbología
               {procActualObj
-                ? ` · ${procActualObj.titulo} (${
+                ? ` · Activo: ${procActualObj.titulo} (${
                     hc.colorMspActivo === "rojo" ? "Rojo" : "Azul"
                   })`
                 : ""}
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
-            {PROCEDIMIENTOS_MSP.map((proc) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+            {SIMBOLOS_SECUNDARIOS_MSP.map((proc) => {
               const seleccionado = hc.procedimientoActivo === proc.id;
 
               return (
@@ -1886,8 +2023,62 @@ export default function HomePage() {
               );
             })}
           </div>
+        </div>
 
-          {/* Paso 4: Botones Cargar y Borrar */}
+        {/* 4. Color rojo o azul + 5. Botones Cargar y Borrar */}
+        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-700 mr-1">
+              4. Color:
+            </span>
+
+            <button
+              type="button"
+              onClick={() => seleccionarColorMsp("rojo")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
+                hc.colorMspActivo === "rojo"
+                  ? "bg-red-500 text-white border-red-500"
+                  : "bg-red-50/70 text-red-700 border-red-200"
+              }`}
+            >
+              <span className="w-3 h-3 rounded-sm bg-red-500 border border-white inline-block" />
+              Rojo (Por realizar)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => seleccionarColorMsp("azul")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
+                hc.colorMspActivo === "azul"
+                  ? "bg-blue-500 text-white border-blue-500"
+                  : "bg-blue-50/70 text-blue-700 border-blue-200"
+              }`}
+            >
+              <span className="w-3 h-3 rounded-sm bg-blue-500 border border-white inline-block" />
+              Azul (Realizado)
+            </button>
+
+            <div
+              className={`ml-auto flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                hc.colorMspActivo === "rojo"
+                  ? "bg-red-50/80 border-red-300 text-red-800"
+                  : "bg-blue-50/80 border-blue-300 text-blue-800"
+              }`}
+            >
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  hc.colorMspActivo === "rojo" ? "bg-red-500" : "bg-blue-500"
+                }`}
+              />
+              <span>
+                Activo:{" "}
+                {hc.colorMspActivo === "rojo"
+                  ? "Rojo (Por realizar)"
+                  : "Azul (Realizado)"}
+              </span>
+            </div>
+          </div>
+
           <div className="pt-2 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100">
             <button
               type="button"
