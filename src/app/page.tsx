@@ -21,6 +21,19 @@ type SeccionHC =
   | "diagnostico"
   | "odontograma";
 
+type EstadoColorDiente = "ninguno" | "realizado" | "por_realizar";
+type CaraDiente = "O" | "V" | "L" | "M" | "D";
+
+interface EstadoPiezaMsp {
+  O: EstadoColorDiente;
+  V: EstadoColorDiente;
+  L: EstadoColorDiente;
+  M: EstadoColorDiente;
+  D: EstadoColorDiente;
+  movilidadRecesion: string;
+  observacion: string;
+}
+
 interface Perfil {
   id: string;
   rol: RolUsuario;
@@ -96,9 +109,12 @@ interface HistoriaClinicaCompleta {
   oclusionLlaveAngle: string;
   detalleOclusionAngle: string;
 
-  // 6. Exámenes complementarios y fotos
+  // 6. Exámenes complementarios, odontograma MSP y fotos
   examenesComplementarios: string;
   fotos: RegistroFoto[];
+  piezaSeleccionada: string;
+  pincelEstado: EstadoColorDiente;
+  odontogramaMsp: Record<string, EstadoPiezaMsp>;
 
   // 7. Diagnóstico CIE-10 y plan de tratamiento
   codigoCie10: string;
@@ -106,7 +122,6 @@ interface HistoriaClinicaCompleta {
   planTratamiento: string;
 
   // 8. Odontograma y periodontograma
-  piezaSeleccionada: string;
   notasOdontograma: string;
   notasPeriodontograma: string;
 }
@@ -250,7 +265,7 @@ const OPCIONES_OCLUSION_ANGLE = [
   "Otros",
 ];
 
-const PIEZAS_FDI_SUPERIOR = [
+const PIEZAS_PERMANENTES_SUP = [
   "18",
   "17",
   "16",
@@ -269,7 +284,11 @@ const PIEZAS_FDI_SUPERIOR = [
   "28",
 ];
 
-const PIEZAS_FDI_INFERIOR = [
+const PIEZAS_TEMPORALES_SUP = ["55", "54", "53", "52", "51", "61", "62", "63", "64", "65"];
+
+const PIEZAS_TEMPORALES_INF = ["85", "84", "83", "82", "81", "71", "72", "73", "74", "75"];
+
+const PIEZAS_PERMANENTES_INF = [
   "48",
   "47",
   "46",
@@ -287,6 +306,24 @@ const PIEZAS_FDI_INFERIOR = [
   "37",
   "38",
 ];
+
+function piezaVacia(): EstadoPiezaMsp {
+  return {
+    O: "ninguno",
+    V: "ninguno",
+    L: "ninguno",
+    M: "ninguno",
+    D: "ninguno",
+    movilidadRecesion: "",
+    observacion: "",
+  };
+}
+
+function fillPorEstado(estado: EstadoColorDiente): string {
+  if (estado === "realizado") return "#2563eb"; // Azul: tratamiento realizado
+  if (estado === "por_realizar") return "#dc2626"; // Rojo: patología / por realizarse
+  return "#ffffff";
+}
 
 function nombreCompletoPaciente(hc: HistoriaClinicaCompleta): string {
   const full = `${hc.nombres || ""} ${hc.apellidos || ""}`.trim();
@@ -352,10 +389,12 @@ function crearHcVacia(
     detalleOclusionAngle: "",
     examenesComplementarios: "",
     fotos: [],
+    piezaSeleccionada: "16",
+    pincelEstado: "por_realizar",
+    odontogramaMsp: {},
     codigoCie10: "",
     diagnostico: "",
     planTratamiento: "",
-    piezaSeleccionada: "11",
     notasOdontograma: "",
     notasPeriodontograma: "",
   };
@@ -545,6 +584,93 @@ export default function HomePage() {
     );
   }
 
+  function marcarCaraPieza(pieza: string, cara: CaraDiente) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+        const estadoActual = actualPieza[cara];
+        const siguienteEstado: EstadoColorDiente =
+          estadoActual === pac.hc.pincelEstado ? "ninguno" : pac.hc.pincelEstado;
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            piezaSeleccionada: pieza,
+            odontogramaMsp: {
+              ...pac.hc.odontogramaMsp,
+              [pieza]: {
+                ...actualPieza,
+                [cara]: siguienteEstado,
+              },
+            },
+          },
+        };
+      })
+    );
+  }
+
+  function marcarPiezaCompleta(pieza: string) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+        const color = pac.hc.pincelEstado;
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            piezaSeleccionada: pieza,
+            odontogramaMsp: {
+              ...pac.hc.odontogramaMsp,
+              [pieza]: {
+                ...actualPieza,
+                O: color,
+                V: color,
+                L: color,
+                M: color,
+                D: color,
+              },
+            },
+          },
+        };
+      })
+    );
+  }
+
+  function actualizarDatoPieza(
+    pieza: string,
+    campo: "movilidadRecesion" | "observacion",
+    valor: string
+  ) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            odontogramaMsp: {
+              ...pac.hc.odontogramaMsp,
+              [pieza]: {
+                ...actualPieza,
+                [campo]: valor,
+              },
+            },
+          },
+        };
+      })
+    );
+  }
+
   function toggleNoPresentaDolor() {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -731,6 +857,283 @@ export default function HomePage() {
     ]);
     setPacienteCita("");
     setMotivoCita("");
+  }
+
+  function renderDienteMsp(
+    codigoPieza: string,
+    hc: HistoriaClinicaCompleta,
+    superior: boolean
+  ) {
+    const d = hc.odontogramaMsp[codigoPieza] || piezaVacia();
+    const seleccionada = hc.piezaSeleccionada === codigoPieza;
+    const caraArriba: CaraDiente = superior ? "V" : "L";
+    const caraAbajo: CaraDiente = superior ? "L" : "V";
+
+    return (
+      <div
+        key={codigoPieza}
+        className={`flex flex-col items-center rounded-lg p-1 border ${
+          seleccionada
+            ? "border-slate-900 bg-slate-100"
+            : "border-transparent hover:border-slate-300"
+        }`}
+      >
+        {superior && (
+          <button
+            type="button"
+            onClick={() => actualizarCampoHc("piezaSeleccionada", codigoPieza)}
+            className="text-[11px] font-bold text-slate-800 leading-tight mb-0.5"
+          >
+            {codigoPieza}
+          </button>
+        )}
+
+        <svg
+          viewBox="0 0 44 44"
+          className="w-9 h-9 touch-manipulation select-none"
+          aria-label={`Pieza ${codigoPieza}`}
+        >
+          {/* Cara superior (V en superiores, L en inferiores) */}
+          <polygon
+            points="2,2 42,2 32,12 12,12"
+            fill={fillPorEstado(d[caraArriba])}
+            stroke="#1e293b"
+            strokeWidth="1.8"
+            className="cursor-pointer"
+            onClick={() => marcarCaraPieza(codigoPieza, caraArriba)}
+          />
+          {/* Cara inferior (L en superiores, V en inferiores) */}
+          <polygon
+            points="12,32 32,32 42,42 2,42"
+            fill={fillPorEstado(d[caraAbajo])}
+            stroke="#1e293b"
+            strokeWidth="1.8"
+            className="cursor-pointer"
+            onClick={() => marcarCaraPieza(codigoPieza, caraAbajo)}
+          />
+          {/* Cara izquierda (M en cuadrantes 1,4,5,8; D en 2,3,6,7) */}
+          <polygon
+            points="2,2 12,12 12,32 2,42"
+            fill={
+              fillPorEstado(
+                codigoPieza.startsWith("1") ||
+                  codigoPieza.startsWith("4") ||
+                  codigoPieza.startsWith("5") ||
+                  codigoPieza.startsWith("8")
+                  ? d.M
+                  : d.D
+              )
+            }
+            stroke="#1e293b"
+            strokeWidth="1.8"
+            className="cursor-pointer"
+            onClick={() =>
+              marcarCaraPieza(
+                codigoPieza,
+                codigoPieza.startsWith("1") ||
+                  codigoPieza.startsWith("4") ||
+                  codigoPieza.startsWith("5") ||
+                  codigoPieza.startsWith("8")
+                  ? "M"
+                  : "D"
+              )
+            }
+          />
+          {/* Cara derecha (D en cuadrantes 1,4,5,8; M en 2,3,6,7) */}
+          <polygon
+            points="32,12 42,2 42,42 32,32"
+            fill={
+              fillPorEstado(
+                codigoPieza.startsWith("1") ||
+                  codigoPieza.startsWith("4") ||
+                  codigoPieza.startsWith("5") ||
+                  codigoPieza.startsWith("8")
+                  ? d.D
+                  : d.M
+              )
+            }
+            stroke="#1e293b"
+            strokeWidth="1.8"
+            className="cursor-pointer"
+            onClick={() =>
+              marcarCaraPieza(
+                codigoPieza,
+                codigoPieza.startsWith("1") ||
+                  codigoPieza.startsWith("4") ||
+                  codigoPieza.startsWith("5") ||
+                  codigoPieza.startsWith("8")
+                  ? "D"
+                  : "M"
+              )
+            }
+          />
+          {/* Centro (Oclusal / Incisal) */}
+          <rect
+            x="12"
+            y="12"
+            width="20"
+            height="20"
+            fill={fillPorEstado(d.O)}
+            stroke="#1e293b"
+            strokeWidth="1.8"
+            className="cursor-pointer"
+            onClick={() => marcarCaraPieza(codigoPieza, "O")}
+          />
+        </svg>
+
+        {!superior && (
+          <button
+            type="button"
+            onClick={() => actualizarCampoHc("piezaSeleccionada", codigoPieza)}
+            className="text-[11px] font-bold text-slate-800 leading-tight mt-0.5"
+          >
+            {codigoPieza}
+          </button>
+        )}
+
+        <input
+          type="text"
+          value={d.movilidadRecesion}
+          onChange={(e) =>
+            actualizarDatoPieza(codigoPieza, "movilidadRecesion", e.target.value)
+          }
+          placeholder="M/R"
+          title={`Movilidad/Recesión pieza ${codigoPieza}`}
+          className="w-8 mt-0.5 text-center text-[10px] border border-slate-300 rounded bg-white px-0.5 py-0.5"
+        />
+      </div>
+    );
+  }
+
+  function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
+    const piezaAct = hc.odontogramaMsp[hc.piezaSeleccionada] || piezaVacia();
+
+    return (
+      <div className="border border-indigo-200 rounded-2xl p-3.5 bg-cyan-50/70 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-100/90 border border-indigo-200 rounded-xl px-3 py-2">
+          <p className="text-xs font-bold text-slate-900">
+            ODONTOGRAMA MSP 033 — AZUL: TRATAMIENTO REALIZADO · ROJO: PATOLOGÍA / POR REALIZARSE[span_3](start_span)[span_3](end_span)
+          </p>
+          <span className="text-xs font-medium text-slate-700">
+            Pieza activa: <strong>#{hc.piezaSeleccionada}</strong>
+          </span>
+        </div>
+
+        {/* Barra de color (Azul / Rojo / Borrar) + Pieza completa */}
+        <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5">
+          <span className="text-xs font-semibold text-slate-600 mr-1">
+            Color activo:
+          </span>
+
+          <button
+            type="button"
+            onClick={() => actualizarCampoHc("pincelEstado", "realizado")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border ${
+              hc.pincelEstado === "realizado"
+                ? "bg-blue-600 text-white border-blue-700"
+                : "bg-blue-50 text-blue-800 border-blue-200"
+            }`}
+          >
+            <span className="w-3 h-3 rounded-sm bg-blue-600 border border-white inline-block" />
+            Azul (Realizado)[span_4](start_span)[span_4](end_span)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => actualizarCampoHc("pincelEstado", "por_realizar")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border ${
+              hc.pincelEstado === "por_realizar"
+                ? "bg-red-600 text-white border-red-700"
+                : "bg-red-50 text-red-800 border-red-200"
+            }`}
+          >
+            <span className="w-3 h-3 rounded-sm bg-red-600 border border-white inline-block" />
+            Rojo (Por realizarse)[span_5](start_span)[span_5](end_span)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => actualizarCampoHc("pincelEstado", "ninguno")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${
+              hc.pincelEstado === "ninguno"
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-slate-100 text-slate-700 border-slate-300"
+            }`}
+          >
+            Limpiar cara
+          </button>
+
+          <button
+            type="button"
+            onClick={() => marcarPiezaCompleta(hc.piezaSeleccionada)}
+            className="ml-auto rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-800"
+          >
+            Pintar pieza #{hc.piezaSeleccionada} completa
+          </button>
+        </div>
+
+        {/* Arcada superior permanente */}
+        <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
+          <p className="text-[11px] font-semibold text-slate-500 mb-1">
+            Superior permanente (18–28) — Fila inferior de cada diente: Movilidad / Recesión[span_6](start_span)[span_6](end_span)
+          </p>
+          <div className="flex items-start gap-1 min-w-max">
+            {PIEZAS_PERMANENTES_SUP.map((p) => renderDienteMsp(p, hc, true))}
+          </div>
+        </div>
+
+        {/* Dentición temporal superior e inferior */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+          <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
+            <p className="text-[11px] font-semibold text-slate-500 mb-1">
+              Temporal superior (55–65)[span_7](start_span)[span_7](end_span)
+            </p>
+            <div className="flex items-start gap-1 min-w-max">
+              {PIEZAS_TEMPORALES_SUP.map((p) => renderDienteMsp(p, hc, true))}
+            </div>
+          </div>
+
+          <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
+            <p className="text-[11px] font-semibold text-slate-500 mb-1">
+              Temporal inferior (85–75)[span_8](start_span)[span_8](end_span)
+            </p>
+            <div className="flex items-start gap-1 min-w-max">
+              {PIEZAS_TEMPORALES_INF.map((p) => renderDienteMsp(p, hc, false))}
+            </div>
+          </div>
+        </div>
+
+        {/* Arcada inferior permanente */}
+        <div className="bg-white/90 border border-slate-200 rounded-xl p-2 overflow-x-auto">
+          <p className="text-[11px] font-semibold text-slate-500 mb-1">
+            Inferior permanente (48–38)[span_9](start_span)[span_9](end_span)
+          </p>
+          <div className="flex items-start gap-1 min-w-max">
+            {PIEZAS_PERMANENTES_INF.map((p) => renderDienteMsp(p, hc, false))}
+          </div>
+        </div>
+
+        {/* Detalle de la pieza seleccionada */}
+        <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+          <label className="block text-xs font-semibold text-slate-700">
+            Observación clínica — Pieza #{hc.piezaSeleccionada}
+          </label>
+          <input
+            type="text"
+            value={piezaAct.observacion}
+            onChange={(e) =>
+              actualizarDatoPieza(
+                hc.piezaSeleccionada,
+                "observacion",
+                e.target.value
+              )
+            }
+            placeholder={`Ej. Resina oclusal en azul / caries o endodoncia por realizar en rojo (#${hc.piezaSeleccionada})`}
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+          />
+        </div>
+      </div>
+    );
   }
 
   const pacienteActivo =
@@ -1682,7 +2085,6 @@ export default function HomePage() {
 
                   {seccionHc === "clinico" && (
                     <div className="space-y-4 text-sm">
-                      {/* Signos vitales (solo PA, Pulso, Temperatura, FR) */}
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -1751,7 +2153,6 @@ export default function HomePage() {
                         </div>
                       </div>
 
-                      {/* Examen extraoral (checks + detalle en Otros) */}
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
                         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
                           Examen extraoral
@@ -1805,7 +2206,6 @@ export default function HomePage() {
                         )}
                       </div>
 
-                      {/* Examen intraoral (checks + detalle en Otros) */}
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
                         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
                           Examen intraoral
@@ -1859,7 +2259,6 @@ export default function HomePage() {
                         )}
                       </div>
 
-                      {/* Tejidos blandos (checks + detalle en Otros) */}
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
                         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
                           Tejidos blandos
@@ -1911,7 +2310,6 @@ export default function HomePage() {
                         )}
                       </div>
 
-                      {/* Cuadro para Índice CPOD */}
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -1995,7 +2393,6 @@ export default function HomePage() {
                         </div>
                       </div>
 
-                      {/* Oclusión / Llave de Angle (lista desplegable + detalle en Otros) */}
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
                         <label className="block text-xs font-medium text-slate-600">
                           Oclusión / Llave de Angle
@@ -2043,7 +2440,7 @@ export default function HomePage() {
                           clínicas, tomografías, laboratorio)
                         </label>
                         <textarea
-                          rows={3}
+                          rows={2}
                           value={pacienteActivo.hc.examenesComplementarios}
                           onChange={(e) =>
                             actualizarCampoHc(
@@ -2055,6 +2452,9 @@ export default function HomePage() {
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                         />
                       </div>
+
+                      {/* Odontograma interactivo MSP 033 integrado en Exámenes y fotos */}
+                      {renderOdontogramaMsp(pacienteActivo.hc)}
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                         <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-800">
@@ -2166,87 +2566,23 @@ export default function HomePage() {
 
                   {seccionHc === "odontograma" && (
                     <div className="space-y-4 text-sm">
-                      {/* Selector rápido de pieza FDI */}
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                            Odontograma — Pieza seleccionada: #
-                            {pacienteActivo.hc.piezaSeleccionada}
-                          </label>
-                          <span className="text-xs text-slate-500">
-                            Toque una pieza para enfocar el registro
-                          </span>
-                        </div>
+                      {renderOdontogramaMsp(pacienteActivo.hc)}
 
-                        <div className="space-y-1.5">
-                          <p className="text-[11px] font-medium text-slate-500">
-                            Arcada superior (18–28)
-                          </p>
-                          <div className="grid grid-cols-8 sm:grid-cols-16 gap-1">
-                            {PIEZAS_FDI_SUPERIOR.map((pieza) => (
-                              <button
-                                key={pieza}
-                                type="button"
-                                onClick={() =>
-                                  actualizarCampoHc("piezaSeleccionada", pieza)
-                                }
-                                className={`rounded border py-1.5 text-xs font-medium ${
-                                  pacienteActivo.hc.piezaSeleccionada === pieza
-                                    ? "bg-slate-900 text-white border-slate-900"
-                                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                                }`}
-                              >
-                                {pieza}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5 pt-1">
-                          <p className="text-[11px] font-medium text-slate-500">
-                            Arcada inferior (48–38)
-                          </p>
-                          <div className="grid grid-cols-8 sm:grid-cols-16 gap-1">
-                            {PIEZAS_FDI_INFERIOR.map((pieza) => (
-                              <button
-                                key={pieza}
-                                type="button"
-                                onClick={() =>
-                                  actualizarCampoHc("piezaSeleccionada", pieza)
-                                }
-                                className={`rounded border py-1.5 text-xs font-medium ${
-                                  pacienteActivo.hc.piezaSeleccionada === pieza
-                                    ? "bg-slate-900 text-white border-slate-900"
-                                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                                }`}
-                              >
-                                {pieza}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="pt-2">
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Registro del odontograma (estado actual, patologías y
-                            tratamientos)
-                          </label>
-                          <textarea
-                            rows={4}
-                            value={pacienteActivo.hc.notasOdontograma}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "notasOdontograma",
-                                e.target.value
-                              )
-                            }
-                            placeholder={`Ej. Pieza #${pacienteActivo.hc.piezaSeleccionada}: caries oclusal / restauración / ausencia...`}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Resumen general del odontograma
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pacienteActivo.hc.notasOdontograma}
+                          onChange={(e) =>
+                            actualizarCampoHc("notasOdontograma", e.target.value)
+                          }
+                          placeholder="Notas generales de piezas, restauraciones o patologías..."
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        />
                       </div>
 
-                      {/* Periodontograma */}
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
                         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
                           Periodontograma
