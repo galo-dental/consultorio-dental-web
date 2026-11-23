@@ -223,6 +223,52 @@ const OPCIONES_OCLUSION_ANGLE = [
   "Clase III",
 ];
 
+const CODIGOS_CIE10_ODONTO: { codigo: string; descripcion: string }[] = [
+  { codigo: "K00.0", descripcion: "Anodoncia" },
+  { codigo: "K00.1", descripcion: "Dientes supernumerarios" },
+  { codigo: "K00.2", descripcion: "Anomalías del tamaño y de la forma del diente" },
+  { codigo: "K00.6", descripcion: "Alteraciones en la erupción dentaria" },
+  { codigo: "K00.7", descripcion: "Síndrome de la erupción dentaria" },
+  { codigo: "K01.0", descripcion: "Dientes incluidos" },
+  { codigo: "K01.1", descripcion: "Dientes impactados" },
+  { codigo: "K02.0", descripcion: "Caries limitada al esmalte" },
+  { codigo: "K02.1", descripcion: "Caries de la dentina" },
+  { codigo: "K02.2", descripcion: "Caries del cemento" },
+  { codigo: "K02.3", descripcion: "Caries dentaria detenida" },
+  { codigo: "K02.8", descripcion: "Otras caries dentales" },
+  { codigo: "K02.9", descripcion: "Caries dental, no especificada" },
+  { codigo: "K03.0", descripcion: "Atrición excesiva de los dientes" },
+  { codigo: "K03.1", descripcion: "Abrasión de los dientes" },
+  { codigo: "K03.2", descripcion: "Erosión de los dientes" },
+  { codigo: "K03.6", descripcion: "Depósitos [acreciones] en los dientes" },
+  { codigo: "K03.7", descripcion: "Cambios posteriores a la erupción en el color de los tejidos duros de los dientes" },
+  { codigo: "K04.0", descripcion: "Pulpitis" },
+  { codigo: "K04.1", descripcion: "Necrosis de la pulpa" },
+  { codigo: "K04.4", descripcion: "Periodontitis apical aguda originada en la pulpa" },
+  { codigo: "K04.5", descripcion: "Periodontitis apical crónica" },
+  { codigo: "K04.6", descripcion: "Absceso periapical con fístula" },
+  { codigo: "K04.7", descripcion: "Absceso periapical sin fístula" },
+  { codigo: "K05.0", descripcion: "Gingivitis aguda" },
+  { codigo: "K05.1", descripcion: "Gingivitis crónica" },
+  { codigo: "K05.2", descripcion: "Periodontitis aguda" },
+  { codigo: "K05.3", descripcion: "Periodontitis crónica" },
+  { codigo: "K06.0", descripcion: "Retracción gingival" },
+  { codigo: "K06.1", descripcion: "Hiperplasia gingival" },
+  { codigo: "K07.0", descripcion: "Anomalías evidentes del tamaño de los maxilares" },
+  { codigo: "K07.2", descripcion: "Anomalías de la relación entre los arcos dentarios" },
+  { codigo: "K07.3", descripcion: "Anomalías de la posición del diente" },
+  { codigo: "K07.4", descripcion: "Maloclusión de tipo no especificado" },
+  { codigo: "K07.6", descripcion: "Trastornos de la articulación temporomandibular" },
+  { codigo: "K08.1", descripcion: "Pérdida de dientes debida a accidente, extracción o enfermedad periodontal local" },
+  { codigo: "K08.2", descripcion: "Atrofia de reborde edéntulo" },
+  { codigo: "K08.3", descripcion: "Raíz dental retenida" },
+  { codigo: "K12.0", descripcion: "Aftas bucales recurrentes" },
+  { codigo: "K12.1", descripcion: "Otras formas de estomatitis" },
+  { codigo: "K13.2", descripcion: "Leucoplasia y otras alteraciones del epitelio bucal, incluyendo la lengua" },
+  { codigo: "K14.0", descripcion: "Glositis" },
+  { codigo: "Z02.1", descripcion: "Examen odontológico" },
+];
+
 const MOVILIDAD_MILLER = [
   { codigo: "M0", etiqueta: "Grado 0: fisiológica (≤0,2 mm)" },
   { codigo: "M1", etiqueta: "Grado 1: horizontal (<1 mm)" },
@@ -940,6 +986,36 @@ export default function HomePage() {
           ? { ...pac, hc: { ...pac.hc, [campo]: valor } }
           : pac
       )
+    );
+  }
+
+  function seleccionarCie10DesdeLista(codigoSeleccionado: string) {
+    if (!pacienteSeleccionadoId) return;
+    const item = CODIGOS_CIE10_ODONTO.find(
+      (c) => c.codigo === codigoSeleccionado
+    );
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        if (!item) {
+          return {
+            ...pac,
+            hc: {
+              ...pac.hc,
+              codigoCie10: "",
+            },
+          };
+        }
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            codigoCie10: item.codigo,
+            diagnostico: item.descripcion,
+          },
+        };
+      })
     );
   }
 
@@ -2311,8 +2387,8 @@ export default function HomePage() {
     { id: "identificacion", titulo: "1. Identificación" },
     { id: "motivo_antecedentes", titulo: "2. Motivo y antecedentes" },
     { id: "clinico", titulo: "3. Signos y examen" },
-    { id: "odontograma", titulo: "4. Odontograma e índice CPOD" },
-    { id: "diagnostico", titulo: "5. Diagnóstico CIE-10 y plan" },
+    { id: "odontograma", titulo: "4. Odontograma" },
+    { id: "diagnostico", titulo: "5. Diagnóstico y plan" },
     { id: "examenes", titulo: "6. Exámenes y fotos" },
   ];
 
@@ -3814,6 +3890,34 @@ export default function HomePage() {
 
                   {seccionHc === "diagnostico" && (
                     <div className="space-y-3 text-sm">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
+                          Lista desplegable CIE-10 (Códigos K y Z02.1)
+                        </label>
+                        <select
+                          value={
+                            CODIGOS_CIE10_ODONTO.some(
+                              (c) => c.codigo === pacienteActivo.hc.codigoCie10
+                            )
+                              ? pacienteActivo.hc.codigoCie10
+                              : ""
+                          }
+                          onChange={(e) =>
+                            seleccionarCie10DesdeLista(e.target.value)
+                          }
+                          className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                        >
+                          <option value="">
+                            Seleccionar código CIE-10 (K / Z02.1)...
+                          </option>
+                          {CODIGOS_CIE10_ODONTO.map((item) => (
+                            <option key={item.codigo} value={item.codigo}>
+                              {item.codigo} — {item.descripcion}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-sky-900 mb-1">
@@ -3825,7 +3929,7 @@ export default function HomePage() {
                             onChange={(e) =>
                               actualizarCampoHc("codigoCie10", e.target.value)
                             }
-                            placeholder="Ej. K02.1 (Caries de la dentina)"
+                            placeholder="Ej. K02.1 o Z02.1"
                             className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
@@ -4044,4 +4148,4 @@ export default function HomePage() {
       )}
     </main>
   );
-} 
+}
