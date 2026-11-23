@@ -207,7 +207,6 @@ function renderEndodonciaEnRaices(
   );
 }
 
-// Espiral de tornillo colocada estrictamente sobre la zona radicular
 function renderImplanteSobreRaiz(
   superior: boolean,
   color: string,
@@ -230,19 +229,13 @@ function renderImplanteSobreRaiz(
       <line x1="16" y1={yTop} x2="28" y2={yTop} strokeWidth="2.4" />
       {[1, 2, 3, 4].map((n) => {
         const y = yTop + step * n;
-        return (
-          <path
-            key={n}
-            d={`M17 ${y - 1.5} L27 ${y + 1.5}`}
-          />
-        );
+        return <path key={n} d={`M17 ${y - 1.5} L27 ${y + 1.5}`} />;
       })}
       <path d={`M17.5 ${yBot - 2} L22 ${yBot} L26.5 ${yBot - 2}`} />
     </g>
   );
 }
 
-// Cobertura total de corona o prótesis sobre la corona (vista lateral)
 function renderCoberturaTotalCoronaLateral(
   sim: SimboloAplicado,
   superior: boolean,
@@ -274,7 +267,6 @@ function renderCoberturaTotalCoronaLateral(
   );
 }
 
-// Cobertura total de corona o prótesis sobre la corona (vista oclusal)
 function renderCoberturaTotalCoronaOclusal(
   sim: SimboloAplicado,
   key: string
@@ -643,7 +635,10 @@ export default function Odontograma3D({ odontogramaMsp }: Props) {
 
   async function alternarPantallaCompleta() {
     try {
-      if (!document.fullscreenElement && contenedorRef.current?.requestFullscreen) {
+      if (
+        !document.fullscreenElement &&
+        contenedorRef.current?.requestFullscreen
+      ) {
         await contenedorRef.current.requestFullscreen();
         setPantallaCompleta(true);
       } else if (document.fullscreenElement && document.exitFullscreen) {
@@ -657,72 +652,89 @@ export default function Odontograma3D({ odontogramaMsp }: Props) {
     }
   }
 
-  const renderFila = (
+  const renderBloqueConLineaMedia = (
     codigos: string[],
     superior: boolean,
     esTemporal: boolean
-  ) => (
-    <div className="flex items-center justify-center gap-0.5 sm:gap-1">
-      {codigos.map((codigo) => {
-        const estado = odontogramaMsp[codigo];
+  ) => {
+    const mitad = Math.floor(codigos.length / 2);
+    const derecha = codigos.slice(0, mitad);
+    const izquierda = codigos.slice(mitad);
 
-        return (
-          <div
-            key={codigo}
-            className="flex flex-col items-center px-0.5 py-0.5 select-none"
-          >
-            {superior ? (
-              <>
-                <VistaRaizSvg
-                  codigo={codigo}
-                  superior={true}
-                  estado={estado}
-                  esTemporal={esTemporal}
-                />
-                <VistaOclusalSvg
-                  codigo={codigo}
-                  estado={estado}
-                  esTemporal={esTemporal}
-                />
-                <span
-                  className={`mt-0.5 font-semibold text-slate-800 ${
-                    esTemporal
-                      ? "text-[9px] sm:text-[10px]"
-                      : "text-[10px] sm:text-[11px]"
-                  }`}
-                >
-                  {codigo}
-                </span>
-              </>
-            ) : (
-              <>
-                <span
-                  className={`mb-0.5 font-semibold text-slate-800 ${
-                    esTemporal
-                      ? "text-[9px] sm:text-[10px]"
-                      : "text-[10px] sm:text-[11px]"
-                  }`}
-                >
-                  {codigo}
-                </span>
-                <VistaOclusalSvg
-                  codigo={codigo}
-                  estado={estado}
-                  esTemporal={esTemporal}
-                />
-                <VistaRaizSvg
-                  codigo={codigo}
-                  superior={false}
-                  estado={estado}
-                  esTemporal={esTemporal}
-                />
-              </>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+    const renderPieza = (codigo: string) => {
+      const estado = odontogramaMsp[codigo];
+      return (
+        <div
+          key={codigo}
+          className="flex flex-col items-center px-0.5 py-0.5 select-none"
+        >
+          {superior ? (
+            <>
+              <VistaRaizSvg
+                codigo={codigo}
+                superior={true}
+                estado={estado}
+                esTemporal={esTemporal}
+              />
+              <VistaOclusalSvg
+                codigo={codigo}
+                estado={estado}
+                esTemporal={esTemporal}
+              />
+              <span
+                className={`mt-0.5 font-semibold text-slate-800 ${
+                  esTemporal
+                    ? "text-[9px] sm:text-[10px]"
+                    : "text-[10px] sm:text-[11px]"
+                }`}
+              >
+                {codigo}
+              </span>
+            </>
+          ) : (
+            <>
+              <span
+                className={`mb-0.5 font-semibold text-slate-800 ${
+                  esTemporal
+                    ? "text-[9px] sm:text-[10px]"
+                    : "text-[10px] sm:text-[11px]"
+                }`}
+              >
+                {codigo}
+              </span>
+              <VistaOclusalSvg
+                codigo={codigo}
+                estado={estado}
+                esTemporal={esTemporal}
+              />
+              <VistaRaizSvg
+                codigo={codigo}
+                superior={false}
+                estado={estado}
+                esTemporal={esTemporal}
+              />
+            </>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div className="flex items-stretch justify-center gap-1 sm:gap-1.5">
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          {derecha.map(renderPieza)}
+        </div>
+        {/* Línea media vertical entrecortada */}
+        <div
+          aria-hidden="true"
+          className="w-0 border-l-2 border-dashed border-slate-600/80 self-stretch mx-0.5"
+        />
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          {izquierda.map(renderPieza)}
+        </div>
+      </div>
+    );
+  };
 
   if (!mostrarParaPaciente) {
     return (
@@ -759,25 +771,29 @@ export default function Odontograma3D({ odontogramaMsp }: Props) {
 
       <div className="overflow-x-auto rounded-xl bg-slate-300/80 border border-slate-400/50 p-3">
         <div className="min-w-[760px] space-y-2">
-          {renderFila(PERMANENTE_SUPERIOR, true, false)}
+          {renderBloqueConLineaMedia(PERMANENTE_SUPERIOR, true, false)}
 
           <div className="pt-0.5">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 text-center mb-0.5">
               Temporal superior
             </p>
-            {renderFila(TEMPORAL_SUPERIOR, true, true)}
+            {renderBloqueConLineaMedia(TEMPORAL_SUPERIOR, true, true)}
           </div>
 
-          <div className="border-t-2 border-slate-500/75 my-1.5" />
+          {/* Línea horizontal entrecortada del plano oclusal */}
+          <div
+            aria-hidden="true"
+            className="border-t-2 border-dashed border-slate-600/85 my-1.5"
+          />
 
           <div className="pb-0.5">
-            {renderFila(TEMPORAL_INFERIOR, false, true)}
+            {renderBloqueConLineaMedia(TEMPORAL_INFERIOR, false, true)}
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 text-center mt-0.5">
               Temporal inferior
             </p>
           </div>
 
-          {renderFila(PERMANENTE_INFERIOR, false, false)}
+          {renderBloqueConLineaMedia(PERMANENTE_INFERIOR, false, false)}
         </div>
       </div>
     </div>
