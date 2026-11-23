@@ -15,9 +15,9 @@ type SeccionHC =
   | "identificacion"
   | "motivo_antecedentes"
   | "clinico"
-  | "examenes"
   | "odontograma"
-  | "diagnostico";
+  | "diagnostico"
+  | "examenes";
 
 type ColorMsp = "rojo" | "azul";
 type EstadoColorDiente = "ninguno" | "realizado" | "por_realizar";
@@ -780,7 +780,7 @@ function SiluetaPersonaNeutral() {
   return (
     <svg
       viewBox="0 0 120 140"
-      className="w-24 h-28 text-slate-400"
+      className="w-24 h-28 text-sky-400"
       role="img"
       aria-label="Silueta general sin género"
     >
@@ -800,7 +800,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [avisoPerfil, setAvisoPerfil] = useState<string | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [moduloActivo, setModuloActivo] = useState<ModuloActivo>(null);
 
@@ -841,7 +840,6 @@ export default function HomePage() {
   async function cargarSesion() {
     setLoading(true);
     setErrorMsg(null);
-    setAvisoPerfil(null);
 
     const {
       data: { user },
@@ -866,9 +864,6 @@ export default function HomePage() {
         rol: inferirRolRespaldo(user.email),
         nombre_completo: user.email || "Usuario del Consultorio",
       });
-      setAvisoPerfil(
-        "Acceso concedido con rol temporal (no se pudo leer la fila en perfiles)."
-      );
     } else {
       setPerfil({
         id: data.id,
@@ -908,7 +903,6 @@ export default function HomePage() {
   async function handleLogout() {
     await supabase.auth.signOut();
     setPerfil(null);
-    setAvisoPerfil(null);
     setModuloActivo(null);
     setPassword("");
   }
@@ -1709,15 +1703,15 @@ export default function HomePage() {
           temporal ? "rounded-2xl" : "rounded-lg"
         } ${
           perdidaRealizada
-            ? "opacity-40 border-slate-100 bg-slate-50/40"
+            ? "opacity-40 border-sky-100 bg-sky-50/40"
             : seleccionada
-            ? "border-slate-500 bg-slate-100 ring-1 ring-slate-400"
-            : "border-transparent hover:border-slate-200"
+            ? "border-sky-500 bg-sky-100/80 ring-1 ring-sky-400"
+            : "border-transparent hover:border-sky-200"
         }`}
       >
         {superior ? (
           <>
-            <span className="text-[11px] font-semibold text-slate-600 leading-tight mb-0.5">
+            <span className="text-[11px] font-semibold text-sky-900 leading-tight mb-0.5">
               {codigoPieza}
             </span>
             {renderMarcadoresExternosPieza(simbolos, true)}
@@ -1849,7 +1843,7 @@ export default function HomePage() {
         {!superior ? (
           <>
             {renderMarcadoresExternosPieza(simbolos, false)}
-            <span className="text-[11px] font-semibold text-slate-600 leading-tight mt-0.5">
+            <span className="text-[11px] font-semibold text-sky-900 leading-tight mt-0.5">
               {codigoPieza}
             </span>
           </>
@@ -1865,7 +1859,7 @@ export default function HomePage() {
               actualizarDatoPieza(codigoPieza, "movilidad", e.target.value)
             }
             title={`Movilidad (Miller) pieza ${codigoPieza}`}
-            className="w-12 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-700 px-0.5 py-0.5"
+            className="w-12 text-center text-[10px] border border-sky-200 rounded bg-white text-sky-900 px-0.5 py-0.5"
           >
             <option value="">M</option>
             {MOVILIDAD_MILLER.map((m) => (
@@ -1882,7 +1876,7 @@ export default function HomePage() {
               actualizarDatoPieza(codigoPieza, "recesion", e.target.value)
             }
             title={`Retracción / Recesión (Miller) pieza ${codigoPieza}`}
-            className="w-12 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-700 px-0.5 py-0.5"
+            className="w-12 text-center text-[10px] border border-sky-200 rounded bg-white text-sky-900 px-0.5 py-0.5"
           >
             <option value="">R</option>
             {RETRACCION_MILLER.map((r) => (
@@ -1917,15 +1911,15 @@ export default function HomePage() {
         : undefined;
 
     return (
-      <div className="border border-slate-200 rounded-2xl p-3.5 bg-cyan-50/50 space-y-3">
-        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
+      <div className="border border-sky-200 rounded-2xl p-3.5 bg-sky-50/60 space-y-3">
+        <div className="bg-white border border-sky-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-slate-700">
+            <span className="text-xs font-semibold text-sky-950">
               Caries / por realizar (Rojo) y Restauración (Azul) — se marcan al
               tocar las caras
             </span>
             {modoCarasActivo && (
-              <span className="text-[11px] font-medium text-slate-600">
+              <span className="text-[11px] font-medium text-sky-800">
                 Modo caras activo:{" "}
                 <strong>
                   {hc.procedimientoActivo === "caries"
@@ -1943,27 +1937,15 @@ export default function HomePage() {
                 onClick={() => activarModoCarieORestauracion("caries")}
                 className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-semibold text-left transition ${
                   hc.procedimientoActivo === "caries"
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : "bg-slate-50/70 text-slate-800 border-slate-200 hover:bg-slate-100"
+                    ? "bg-sky-200 text-sky-950 border-sky-400"
+                    : "bg-sky-50/60 text-sky-900 border-sky-200 hover:bg-sky-100"
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <span
-                    className={`w-3 h-3 rounded-sm bg-red-500 inline-block border ${
-                      hc.procedimientoActivo === "caries"
-                        ? "border-white"
-                        : "border-red-600"
-                    }`}
-                  />
+                  <span className="w-3 h-3 rounded-sm bg-red-500 inline-block border border-red-600" />
                   <span>Caries / por realizar</span>
                 </span>
-                <span
-                  className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
-                    hc.procedimientoActivo === "caries"
-                      ? "bg-red-500/20 text-red-200 border-red-300/40"
-                      : "bg-red-50 text-red-700 border-red-200"
-                  }`}
-                >
+                <span className="rounded px-2 py-0.5 text-[11px] font-semibold border bg-red-50 text-red-700 border-red-200">
                   Rojo
                 </span>
               </button>
@@ -1973,27 +1955,15 @@ export default function HomePage() {
                 onClick={() => activarModoCarieORestauracion("restauracion")}
                 className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-semibold text-left transition ${
                   hc.procedimientoActivo === "restauracion"
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : "bg-slate-50/70 text-slate-800 border-slate-200 hover:bg-slate-100"
+                    ? "bg-sky-200 text-sky-950 border-sky-400"
+                    : "bg-sky-50/60 text-sky-900 border-sky-200 hover:bg-sky-100"
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <span
-                    className={`w-3 h-3 rounded-sm bg-blue-500 inline-block border ${
-                      hc.procedimientoActivo === "restauracion"
-                        ? "border-white"
-                        : "border-blue-600"
-                    }`}
-                  />
+                  <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block border border-blue-600" />
                   <span>Restauración</span>
                 </span>
-                <span
-                  className={`rounded px-2 py-0.5 text-[11px] font-semibold border ${
-                    hc.procedimientoActivo === "restauracion"
-                      ? "bg-blue-500/20 text-blue-200 border-blue-300/40"
-                      : "bg-blue-50 text-blue-700 border-blue-200"
-                  }`}
-                >
+                <span className="rounded px-2 py-0.5 text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
                   Azul
                 </span>
               </button>
@@ -2012,16 +1982,16 @@ export default function HomePage() {
                 onClick={() =>
                   cargarInformacionSeleccionada(procParaCargarCaras)
                 }
-                className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-semibold"
+                className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
               >
                 Cargar
               </button>
             </div>
           </div>
         </div>
-        <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
+        <div className="bg-white/95 border border-sky-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-slate-700">
+            <span className="text-xs font-semibold text-sky-950">
               Odontograma — Piezas (
               {piezasSel.length > 0 ? `#${piezasSel.join(", #")}` : "ninguna"})
             </span>
@@ -2032,8 +2002,8 @@ export default function HomePage() {
                 onClick={() => alternarArcadaCompleta("superior")}
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border transition ${
                   superiorCompleta
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                    ? "bg-sky-600 text-white border-sky-600"
+                    : "bg-sky-50 text-sky-900 border-sky-200 hover:bg-sky-100"
                 }`}
               >
                 {superiorCompleta
@@ -2046,8 +2016,8 @@ export default function HomePage() {
                 onClick={() => alternarArcadaCompleta("inferior")}
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border transition ${
                   inferiorCompleta
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                    ? "bg-sky-600 text-white border-sky-600"
+                    : "bg-sky-50 text-sky-900 border-sky-200 hover:bg-sky-100"
                 }`}
               >
                 {inferiorCompleta
@@ -2057,7 +2027,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 bg-slate-50/80 border border-slate-200/80 rounded-lg px-2.5 py-1.5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-sky-800 bg-sky-50/80 border border-sky-200/80 rounded-lg px-2.5 py-1.5">
             <span><strong>V</strong> = Vestibular</span>
             <span><strong>P</strong> = Palatino / <strong>L</strong> = Lingual</span>
             <span><strong>M</strong> = Mesial</span>
@@ -2072,22 +2042,22 @@ export default function HomePage() {
             <div className="relative min-w-[780px] py-1">
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 border-l border-dashed border-slate-200 z-0"
+                className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 border-l border-dashed border-sky-200 z-0"
               />
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-200 z-0"
+                className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-dashed border-sky-200 z-0"
               />
 
               <div className="relative z-10 space-y-2">
                 <div className="grid grid-cols-2 gap-4 items-center">
                   <div className="flex items-center justify-end gap-0.5 pr-2">
-                    <span className="text-[10px] font-medium text-slate-400 mr-1">V</span>
+                    <span className="text-[10px] font-medium text-sky-500 mr-1">V</span>
                     {SUP_DER_PERM.map((p) => renderDienteMsp(p, hc))}
                   </div>
                   <div className="flex items-center justify-start gap-0.5 pl-2">
                     {SUP_IZQ_PERM.map((p) => renderDienteMsp(p, hc))}
-                    <span className="text-[10px] font-medium text-slate-400 ml-1">V</span>
+                    <span className="text-[10px] font-medium text-sky-500 ml-1">V</span>
                   </div>
                 </div>
 
@@ -2113,21 +2083,21 @@ export default function HomePage() {
 
                 <div className="grid grid-cols-2 gap-4 items-center">
                   <div className="flex items-center justify-end gap-0.5 pr-2">
-                    <span className="text-[10px] font-medium text-slate-400 mr-1">V</span>
+                    <span className="text-[10px] font-medium text-sky-500 mr-1">V</span>
                     {INF_DER_PERM.map((p) => renderDienteMsp(p, hc))}
                   </div>
                   <div className="flex items-center justify-start gap-0.5 pl-2">
                     {INF_IZQ_PERM.map((p) => renderDienteMsp(p, hc))}
-                    <span className="text-[10px] font-medium text-slate-400 ml-1">V</span>
+                    <span className="text-[10px] font-medium text-sky-500 ml-1">V</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-50/90 border border-slate-200/90 rounded-lg p-2.5 text-[11px] text-slate-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-sky-50/80 border border-sky-200/80 rounded-lg p-2.5 text-[11px] text-sky-900">
             <div className="space-y-0.5">
-              <p className="font-semibold text-slate-700">
+              <p className="font-semibold text-sky-950">
                 Leyenda Movilidad (Miller)
               </p>
               {MOVILIDAD_MILLER.map((m) => (
@@ -2138,7 +2108,7 @@ export default function HomePage() {
               ))}
             </div>
             <div className="space-y-0.5">
-              <p className="font-semibold text-slate-700">
+              <p className="font-semibold text-sky-950">
                 Leyenda Retracción / Recesión (Miller)
               </p>
               {RETRACCION_MILLER.map((r) => (
@@ -2151,9 +2121,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
+        <div className="bg-white border border-sky-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-slate-700">
+            <span className="text-xs font-semibold text-sky-950">
               Simbología
               {procActualObj
                 ? ` · Activo: ${procActualObj.titulo} (${
@@ -2174,14 +2144,14 @@ export default function HomePage() {
                   onClick={() => seleccionarProcedimiento(proc.id)}
                   className={`flex items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition ${
                     seleccionado
-                      ? "bg-slate-800 text-white border-slate-800 font-semibold"
-                      : "bg-slate-50/70 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      ? "bg-sky-200 text-sky-950 border-sky-400 font-semibold"
+                      : "bg-sky-50/60 text-sky-900 border-sky-200 hover:bg-sky-100"
                   }`}
                 >
                   <span className="truncate">{proc.titulo}</span>
                   <span
                     className={`font-bold shrink-0 ${
-                      seleccionado ? "text-white" : "text-slate-500"
+                      seleccionado ? "text-sky-950" : "text-sky-600"
                     }`}
                   >
                     {proc.muestra}
@@ -2192,9 +2162,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2.5">
+        <div className="bg-white border border-sky-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-700 mr-1">
+            <span className="text-xs font-semibold text-sky-950 mr-1">
               Color:
             </span>
 
@@ -2216,11 +2186,11 @@ export default function HomePage() {
               onClick={() => seleccionarColorMsp("azul")}
               className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border ${
                 hc.colorMspActivo === "azul"
-                  ? "bg-blue-500 text-white border-blue-500"
-                  : "bg-blue-50/70 text-blue-700 border-blue-200"
+                  ? "bg-sky-600 text-white border-sky-600"
+                  : "bg-sky-50 text-sky-800 border-sky-200"
               }`}
             >
-              <span className="w-3 h-3 rounded-sm bg-blue-500 border border-white inline-block" />
+              <span className="w-3 h-3 rounded-sm bg-sky-500 border border-white inline-block" />
               Azul (Realizado)
             </button>
 
@@ -2228,12 +2198,12 @@ export default function HomePage() {
               className={`ml-auto flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
                 hc.colorMspActivo === "rojo"
                   ? "bg-red-50/80 border-red-300 text-red-800"
-                  : "bg-blue-50/80 border-blue-300 text-blue-800"
+                  : "bg-sky-100/80 border-sky-300 text-sky-900"
               }`}
             >
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
-                  hc.colorMspActivo === "rojo" ? "bg-red-500" : "bg-blue-500"
+                  hc.colorMspActivo === "rojo" ? "bg-red-500" : "bg-sky-600"
                 }`}
               />
               <span>
@@ -2245,7 +2215,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="pt-2 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100">
+          <div className="pt-2 flex flex-wrap items-center justify-end gap-2 border-t border-sky-100">
             <button
               type="button"
               onClick={borrarInformacionSeleccionada}
@@ -2256,7 +2226,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => cargarInformacionSeleccionada()}
-              className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-semibold"
+              className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
             >
               Cargar
             </button>
@@ -2271,8 +2241,8 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-6">
-        <p className="text-sm text-slate-600">
+      <main className="min-h-screen flex items-center justify-center p-6 bg-sky-50/40">
+        <p className="text-sm text-sky-800">
           Cargando sistema del consultorio...
         </p>
       </main>
@@ -2281,18 +2251,18 @@ export default function HomePage() {
 
   if (!perfil) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <h1 className="text-xl font-semibold text-slate-900">
+      <main className="min-h-screen flex items-center justify-center p-4 bg-sky-50/40">
+        <div className="w-full max-w-sm bg-white border border-sky-200 rounded-2xl p-6 shadow-sm">
+          <h1 className="text-xl font-semibold text-sky-950">
             Consultorio Dental
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-sky-700 mt-1">
             Ingresa con tu cuenta asignada para abrir tu panel.
           </p>
 
           <form onSubmit={handleLogin} className="mt-5 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-sky-900 mb-1">
                 Correo electrónico
               </label>
               <input
@@ -2301,12 +2271,12 @@ export default function HomePage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="usuario@consultorio.com"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-sky-900 mb-1">
                 Contraseña
               </label>
               <input
@@ -2315,7 +2285,7 @@ export default function HomePage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
               />
             </div>
 
@@ -2328,7 +2298,7 @@ export default function HomePage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-lg bg-slate-900 text-white py-2.5 text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+              className="w-full rounded-lg bg-sky-600 text-white py-2.5 text-sm font-medium hover:bg-sky-700 disabled:opacity-50"
             >
               {submitting ? "Ingresando..." : "Iniciar sesión"}
             </button>
@@ -2341,9 +2311,9 @@ export default function HomePage() {
     { id: "identificacion", titulo: "1. Identificación" },
     { id: "motivo_antecedentes", titulo: "2. Motivo y antecedentes" },
     { id: "clinico", titulo: "3. Signos y examen" },
-    { id: "examenes", titulo: "4. Exámenes y fotos" },
-    { id: "odontograma", titulo: "5. Odontograma e índice CPOD" },
-    { id: "diagnostico", titulo: "6. Diagnóstico CIE-10 y plan" },
+    { id: "odontograma", titulo: "4. Odontograma e índice CPOD" },
+    { id: "diagnostico", titulo: "5. Diagnóstico CIE-10 y plan" },
+    { id: "examenes", titulo: "6. Exámenes y fotos" },
   ];
 
   const tieneAlergiaActiva = pacienteActivo
@@ -2360,23 +2330,21 @@ export default function HomePage() {
     : "";
 
   return (
-    <main className="min-h-screen p-4 max-w-5xl mx-auto space-y-6">
-      <header className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+    <main className="min-h-screen p-4 max-w-5xl mx-auto space-y-6 bg-sky-50/30">
+      <header className="flex items-center justify-between bg-white border border-sky-200 rounded-2xl p-4 shadow-sm">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-500">
-            Rol activo: <strong className="text-slate-900">{perfil.rol}</strong>
+          <p className="text-xs uppercase tracking-wide text-sky-700">
+            Rol activo:{" "}
+            <strong className="text-sky-950">{perfil.rol}</strong>
           </p>
-          <h1 className="text-lg font-semibold text-slate-900">
+          <h1 className="text-lg font-semibold text-sky-950">
             {perfil.nombre_completo || "Panel del Consultorio"}
           </h1>
-          {avisoPerfil && (
-            <p className="text-xs text-amber-700 mt-1">{avisoPerfil}</p>
-          )}
         </div>
 
         <button
           onClick={handleLogout}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+          className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-900 hover:bg-sky-100"
         >
           Cerrar sesión
         </button>
@@ -2387,12 +2355,12 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setModuloActivo("historias")}
-            className="text-left bg-white border border-slate-200 hover:border-slate-400 rounded-xl p-4 shadow-sm transition"
+            className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
           >
-            <h2 className="font-medium text-slate-900">
+            <h2 className="font-medium text-sky-950">
               Historias Clínicas y Odontograma
             </h2>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-sky-700 mt-1">
               Pacientes ({pacientes.length}), historia clínica completa, fotos
               y CIE-10.
             </p>
@@ -2401,10 +2369,10 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setModuloActivo("agenda")}
-            className="text-left bg-white border border-slate-200 hover:border-slate-400 rounded-xl p-4 shadow-sm transition"
+            className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
           >
-            <h2 className="font-medium text-slate-900">Agenda y Recordatorios</h2>
-            <p className="text-xs text-slate-500 mt-1">
+            <h2 className="font-medium text-sky-950">Agenda y Recordatorios</h2>
+            <p className="text-xs text-sky-700 mt-1">
               Citas programadas ({citas.length}) y confirmaciones.
             </p>
           </button>
@@ -2412,10 +2380,10 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setModuloActivo("pagos")}
-            className="text-left bg-white border border-slate-200 hover:border-slate-400 rounded-xl p-4 shadow-sm transition"
+            className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
           >
-            <h2 className="font-medium text-slate-900">Presupuestos y Pagos</h2>
-            <p className="text-xs text-slate-500 mt-1">
+            <h2 className="font-medium text-sky-950">Presupuestos y Pagos</h2>
+            <p className="text-xs text-sky-700 mt-1">
               Planes de tratamiento, abonos y saldos.
             </p>
           </button>
@@ -2423,18 +2391,18 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setModuloActivo("inventario")}
-            className="text-left bg-white border border-slate-200 hover:border-slate-400 rounded-xl p-4 shadow-sm transition"
+            className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
           >
-            <h2 className="font-medium text-slate-900">Inventario de Insumos</h2>
-            <p className="text-xs text-slate-500 mt-1">
+            <h2 className="font-medium text-sky-950">Inventario de Insumos</h2>
+            <p className="text-xs text-sky-700 mt-1">
               Existencias y materiales del consultorio.
             </p>
           </button>
         </section>
       ) : (
-        <section className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-base font-semibold text-slate-900">
+        <section className="bg-white border border-sky-200 rounded-2xl p-5 shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b border-sky-100 pb-3">
+            <h2 className="text-base font-semibold text-sky-950">
               {moduloActivo === "historias" &&
                 "Historias Clínicas y Odontograma"}
               {moduloActivo === "agenda" && "Agenda y Recordatorios"}
@@ -2444,7 +2412,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setModuloActivo(null)}
-              className="rounded-lg bg-slate-900 text-white px-3 py-1.5 text-xs font-medium hover:bg-slate-800"
+              className="rounded-lg bg-sky-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-sky-700"
             >
               Volver al menú
             </button>
@@ -2454,7 +2422,7 @@ export default function HomePage() {
             <div className="space-y-5">
               <form
                 onSubmit={crearPaciente}
-                className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 bg-slate-50 p-3.5 rounded-xl border border-slate-200"
+                className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 bg-sky-50/70 p-3.5 rounded-xl border border-sky-200"
               >
                 <input
                   type="text"
@@ -2462,7 +2430,7 @@ export default function HomePage() {
                   value={nombresNuevo}
                   onChange={(e) => setNombresNuevo(e.target.value)}
                   placeholder="Nombres"
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                 />
                 <input
                   type="text"
@@ -2470,25 +2438,25 @@ export default function HomePage() {
                   value={apellidosNuevo}
                   onChange={(e) => setApellidosNuevo(e.target.value)}
                   placeholder="Apellidos"
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                 />
                 <input
                   type="text"
                   value={telefonoNuevo}
                   onChange={(e) => setTelefonoNuevo(e.target.value)}
                   placeholder="Teléfono / WhatsApp"
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                 />
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800"
+                  className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
                 >
                   + Crear paciente
                 </button>
               </form>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span className="text-xs font-semibold uppercase tracking-wide text-sky-700">
                   Paciente activo:
                 </span>
                 {pacientes.map((pac) => {
@@ -2507,30 +2475,18 @@ export default function HomePage() {
                       }}
                       className={`inline-flex flex-wrap items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border ${
                         pac.id === pacienteActivo?.id
-                          ? "bg-slate-900 text-white border-slate-900"
-                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                          ? "bg-sky-200 text-sky-950 border-sky-400 font-semibold"
+                          : "bg-white text-sky-800 border-sky-200 hover:bg-sky-50"
                       }`}
                     >
                       <span>{nombreCompletoPaciente(pac.hc)}</span>
                       {alertaPac && (
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                            pac.id === pacienteActivo?.id
-                              ? "bg-amber-400 text-slate-950"
-                              : "bg-amber-100 text-amber-900 border border-amber-300"
-                          }`}
-                        >
+                        <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-900 border border-amber-300">
                           {detalleAlergiaPac || "Alergia"}
                         </span>
                       )}
                       {enfSisPac && (
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                            pac.id === pacienteActivo?.id
-                              ? "bg-rose-400 text-slate-950"
-                              : "bg-rose-100 text-rose-900 border border-rose-300"
-                          }`}
-                        >
+                        <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-rose-100 text-rose-900 border border-rose-300">
                           {detalleEnfPac
                             ? `Enf. sistémica: ${detalleEnfPac}`
                             : "Paciente con enfermedad sistémica"}
@@ -2542,11 +2498,11 @@ export default function HomePage() {
               </div>
 
               {pacienteActivo && (
-                <div className="space-y-4 border border-slate-200 rounded-2xl p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="space-y-4 border border-sky-200 rounded-2xl p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sky-100 pb-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold text-slate-900">
+                        <h3 className="text-base font-semibold text-sky-950">
                           {nombreCompletoPaciente(pacienteActivo.hc)}
                         </h3>
                         {tieneAlergiaActiva && (
@@ -2563,7 +2519,7 @@ export default function HomePage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-sky-700 mt-0.5">
                         Edad calculada:{" "}
                         <strong>
                           {calcularEdad(pacienteActivo.hc.fechaNacimiento)}
@@ -2602,10 +2558,10 @@ export default function HomePage() {
                         key={tab.id}
                         type="button"
                         onClick={() => setSeccionHc(tab.id)}
-                        className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium ${
+                        className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium border transition ${
                           seccionHc === tab.id
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            ? "bg-sky-200 text-sky-950 border-sky-400 font-semibold"
+                            : "bg-sky-50/70 text-sky-800 border-sky-200 hover:bg-sky-100"
                         }`}
                       >
                         {tab.titulo}
@@ -2615,8 +2571,8 @@ export default function HomePage() {
 
                   {seccionHc === "identificacion" && (
                     <div className="space-y-4 text-sm">
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 flex flex-col sm:flex-row items-center gap-4">
-                        <div className="w-28 h-32 rounded-xl border border-slate-300 bg-white overflow-hidden flex items-center justify-center shrink-0">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 flex flex-col sm:flex-row items-center gap-4">
+                        <div className="w-28 h-32 rounded-xl border border-sky-300 bg-white overflow-hidden flex items-center justify-center shrink-0">
                           {pacienteActivo.hc.fotoCarne ? (
                             <img
                               src={pacienteActivo.hc.fotoCarne}
@@ -2631,15 +2587,15 @@ export default function HomePage() {
                         </div>
 
                         <div className="flex-1 space-y-2 text-center sm:text-left">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                            Fotografía de identificación (tipo pasaporte / carné)
+                          <p className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            Fotografía de identificación
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-sky-700">
                             Si no se agrega fotografía, se muestra una silueta
                             neutral sin género.
                           </p>
                           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
-                            <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-1.5 text-xs font-medium hover:bg-slate-800">
+                            <label className="cursor-pointer rounded-lg bg-sky-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-sky-700">
                               Tomar foto pasaporte
                               <input
                                 type="file"
@@ -2650,7 +2606,7 @@ export default function HomePage() {
                               />
                             </label>
 
-                            <label className="cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-1.5 text-xs font-medium hover:bg-slate-100">
+                            <label className="cursor-pointer rounded-lg border border-sky-300 bg-white text-sky-900 px-3 py-1.5 text-xs font-medium hover:bg-sky-100">
                               Subir imagen carné
                               <input
                                 type="file"
@@ -2675,7 +2631,7 @@ export default function HomePage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Nombres
                           </label>
                           <input
@@ -2685,12 +2641,12 @@ export default function HomePage() {
                               actualizarCampoHc("nombres", e.target.value)
                             }
                             placeholder="Nombres del paciente"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Apellidos
                           </label>
                           <input
@@ -2700,12 +2656,12 @@ export default function HomePage() {
                               actualizarCampoHc("apellidos", e.target.value)
                             }
                             placeholder="Apellidos del paciente"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Documento de identidad
                           </label>
                           <input
@@ -2715,12 +2671,12 @@ export default function HomePage() {
                               actualizarCampoHc("documento", e.target.value)
                             }
                             placeholder="Cédula / DNI / Pasaporte"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Fecha de nacimiento (Edad:{" "}
                             {calcularEdad(pacienteActivo.hc.fechaNacimiento)})
                           </label>
@@ -2733,12 +2689,12 @@ export default function HomePage() {
                                 e.target.value
                               )
                             }
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Género
                           </label>
                           <select
@@ -2746,7 +2702,7 @@ export default function HomePage() {
                             onChange={(e) =>
                               actualizarCampoHc("genero", e.target.value)
                             }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                           >
                             <option value="">Seleccionar género</option>
                             <option value="Masculino">Masculino</option>
@@ -2756,7 +2712,7 @@ export default function HomePage() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Nacionalidad
                           </label>
                           <select
@@ -2764,7 +2720,7 @@ export default function HomePage() {
                             onChange={(e) =>
                               actualizarCampoHc("nacionalidad", e.target.value)
                             }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                           >
                             <option value="">Seleccionar país</option>
                             {PAISES.map((pais) => (
@@ -2776,7 +2732,7 @@ export default function HomePage() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Teléfono
                           </label>
                           <input
@@ -2786,12 +2742,12 @@ export default function HomePage() {
                               actualizarCampoHc("telefono", e.target.value)
                             }
                             placeholder="Teléfono / WhatsApp"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Correo electrónico
                           </label>
                           <input
@@ -2801,12 +2757,12 @@ export default function HomePage() {
                               actualizarCampoHc("correo", e.target.value)
                             }
                             placeholder="correo@ejemplo.com"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Ocupación
                           </label>
                           <input
@@ -2816,12 +2772,12 @@ export default function HomePage() {
                               actualizarCampoHc("ocupacion", e.target.value)
                             }
                             placeholder="Ocupación actual"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Ciudad
                           </label>
                           <input
@@ -2831,12 +2787,12 @@ export default function HomePage() {
                               actualizarCampoHc("ciudad", e.target.value)
                             }
                             placeholder="Ciudad de residencia"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Dirección o sector
                           </label>
                           <input
@@ -2846,12 +2802,12 @@ export default function HomePage() {
                               actualizarCampoHc("direccion", e.target.value)
                             }
                             placeholder="Calle, sector, referencia"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Contacto adicional
                           </label>
                           <input
@@ -2864,12 +2820,12 @@ export default function HomePage() {
                               )
                             }
                             placeholder="Nombre y teléfono de contacto adicional"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Seguro o convenio médico
                           </label>
                           <select
@@ -2880,7 +2836,7 @@ export default function HomePage() {
                                 e.target.value
                               )
                             }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                           >
                             <option value="">Seleccionar opción</option>
                             <option value="Particular">Particular</option>
@@ -2890,7 +2846,7 @@ export default function HomePage() {
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Representante legal (si es menor de edad)
                           </label>
                           <input
@@ -2903,7 +2859,7 @@ export default function HomePage() {
                               )
                             }
                             placeholder="Nombre, documento y parentesco del representante"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
                       </div>
@@ -2912,13 +2868,13 @@ export default function HomePage() {
 
                   {seccionHc === "motivo_antecedentes" && (
                     <div className="space-y-5 text-sm">
-                      <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-white">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                      <div className="border border-sky-200 rounded-xl p-4 space-y-3 bg-white">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
                           Motivo de consulta y enfermedad actual
                         </h4>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-800 mb-1">
                             Motivo de consulta (en palabras del paciente)
                           </label>
                           <textarea
@@ -2928,12 +2884,12 @@ export default function HomePage() {
                               actualizarCampoHc("motivoConsulta", e.target.value)
                             }
                             placeholder="Ej. 'Me duele una muela al tomar algo frío'"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-800 mb-1">
                             Enfermedad actual (síntomas, inicio y evolución)
                           </label>
                           <textarea
@@ -2946,21 +2902,21 @@ export default function HomePage() {
                               )
                             }
                             placeholder="Cuándo inició, cómo ha evolucionado y qué lo agrava o alivia"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
-                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <label className="block text-xs font-medium text-slate-600">
+                            <label className="block text-xs font-medium text-sky-900">
                               Intensidad del dolor / molestia (1 al 10)
                             </label>
-                            <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                            <label className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-1.5 text-xs font-medium text-sky-900 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={pacienteActivo.hc.noPresentaDolor}
                                 onChange={toggleNoPresentaDolor}
-                                className="rounded border-slate-300"
+                                className="rounded border-sky-300"
                               />
                               <span>No presenta dolor</span>
                             </label>
@@ -2979,7 +2935,7 @@ export default function HomePage() {
                                 e.target.value
                               )
                             }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm disabled:bg-sky-50 disabled:text-sky-400"
                           >
                             <option value="">
                               {pacienteActivo.hc.noPresentaDolor
@@ -2994,9 +2950,9 @@ export default function HomePage() {
                           </select>
                         </div>
                       </div>
-                      <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
+                      <div className="border border-sky-200 rounded-xl p-4 space-y-4 bg-white">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
                             Antecedentes médicos
                           </h4>
                           {tieneEnfermedadSisActiva && (
@@ -3006,8 +2962,8 @@ export default function HomePage() {
                           )}
                         </div>
 
-                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                             Enfermedades sistémicas (seleccione una o varias)
                           </label>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -3019,7 +2975,7 @@ export default function HomePage() {
                               return (
                                 <label
                                   key={enf}
-                                  className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                  className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
                                 >
                                   <input
                                     type="checkbox"
@@ -3027,7 +2983,7 @@ export default function HomePage() {
                                     onChange={() =>
                                       toggleEnfermedadSistemica(enf)
                                     }
-                                    className="rounded border-slate-300"
+                                    className="rounded border-sky-300"
                                   />
                                   <span>{enf}</span>
                                 </label>
@@ -3039,7 +2995,7 @@ export default function HomePage() {
                             "Otros"
                           ) && (
                             <div className="pt-1">
-                              <label className="block text-xs font-medium text-slate-600 mb-1">
+                              <label className="block text-xs font-medium text-sky-800 mb-1">
                                 Especificar otras enfermedades sistémicas
                               </label>
                               <input
@@ -3054,25 +3010,25 @@ export default function HomePage() {
                                   )
                                 }
                                 placeholder="Escriba cuál es la enfermedad..."
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                               />
                             </div>
                           )}
                         </div>
 
-                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                               Alergia a medicamentos
                             </label>
-                            <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                            <label className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-1.5 text-xs font-medium text-sky-900 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={
                                   pacienteActivo.hc.alergicoMedicamentos
                                 }
                                 onChange={toggleAlergicoMedicamentos}
-                                className="rounded border-slate-300"
+                                className="rounded border-sky-300"
                               />
                               <span>Alérgico a medicamentos</span>
                             </label>
@@ -3100,8 +3056,8 @@ export default function HomePage() {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                            <label className="block text-xs font-medium text-slate-600">
+                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
+                            <label className="block text-xs font-medium text-sky-900">
                               ¿Tiene problemas de hemorragias?
                             </label>
                             <select
@@ -3112,7 +3068,7 @@ export default function HomePage() {
                                   e.target.value
                                 )
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             >
                               <option value="">Seleccionar opción</option>
                               <option value="No">No</option>
@@ -3133,13 +3089,13 @@ export default function HomePage() {
                                   )
                                 }
                                 placeholder="Detalle el problema de hemorragias..."
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                               />
                             )}
                           </div>
 
-                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                            <label className="block text-xs font-medium text-slate-600">
+                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
+                            <label className="block text-xs font-medium text-sky-900">
                               ¿Tiene problemas con la anestesia dental?
                             </label>
                             <select
@@ -3150,7 +3106,7 @@ export default function HomePage() {
                                   e.target.value
                                 )
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             >
                               <option value="">Seleccionar opción</option>
                               <option value="No">No</option>
@@ -3173,13 +3129,13 @@ export default function HomePage() {
                                   )
                                 }
                                 placeholder="Detalle la reacción o problema con anestesia..."
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                               />
                             )}
                           </div>
 
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                            <label className="block text-xs font-medium text-sky-900 mb-1">
                               Otras alergias (materiales, alimentos, etc.)
                             </label>
                             <input
@@ -3189,12 +3145,12 @@ export default function HomePage() {
                                 actualizarCampoHc("alergias", e.target.value)
                               }
                               placeholder="Látex, acrílicos, yodo, alimentos..."
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                            <label className="block text-xs font-medium text-sky-900 mb-1">
                               Medicación actual
                             </label>
                             <input
@@ -3207,12 +3163,12 @@ export default function HomePage() {
                                 )
                               }
                               placeholder="Fármacos y dosis actuales"
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                            <label className="block text-xs font-medium text-sky-900 mb-1">
                               Cirugías previas
                             </label>
                             <input
@@ -3225,12 +3181,12 @@ export default function HomePage() {
                                 )
                               }
                               placeholder="Intervenciones quirúrgicas anteriores"
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                            <label className="block text-xs font-medium text-sky-900 mb-1">
                               Antecedentes familiares
                             </label>
                             <input
@@ -3243,21 +3199,21 @@ export default function HomePage() {
                                 )
                               }
                               placeholder="Patologías relevantes en familiares"
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                             />
                           </div>
 
-                          <div className="sm:col-span-2 border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                          <div className="sm:col-span-2 border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                              <label className="block text-xs font-medium text-slate-600">
+                              <label className="block text-xs font-medium text-sky-900">
                                 Hábitos del paciente
                               </label>
-                              <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                              <label className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-1.5 text-xs font-medium text-sky-900 cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={pacienteActivo.hc.tieneHabitos}
                                   onChange={toggleTieneHabitos}
-                                  className="rounded border-slate-300"
+                                  className="rounded border-sky-300"
                                 />
                                 <span>Presenta hábitos</span>
                               </label>
@@ -3278,19 +3234,19 @@ export default function HomePage() {
                                   ? "Escriba el hábito que presenta el paciente..."
                                   : "Marque la casilla para habilitar y escribir el hábito"
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm disabled:bg-sky-50 disabled:text-sky-400"
                             />
                           </div>
                         </div>
                       </div>
 
-                      <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                      <div className="border border-sky-200 rounded-xl p-4 space-y-4 bg-white">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
                           Antecedentes odontológicos
                         </h4>
 
-                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                             Tratamientos odontológicos previos
                           </label>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -3302,7 +3258,7 @@ export default function HomePage() {
                               return (
                                 <label
                                   key={trat}
-                                  className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                  className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
                                 >
                                   <input
                                     type="checkbox"
@@ -3310,7 +3266,7 @@ export default function HomePage() {
                                     onChange={() =>
                                       toggleTratamientoPrevio(trat)
                                     }
-                                    className="rounded border-slate-300"
+                                    className="rounded border-sky-300"
                                   />
                                   <span>{trat}</span>
                                 </label>
@@ -3322,7 +3278,7 @@ export default function HomePage() {
                             "Otros"
                           ) && (
                             <div className="pt-1">
-                              <label className="block text-xs font-medium text-slate-600 mb-1">
+                              <label className="block text-xs font-medium text-sky-800 mb-1">
                                 Especificar otros tratamientos previos
                               </label>
                               <input
@@ -3337,15 +3293,15 @@ export default function HomePage() {
                                   )
                                 }
                                 placeholder="Escriba a qué tratamientos se refiere..."
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                               />
                             </div>
                           )}
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                            <label className="block text-xs font-medium text-slate-600">
+                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
+                            <label className="block text-xs font-medium text-sky-900">
                               Frecuencia de visitas al odontólogo
                             </label>
                             <select
@@ -3356,7 +3312,7 @@ export default function HomePage() {
                                   e.target.value
                                 )
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             >
                               <option value="">Seleccionar opción</option>
                               {OPCIONES_FRECUENCIA_VISITAS.map((op) => (
@@ -3377,13 +3333,13 @@ export default function HomePage() {
                                   )
                                 }
                                 placeholder="Escriba a qué se refiere..."
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                               />
                             )}
                           </div>
 
-                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                            <label className="block text-xs font-medium text-slate-600">
+                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
+                            <label className="block text-xs font-medium text-sky-900">
                               Experiencias anteriores
                             </label>
                             <select
@@ -3394,7 +3350,7 @@ export default function HomePage() {
                                   e.target.value
                                 )
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             >
                               <option value="">Seleccionar opción</option>
                               {OPCIONES_EXPERIENCIAS_ANTERIORES.map((op) => (
@@ -3417,13 +3373,13 @@ export default function HomePage() {
                                   )
                                 }
                                 placeholder="Escriba a qué se refiere..."
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                               />
                             )}
                           </div>
 
-                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                            <label className="block text-xs font-medium text-slate-600">
+                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
+                            <label className="block text-xs font-medium text-sky-900">
                               Nivel de ansiedad dental
                             </label>
                             <select
@@ -3434,7 +3390,7 @@ export default function HomePage() {
                                   e.target.value
                                 )
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             >
                               <option value="">Seleccionar opción</option>
                               {OPCIONES_ANSIEDAD_DENTAL.map((op) => (
@@ -3454,13 +3410,13 @@ export default function HomePage() {
                                   )
                                 }
                                 placeholder="Escriba a qué se refiere..."
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                               />
                             )}
                           </div>
 
-                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                            <label className="block text-xs font-medium text-slate-600">
+                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
+                            <label className="block text-xs font-medium text-sky-900">
                               Higiene oral habitual
                             </label>
                             <select
@@ -3468,7 +3424,7 @@ export default function HomePage() {
                               onChange={(e) =>
                                 actualizarCampoHc("higieneOral", e.target.value)
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             >
                               <option value="">Seleccionar opción</option>
                               {OPCIONES_HIGIENE_ORAL.map((op) => (
@@ -3488,7 +3444,7 @@ export default function HomePage() {
                                   )
                                 }
                                 placeholder="Escriba a qué se refiere..."
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                               />
                             )}
                           </div>
@@ -3501,7 +3457,7 @@ export default function HomePage() {
                     <div className="space-y-4 text-sm">
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Presión arterial
                           </label>
                           <input
@@ -3514,12 +3470,12 @@ export default function HomePage() {
                               )
                             }
                             placeholder="Ej. 120/80 mmHg"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Pulso
                           </label>
                           <input
@@ -3529,12 +3485,12 @@ export default function HomePage() {
                               actualizarCampoHc("pulso", e.target.value)
                             }
                             placeholder="Ej. 72 lpm"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Temperatura
                           </label>
                           <input
@@ -3544,12 +3500,12 @@ export default function HomePage() {
                               actualizarCampoHc("temperatura", e.target.value)
                             }
                             placeholder="Ej. 36.6 °C"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Frecuencia respiratoria
                           </label>
                           <input
@@ -3562,13 +3518,13 @@ export default function HomePage() {
                               )
                             }
                             placeholder="Ej. 16 rpm"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
                       </div>
 
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                           Examen extraoral
                         </label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -3578,7 +3534,7 @@ export default function HomePage() {
                             return (
                               <label
                                 key={op}
-                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
                               >
                                 <input
                                   type="checkbox"
@@ -3590,7 +3546,7 @@ export default function HomePage() {
                                       op
                                     )
                                   }
-                                  className="rounded border-slate-300"
+                                  className="rounded border-sky-300"
                                 />
                                 <span>{op}</span>
                               </label>
@@ -3601,7 +3557,7 @@ export default function HomePage() {
                           "Otros"
                         ) && (
                           <div className="pt-1">
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                            <label className="block text-xs font-medium text-sky-800 mb-1">
                               Detallar examen extraoral (Otros)
                             </label>
                             <input
@@ -3614,14 +3570,14 @@ export default function HomePage() {
                                 )
                               }
                               placeholder="Escriba los hallazgos extraorales..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             />
                           </div>
                         )}
                       </div>
 
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                           Examen intraoral
                         </label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -3631,7 +3587,7 @@ export default function HomePage() {
                             return (
                               <label
                                 key={op}
-                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
                               >
                                 <input
                                   type="checkbox"
@@ -3643,7 +3599,7 @@ export default function HomePage() {
                                       op
                                     )
                                   }
-                                  className="rounded border-slate-300"
+                                  className="rounded border-sky-300"
                                 />
                                 <span>{op}</span>
                               </label>
@@ -3654,7 +3610,7 @@ export default function HomePage() {
                           "Otros"
                         ) && (
                           <div className="pt-1">
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                            <label className="block text-xs font-medium text-sky-800 mb-1">
                               Detallar examen intraoral (Otros)
                             </label>
                             <input
@@ -3667,14 +3623,14 @@ export default function HomePage() {
                                 )
                               }
                               placeholder="Escriba los hallazgos intraorales..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             />
                           </div>
                         )}
                       </div>
 
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                           Tejidos blandos
                         </label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -3684,7 +3640,7 @@ export default function HomePage() {
                             return (
                               <label
                                 key={op}
-                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
                               >
                                 <input
                                   type="checkbox"
@@ -3696,7 +3652,7 @@ export default function HomePage() {
                                       op
                                     )
                                   }
-                                  className="rounded border-slate-300"
+                                  className="rounded border-sky-300"
                                 />
                                 <span>{op}</span>
                               </label>
@@ -3705,7 +3661,7 @@ export default function HomePage() {
                         </div>
                         {pacienteActivo.hc.tejidosBlandos.includes("Otros") && (
                           <div className="pt-1">
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                            <label className="block text-xs font-medium text-sky-800 mb-1">
                               Detallar tejidos blandos (Otros)
                             </label>
                             <input
@@ -3718,89 +3674,11 @@ export default function HomePage() {
                                 )
                               }
                               placeholder="Escriba los hallazgos en tejidos blandos..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                             />
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
-
-                  {seccionHc === "examenes" && (
-                    <div className="space-y-4 text-sm">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Exámenes complementarios (radiografías, fotografías
-                          clínicas, tomografías, laboratorio)
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={pacienteActivo.hc.examenesComplementarios}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "examenesComplementarios",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                        <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-800">
-                          Tomar foto con cámara
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-
-                        <label className="cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-100">
-                          Adjuntar foto o imagen
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-
-                      {pacienteActivo.hc.fotos.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {pacienteActivo.hc.fotos.map((foto) => (
-                            <div
-                              key={foto.id}
-                              className="border border-slate-200 rounded-xl overflow-hidden bg-white"
-                            >
-                              <img
-                                src={foto.dataUrl}
-                                alt={foto.nombreArchivo}
-                                className="w-full h-36 object-cover bg-slate-100"
-                              />
-                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
-                                <div className="truncate">
-                                  <p className="font-medium text-slate-800 truncate">
-                                    {foto.nombreArchivo}
-                                  </p>
-                                  <p className="text-slate-500">{foto.fecha}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarFoto(foto.id)}
-                                  className="text-red-600 hover:underline shrink-0"
-                                >
-                                  Quitar
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -3810,8 +3688,8 @@ export default function HomePage() {
                       <div className="space-y-4 text-sm">
                         {renderOdontogramaMsp(pacienteActivo.hc)}
 
-                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                             Resumen general del odontograma
                           </label>
                           <textarea
@@ -3824,40 +3702,40 @@ export default function HomePage() {
                               )
                             }
                             placeholder="Notas generales de piezas, restauraciones o patologías..."
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                           />
                         </div>
 
-                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                               Índice CPOD (sincronizado con odontograma)
                             </label>
-                            <span className="text-xs font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
+                            <span className="text-xs font-semibold text-sky-950 bg-white border border-sky-200 rounded-lg px-2.5 py-1">
                               Total CPOD: {cpod.total}
                             </span>
                           </div>
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs border-collapse bg-white rounded-lg overflow-hidden">
                               <thead>
-                                <tr className="bg-slate-100 text-slate-700">
-                                  <th className="border border-slate-200 px-3 py-2 text-center">
+                                <tr className="bg-sky-100 text-sky-950">
+                                  <th className="border border-sky-200 px-3 py-2 text-center">
                                     C (Cariados)
                                   </th>
-                                  <th className="border border-slate-200 px-3 py-2 text-center">
+                                  <th className="border border-sky-200 px-3 py-2 text-center">
                                     P (Perdidos)
                                   </th>
-                                  <th className="border border-slate-200 px-3 py-2 text-center">
+                                  <th className="border border-sky-200 px-3 py-2 text-center">
                                     O (Obturados)
                                   </th>
-                                  <th className="border border-slate-200 px-3 py-2 text-center">
+                                  <th className="border border-sky-200 px-3 py-2 text-center">
                                     Total CPOD
                                   </th>
                                 </tr>
                               </thead>
                               <tbody>
                                 <tr>
-                                  <td className="border border-slate-200 p-2 text-center">
+                                  <td className="border border-sky-200 p-2 text-center">
                                     <input
                                       type="number"
                                       min={0}
@@ -3868,10 +3746,10 @@ export default function HomePage() {
                                           e.target.value
                                         )
                                       }
-                                      className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm font-semibold text-red-700"
+                                      className="w-20 text-center rounded border border-sky-200 px-2 py-1 text-sm font-semibold text-red-700"
                                     />
                                   </td>
-                                  <td className="border border-slate-200 p-2 text-center">
+                                  <td className="border border-sky-200 p-2 text-center">
                                     <input
                                       type="number"
                                       min={0}
@@ -3882,10 +3760,10 @@ export default function HomePage() {
                                           e.target.value
                                         )
                                       }
-                                      className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm font-semibold text-slate-800"
+                                      className="w-20 text-center rounded border border-sky-200 px-2 py-1 text-sm font-semibold text-sky-900"
                                     />
                                   </td>
-                                  <td className="border border-slate-200 p-2 text-center">
+                                  <td className="border border-sky-200 p-2 text-center">
                                     <input
                                       type="number"
                                       min={0}
@@ -3896,10 +3774,10 @@ export default function HomePage() {
                                           e.target.value
                                         )
                                       }
-                                      className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm font-semibold text-blue-700"
+                                      className="w-20 text-center rounded border border-sky-200 px-2 py-1 text-sm font-semibold text-sky-700"
                                     />
                                   </td>
-                                  <td className="border border-slate-200 p-2 text-center font-semibold text-slate-900">
+                                  <td className="border border-sky-200 p-2 text-center font-semibold text-sky-950">
                                     {cpod.total}
                                   </td>
                                 </tr>
@@ -3908,8 +3786,8 @@ export default function HomePage() {
                           </div>
                         </div>
 
-                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                          <label className="block text-xs font-medium text-slate-600">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                          <label className="block text-xs font-medium text-sky-900">
                             Oclusión / Llave de Angle
                           </label>
                           <select
@@ -3920,7 +3798,7 @@ export default function HomePage() {
                                 e.target.value
                               )
                             }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                           >
                             <option value="">Seleccionar clasificación</option>
                             {OPCIONES_OCLUSION_ANGLE.map((op) => (
@@ -3938,7 +3816,7 @@ export default function HomePage() {
                     <div className="space-y-3 text-sm">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Código CIE-10
                           </label>
                           <input
@@ -3948,12 +3826,12 @@ export default function HomePage() {
                               actualizarCampoHc("codigoCie10", e.target.value)
                             }
                             placeholder="Ej. K02.1 (Caries de la dentina)"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
                             Diagnóstico presuntivo o definitivo (CIE-10)
                           </label>
                           <input
@@ -3963,13 +3841,13 @@ export default function HomePage() {
                               actualizarCampoHc("diagnostico", e.target.value)
                             }
                             placeholder="Diagnóstico clínico según CIE-10"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                        <label className="block text-xs font-medium text-sky-900 mb-1">
                           Plan de tratamiento
                         </label>
                         <textarea
@@ -3979,9 +3857,87 @@ export default function HomePage() {
                             actualizarCampoHc("planTratamiento", e.target.value)
                           }
                           placeholder="Secuencia de tratamientos y citas propuestas"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
                         />
                       </div>
+                    </div>
+                  )}
+
+                  {seccionHc === "examenes" && (
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <label className="block text-xs font-medium text-sky-900 mb-1">
+                          Exámenes complementarios (radiografías, fotografías
+                          clínicas, tomografías, laboratorio)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={pacienteActivo.hc.examenesComplementarios}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "examenesComplementarios",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
+                          className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-sky-50/70 p-3.5 rounded-xl border border-sky-200">
+                        <label className="cursor-pointer rounded-lg bg-sky-600 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-700">
+                          Tomar foto con cámara
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+
+                        <label className="cursor-pointer rounded-lg border border-sky-300 bg-white text-sky-900 px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-100">
+                          Adjuntar foto o imagen
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {pacienteActivo.hc.fotos.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {pacienteActivo.hc.fotos.map((foto) => (
+                            <div
+                              key={foto.id}
+                              className="border border-sky-200 rounded-xl overflow-hidden bg-white"
+                            >
+                              <img
+                                src={foto.dataUrl}
+                                alt={foto.nombreArchivo}
+                                className="w-full h-36 object-cover bg-sky-50"
+                              />
+                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
+                                <div className="truncate">
+                                  <p className="font-medium text-sky-950 truncate">
+                                    {foto.nombreArchivo}
+                                  </p>
+                                  <p className="text-sky-600">{foto.fecha}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarFoto(foto.id)}
+                                  className="text-red-600 hover:underline shrink-0"
+                                >
+                                  Quitar
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -3993,7 +3949,7 @@ export default function HomePage() {
                           "Cambios aplicados en la ficha clínica activa."
                         )
                       }
-                      className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-medium hover:bg-slate-800"
+                      className="rounded-lg bg-sky-600 text-white px-4 py-2 text-xs font-medium hover:bg-sky-700"
                     >
                       Confirmar registro de esta sección
                     </button>
@@ -4015,7 +3971,7 @@ export default function HomePage() {
                   value={pacienteCita}
                   onChange={(e) => setPacienteCita(e.target.value)}
                   placeholder="Nombre del paciente"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
                 />
                 <input
                   type="text"
@@ -4023,30 +3979,30 @@ export default function HomePage() {
                   value={motivoCita}
                   onChange={(e) => setMotivoCita(e.target.value)}
                   placeholder="Motivo de cita"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
                 />
                 <input
                   type="time"
                   value={horaCita}
                   onChange={(e) => setHoraCita(e.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
                 />
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-medium"
+                  className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-medium hover:bg-sky-700"
                 >
                   Agregar cita
                 </button>
               </form>
 
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-sky-100">
                 {citas.map((cita) => (
                   <li
                     key={cita.id}
                     className="py-2.5 flex items-center justify-between gap-2 text-sm"
                   >
                     <div>
-                      <strong className="text-slate-900">{cita.hora}</strong> —{" "}
+                      <strong className="text-sky-950">{cita.hora}</strong> —{" "}
                       {cita.paciente} ({cita.motivo})
                     </div>
                     <button
@@ -4063,7 +4019,7 @@ export default function HomePage() {
                       className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
                         cita.confirmada
                           ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-100 text-slate-700"
+                          : "bg-sky-100 text-sky-900"
                       }`}
                     >
                       {cita.confirmada ? "Confirmada" : "Marcar recordatorio"}
@@ -4075,7 +4031,7 @@ export default function HomePage() {
           )}
 
           {(moduloActivo === "pagos" || moduloActivo === "inventario") && (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-sky-800">
               Este módulo ya tiene su vista abierta y lista para añadirle
               campos. Dime si quieres que armemos primero{" "}
               {moduloActivo === "pagos"
