@@ -83,6 +83,7 @@ interface HistoriaClinicaCompleta {
   contactoAdicional: string;
   seguroConvenio: string;
   representanteLegal: string;
+  fotoCarne: string;
   motivoConsulta: string;
   enfermedadActual: string;
   noPresentaDolor: boolean;
@@ -124,6 +125,9 @@ interface HistoriaClinicaCompleta {
   cpodCariados: string;
   cpodPerdidos: string;
   cpodObturados: string;
+  cpodAjusteManualCariados: number;
+  cpodAjusteManualPerdidos: number;
+  cpodAjusteManualObturados: number;
   oclusionLlaveAngle: string;
   detalleOclusionAngle: string;
   examenesComplementarios: string;
@@ -410,6 +414,97 @@ function obtenerLeyendaAlergia(hc: HistoriaClinicaCompleta): string {
   return partes.join(" · ");
 }
 
+function pacienteTieneEnfermedadSistemica(
+  hc: HistoriaClinicaCompleta
+): boolean {
+  const lista = hc.enfermedadesSistemicas || [];
+  return lista.length > 0 || Boolean(hc.otrasEnfermedadesSistemicas?.trim());
+}
+
+function obtenerDetalleEnfermedadesSistemicas(
+  hc: HistoriaClinicaCompleta
+): string {
+  const lista = (hc.enfermedadesSistemicas || []).filter(
+    (item) => item !== "Otros"
+  );
+  if (
+    (hc.enfermedadesSistemicas || []).includes("Otros") ||
+    hc.otrasEnfermedadesSistemicas?.trim()
+  ) {
+    lista.push(
+      hc.otrasEnfermedadesSistemicas?.trim()
+        ? `Otros (${hc.otrasEnfermedadesSistemicas.trim()})`
+        : "Otros"
+    );
+  }
+  return lista.join(", ");
+}
+
+function calcularCpodAutomaticoDesdeOdontograma(
+  odontograma: Record<string, EstadoPiezaMsp>
+): { cariados: number; perdidos: number; obturados: number } {
+  let cariados = 0;
+  let perdidos = 0;
+  let obturados = 0;
+
+  const piezas = Object.values(odontograma || {});
+  for (const d of piezas) {
+    if (!d) continue;
+    const simbolos = d.simbolos || [];
+    const tieneCaraRoja = (["O", "V", "L", "M", "D"] as CaraDiente[]).some(
+      (c) => d[c] === "por_realizar"
+    );
+    const tieneCaraAzul = (["O", "V", "L", "M", "D"] as CaraDiente[]).some(
+      (c) => d[c] === "realizado"
+    );
+
+    const esCariada =
+      simbolos.some((s) => s.tipo === "caries") || tieneCaraRoja;
+    const esPerdida = simbolos.some(
+      (s) =>
+        s.tipo === "extraccion_perdida_caries" ||
+        s.tipo === "perdida_otra_causa"
+    );
+    const esObturada =
+      simbolos.some(
+        (s) => s.tipo === "restauracion" || s.tipo === "corona"
+      ) || tieneCaraAzul;
+
+    if (esCariada) cariados += 1;
+    if (esPerdida) perdidos += 1;
+    if (esObturada) obturados += 1;
+  }
+
+  return { cariados, perdidos, obturados };
+}
+
+function obtenerValoresCpod(hc: HistoriaClinicaCompleta): {
+  cariados: number;
+  perdidos: number;
+  obturados: number;
+  total: number;
+} {
+  const auto = calcularCpodAutomaticoDesdeOdontograma(hc.odontogramaMsp);
+  const cariados = Math.max(
+    0,
+    auto.cariados + (hc.cpodAjusteManualCariados || 0)
+  );
+  const perdidos = Math.max(
+    0,
+    auto.perdidos + (hc.cpodAjusteManualPerdidos || 0)
+  );
+  const obturados = Math.max(
+    0,
+    auto.obturados + (hc.cpodAjusteManualObturados || 0)
+  );
+  return {
+    cariados,
+    perdidos,
+    obturados,
+    total: cariados + perdidos + obturados,
+  };
+}
+
 function crearHcVacia(
   nombres = "",
   apellidos = "",
@@ -419,23 +514,26 @@ function crearHcVacia(
     nombres, apellidos, documento: "", fechaNacimiento: "", genero: "",
     nacionalidad: "Ecuador", direccion: "", ciudad: "", telefono: telefonoInicial,
     correo: "", ocupacion: "", contactoAdicional: "", seguroConvenio: "",
-    representanteLegal: "", motivoConsulta: "", enfermedadActual: "",
-    noPresentaDolor: false, intensidadDolor: "", enfermedadesSistemicas: [],
-    otrasEnfermedadesSistemicas: "", alergicoMedicamentos: false,
-    medicamentoAlergia: "", alergias: "", problemasHemorragias: "",
-    detalleHemorragias: "", problemasAnestesiaDental: "",
-    detalleAnestesiaDental: "", medicacionActual: "", cirugiasPrevias: "",
-    antecedentesFamiliares: "", tieneHabitos: false, habitosGenerales: "",
-    tratamientosPrevios: [], otrosTratamientosPrevios: "", frecuenciaVisitas: "",
+    representanteLegal: "", fotoCarne: "", motivoConsulta: "",
+    enfermedadActual: "", noPresentaDolor: false, intensidadDolor: "",
+    enfermedadesSistemicas: [], otrasEnfermedadesSistemicas: "",
+    alergicoMedicamentos: false, medicamentoAlergia: "", alergias: "",
+    problemasHemorragias: "", detalleHemorragias: "",
+    problemasAnestesiaDental: "", detalleAnestesiaDental: "",
+    medicacionActual: "", cirugiasPrevias: "", antecedentesFamiliares: "",
+    tieneHabitos: false, habitosGenerales: "", tratamientosPrevios: [],
+    otrosTratamientosPrevios: "", frecuenciaVisitas: "",
     otraFrecuenciaVisitas: "", experienciasAnteriores: "",
     otraExperienciaAnterior: "", ansiedadDental: "", otraAnsiedadDental: "",
     higieneOral: "", otraHigieneOral: "", presionArterial: "", pulso: "",
     temperatura: "", frecuenciaRespiratoria: "", examenExtraoral: [],
     detalleExamenExtraoral: "", examenIntraoral: [], detalleExamenIntraoral: "",
-    tejidosBlandos: [], detalleTejidosBlandos: "", cpodCariados: "",
-    cpodPerdidos: "", cpodObturados: "", oclusionLlaveAngle: "",
-    detalleOclusionAngle: "", examenesComplementarios: "", fotos: [],
-    piezaSeleccionada: "", piezasSeleccionadas: [], carasSeleccionadas: [],
+    tejidosBlandos: [], detalleTejidosBlandos: "", cpodCariados: "0",
+    cpodPerdidos: "0", cpodObturados: "0", cpodAjusteManualCariados: 0,
+    cpodAjusteManualPerdidos: 0, cpodAjusteManualObturados: 0,
+    oclusionLlaveAngle: "", detalleOclusionAngle: "",
+    examenesComplementarios: "", fotos: [], piezaSeleccionada: "",
+    piezasSeleccionadas: [], carasSeleccionadas: [],
     procedimientoActivo: "ninguno", colorCaries: "rojo", colorRestauracion: "azul",
     colorMspActivo: "rojo", pincelEstado: "por_realizar", odontogramaMsp: {},
     codigoCie10: "", diagnostico: "", planTratamiento: "", notasOdontograma: "",
@@ -452,13 +550,6 @@ function calcularEdad(fechaNacimiento: string): string {
     edad--;
   }
   return edad >= 0 ? `${edad} años` : "—";
-}
-
-function calcularTotalCpod(hc: HistoriaClinicaCompleta): number {
-  const c = parseInt(hc.cpodCariados || "0", 10) || 0;
-  const p = parseInt(hc.cpodPerdidos || "0", 10) || 0;
-  const o = parseInt(hc.cpodObturados || "0", 10) || 0;
-  return Math.max(0, c) + Math.max(0, p) + Math.max(0, o);
 }
 
 function inferirRolRespaldo(email?: string | null): RolUsuario {
@@ -685,6 +776,24 @@ function renderMarcadoresExternosPieza(
   );
 }
 
+function SiluetaPersonaNeutral() {
+  return (
+    <svg
+      viewBox="0 0 120 140"
+      className="w-24 h-28 text-slate-400"
+      role="img"
+      aria-label="Silueta general sin género"
+    >
+      <circle cx="60" cy="44" r="22" fill="currentColor" opacity="0.35" />
+      <path
+        d="M 24 126 C 24 94 38 78 60 78 C 82 78 96 94 96 126 Z"
+        fill="currentColor"
+        opacity="0.35"
+      />
+    </svg>
+  );
+}
+
 export default function HomePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -837,6 +946,66 @@ export default function HomePage() {
           ? { ...pac, hc: { ...pac.hc, [campo]: valor } }
           : pac
       )
+    );
+  }
+
+  function handleSubirFotoCarne(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0];
+    if (!archivo || !pacienteSeleccionadoId) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") return;
+      actualizarCampoHc("fotoCarne", reader.result);
+    };
+    reader.readAsDataURL(archivo);
+    e.target.value = "";
+  }
+
+  function quitarFotoCarne() {
+    actualizarCampoHc("fotoCarne", "");
+  }
+
+  function actualizarCpodManual(
+    campo: "cariados" | "perdidos" | "obturados",
+    valorTexto: string
+  ) {
+    if (!pacienteSeleccionadoId) return;
+    const numeroIngresado = Math.max(0, parseInt(valorTexto || "0", 10) || 0);
+    setMensajeGuardado(null);
+
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const auto = calcularCpodAutomaticoDesdeOdontograma(
+          pac.hc.odontogramaMsp
+        );
+        const delta =
+          campo === "cariados"
+            ? numeroIngresado - auto.cariados
+            : campo === "perdidos"
+            ? numeroIngresado - auto.perdidos
+            : numeroIngresado - auto.obturados;
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            cpodAjusteManualCariados:
+              campo === "cariados"
+                ? delta
+                : pac.hc.cpodAjusteManualCariados || 0,
+            cpodAjusteManualPerdidos:
+              campo === "perdidos"
+                ? delta
+                : pac.hc.cpodAjusteManualPerdidos || 0,
+            cpodAjusteManualObturados:
+              campo === "obturados"
+                ? delta
+                : pac.hc.cpodAjusteManualObturados || 0,
+          },
+        };
+      })
     );
   }
 
@@ -1729,14 +1898,6 @@ export default function HomePage() {
 
   function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
     const piezasSel = hc.piezasSeleccionadas || [];
-    const piezaFoco =
-      hc.piezaSeleccionada || piezasSel[piezasSel.length - 1] || "";
-    const piezaAct = piezaFoco
-      ? hc.odontogramaMsp[piezaFoco] || piezaVacia()
-      : piezaVacia();
-    const descripcionPieza = describirProcedimientosEnPieza(
-      piezaAct.simbolos || []
-    );
     const procActualObj = PROCEDIMIENTOS_MSP.find(
       (p) => p.id === hc.procedimientoActivo
     );
@@ -1757,24 +1918,11 @@ export default function HomePage() {
 
     return (
       <div className="border border-slate-200 rounded-2xl p-3.5 bg-cyan-50/50 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-100/90 border border-slate-200 rounded-xl px-3 py-2">
-          <p className="text-xs font-semibold text-slate-700">
-            1) CARIES / RESTAURACIÓN · 2) ODONTOGRAMA · 3) SIMBOLOGÍA · 4) COLOR · 5) CARGAR / BORRAR
-          </p>
-          <span className="text-xs text-slate-600">
-            Piezas:{" "}
-            <strong>
-              {piezasSel.length > 0 ? `#${piezasSel.join(", #")}` : "Ninguna"}
-            </strong>
-            {descripcionPieza ? ` · ${descripcionPieza}` : ""}
-          </span>
-        </div>
-
         <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
-              1. Caries / por realizar (Rojo) y Restauración (Azul) — se marcan
-              al tocar las caras
+              Caries / por realizar (Rojo) y Restauración (Azul) — se marcan al
+              tocar las caras
             </span>
             {modoCarasActivo && (
               <span className="text-[11px] font-medium text-slate-600">
@@ -1874,7 +2022,7 @@ export default function HomePage() {
         <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
-              2. Odontograma — Piezas (
+              Odontograma — Piezas (
               {piezasSel.length > 0 ? `#${piezasSel.join(", #")}` : "ninguna"})
             </span>
 
@@ -2006,7 +2154,7 @@ export default function HomePage() {
         <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
-              3. Simbología
+              Simbología
               {procActualObj
                 ? ` · Activo: ${procActualObj.titulo} (${
                     hc.colorMspActivo === "rojo" ? "Rojo" : "Azul"
@@ -2047,7 +2195,7 @@ export default function HomePage() {
         <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-slate-700 mr-1">
-              4. Color:
+              Color:
             </span>
 
             <button
@@ -2204,6 +2352,12 @@ export default function HomePage() {
   const leyendaAlergiaActiva = pacienteActivo
     ? obtenerLeyendaAlergia(pacienteActivo.hc)
     : "";
+  const tieneEnfermedadSisActiva = pacienteActivo
+    ? pacienteTieneEnfermedadSistemica(pacienteActivo.hc)
+    : false;
+  const detalleEnfermedadSisActiva = pacienteActivo
+    ? obtenerDetalleEnfermedadesSistemicas(pacienteActivo.hc)
+    : "";
 
   return (
     <main className="min-h-screen p-4 max-w-5xl mx-auto space-y-6">
@@ -2340,6 +2494,9 @@ export default function HomePage() {
                 {pacientes.map((pac) => {
                   const alertaPac = pacienteTieneAlergias(pac.hc);
                   const detalleAlergiaPac = obtenerLeyendaAlergia(pac.hc);
+                  const enfSisPac = pacienteTieneEnfermedadSistemica(pac.hc);
+                  const detalleEnfPac =
+                    obtenerDetalleEnfermedadesSistemicas(pac.hc);
                   return (
                     <button
                       key={pac.id}
@@ -2348,7 +2505,7 @@ export default function HomePage() {
                         setPacienteSeleccionadoId(pac.id);
                         setMensajeGuardado(null);
                       }}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border ${
+                      className={`inline-flex flex-wrap items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border ${
                         pac.id === pacienteActivo?.id
                           ? "bg-slate-900 text-white border-slate-900"
                           : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
@@ -2364,6 +2521,19 @@ export default function HomePage() {
                           }`}
                         >
                           {detalleAlergiaPac || "Alergia"}
+                        </span>
+                      )}
+                      {enfSisPac && (
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            pac.id === pacienteActivo?.id
+                              ? "bg-rose-400 text-slate-950"
+                              : "bg-rose-100 text-rose-900 border border-rose-300"
+                          }`}
+                        >
+                          {detalleEnfPac
+                            ? `Enf. sistémica: ${detalleEnfPac}`
+                            : "Paciente con enfermedad sistémica"}
                         </span>
                       )}
                     </button>
@@ -2382,6 +2552,14 @@ export default function HomePage() {
                         {tieneAlergiaActiva && (
                           <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
                             {leyendaAlergiaActiva || "Padece alergias"}
+                          </span>
+                        )}
+                        {tieneEnfermedadSisActiva && (
+                          <span className="inline-flex items-center rounded-full bg-rose-100 border border-rose-300 px-2.5 py-0.5 text-xs font-semibold text-rose-900">
+                            Paciente con enfermedad sistémica
+                            {detalleEnfermedadSisActiva
+                              ? `: ${detalleEnfermedadSisActiva}`
+                              : ""}
                           </span>
                         )}
                       </div>
@@ -2407,6 +2585,17 @@ export default function HomePage() {
                     </div>
                   )}
 
+                  {tieneEnfermedadSisActiva && (
+                    <div className="rounded-xl bg-rose-50 border border-rose-300 px-3.5 py-2.5 text-xs font-medium text-rose-950">
+                      <strong>Alarma clínica:</strong> Paciente con enfermedad
+                      sistémica
+                      {detalleEnfermedadSisActiva
+                        ? ` (${detalleEnfermedadSisActiva})`
+                        : ""}
+                      .
+                    </div>
+                  )}
+
                   <div className="flex gap-1.5 overflow-x-auto pb-1">
                     {pestanasHc.map((tab) => (
                       <button
@@ -2425,232 +2614,298 @@ export default function HomePage() {
                   </div>
 
                   {seccionHc === "identificacion" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Nombres
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.nombres}
-                          onChange={(e) =>
-                            actualizarCampoHc("nombres", e.target.value)
-                          }
-                          placeholder="Nombres del paciente"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                    <div className="space-y-4 text-sm">
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 flex flex-col sm:flex-row items-center gap-4">
+                        <div className="w-28 h-32 rounded-xl border border-slate-300 bg-white overflow-hidden flex items-center justify-center shrink-0">
+                          {pacienteActivo.hc.fotoCarne ? (
+                            <img
+                              src={pacienteActivo.hc.fotoCarne}
+                              alt={`Foto carné de ${nombreCompletoPaciente(
+                                pacienteActivo.hc
+                              )}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <SiluetaPersonaNeutral />
+                          )}
+                        </div>
+
+                        <div className="flex-1 space-y-2 text-center sm:text-left">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Fotografía de identificación (tipo pasaporte / carné)
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Si no se agrega fotografía, se muestra una silueta
+                            neutral sin género.
+                          </p>
+                          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                            <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-1.5 text-xs font-medium hover:bg-slate-800">
+                              Tomar foto pasaporte
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="user"
+                                onChange={handleSubirFotoCarne}
+                                className="hidden"
+                              />
+                            </label>
+
+                            <label className="cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-1.5 text-xs font-medium hover:bg-slate-100">
+                              Subir imagen carné
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleSubirFotoCarne}
+                                className="hidden"
+                              />
+                            </label>
+
+                            {pacienteActivo.hc.fotoCarne && (
+                              <button
+                                type="button"
+                                onClick={quitarFotoCarne}
+                                className="rounded-lg border border-red-200 bg-red-50 text-red-700 px-3 py-1.5 text-xs font-medium hover:bg-red-100"
+                              >
+                                Quitar foto
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Apellidos
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.apellidos}
-                          onChange={(e) =>
-                            actualizarCampoHc("apellidos", e.target.value)
-                          }
-                          placeholder="Apellidos del paciente"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Nombres
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.nombres}
+                            onChange={(e) =>
+                              actualizarCampoHc("nombres", e.target.value)
+                            }
+                            placeholder="Nombres del paciente"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Documento de identidad
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.documento}
-                          onChange={(e) =>
-                            actualizarCampoHc("documento", e.target.value)
-                          }
-                          placeholder="Cédula / DNI / Pasaporte"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Apellidos
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.apellidos}
+                            onChange={(e) =>
+                              actualizarCampoHc("apellidos", e.target.value)
+                            }
+                            placeholder="Apellidos del paciente"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Fecha de nacimiento (Edad:{" "}
-                          {calcularEdad(pacienteActivo.hc.fechaNacimiento)})
-                        </label>
-                        <input
-                          type="date"
-                          value={pacienteActivo.hc.fechaNacimiento}
-                          onChange={(e) =>
-                            actualizarCampoHc("fechaNacimiento", e.target.value)
-                          }
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Documento de identidad
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.documento}
+                            onChange={(e) =>
+                              actualizarCampoHc("documento", e.target.value)
+                            }
+                            placeholder="Cédula / DNI / Pasaporte"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Género
-                        </label>
-                        <select
-                          value={pacienteActivo.hc.genero}
-                          onChange={(e) =>
-                            actualizarCampoHc("genero", e.target.value)
-                          }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        >
-                          <option value="">Seleccionar género</option>
-                          <option value="Masculino">Masculino</option>
-                          <option value="Femenino">Femenino</option>
-                          <option value="Otro">Otro</option>
-                        </select>
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Fecha de nacimiento (Edad:{" "}
+                            {calcularEdad(pacienteActivo.hc.fechaNacimiento)})
+                          </label>
+                          <input
+                            type="date"
+                            value={pacienteActivo.hc.fechaNacimiento}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "fechaNacimiento",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Nacionalidad
-                        </label>
-                        <select
-                          value={pacienteActivo.hc.nacionalidad}
-                          onChange={(e) =>
-                            actualizarCampoHc("nacionalidad", e.target.value)
-                          }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        >
-                          <option value="">Seleccionar país</option>
-                          {PAISES.map((pais) => (
-                            <option key={pais} value={pais}>
-                              {pais}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Género
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.genero}
+                            onChange={(e) =>
+                              actualizarCampoHc("genero", e.target.value)
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar género</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Femenino">Femenino</option>
+                            <option value="Otro">Otro</option>
+                          </select>
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Teléfono
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.telefono}
-                          onChange={(e) =>
-                            actualizarCampoHc("telefono", e.target.value)
-                          }
-                          placeholder="Teléfono / WhatsApp"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Nacionalidad
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.nacionalidad}
+                            onChange={(e) =>
+                              actualizarCampoHc("nacionalidad", e.target.value)
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar país</option>
+                            {PAISES.map((pais) => (
+                              <option key={pais} value={pais}>
+                                {pais}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Correo electrónico
-                        </label>
-                        <input
-                          type="email"
-                          value={pacienteActivo.hc.correo}
-                          onChange={(e) =>
-                            actualizarCampoHc("correo", e.target.value)
-                          }
-                          placeholder="correo@ejemplo.com"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Teléfono
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.telefono}
+                            onChange={(e) =>
+                              actualizarCampoHc("telefono", e.target.value)
+                            }
+                            placeholder="Teléfono / WhatsApp"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Ocupación
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.ocupacion}
-                          onChange={(e) =>
-                            actualizarCampoHc("ocupacion", e.target.value)
-                          }
-                          placeholder="Ocupación actual"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Correo electrónico
+                          </label>
+                          <input
+                            type="email"
+                            value={pacienteActivo.hc.correo}
+                            onChange={(e) =>
+                              actualizarCampoHc("correo", e.target.value)
+                            }
+                            placeholder="correo@ejemplo.com"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Ciudad
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.ciudad}
-                          onChange={(e) =>
-                            actualizarCampoHc("ciudad", e.target.value)
-                          }
-                          placeholder="Ciudad de residencia"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Ocupación
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.ocupacion}
+                            onChange={(e) =>
+                              actualizarCampoHc("ocupacion", e.target.value)
+                            }
+                            placeholder="Ocupación actual"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Dirección o sector
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.direccion}
-                          onChange={(e) =>
-                            actualizarCampoHc("direccion", e.target.value)
-                          }
-                          placeholder="Calle, sector, referencia"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Ciudad
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.ciudad}
+                            onChange={(e) =>
+                              actualizarCampoHc("ciudad", e.target.value)
+                            }
+                            placeholder="Ciudad de residencia"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Contacto adicional
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.contactoAdicional}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "contactoAdicional",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Nombre y teléfono de contacto adicional"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Dirección o sector
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.direccion}
+                            onChange={(e) =>
+                              actualizarCampoHc("direccion", e.target.value)
+                            }
+                            placeholder="Calle, sector, referencia"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Seguro o convenio médico
-                        </label>
-                        <select
-                          value={pacienteActivo.hc.seguroConvenio}
-                          onChange={(e) =>
-                            actualizarCampoHc("seguroConvenio", e.target.value)
-                          }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        >
-                          <option value="">Seleccionar opción</option>
-                          <option value="Particular">Particular</option>
-                          <option value="Seguro">Seguro</option>
-                          <option value="Convenio">Convenio</option>
-                        </select>
-                      </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Contacto adicional
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.contactoAdicional}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "contactoAdicional",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Nombre y teléfono de contacto adicional"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
 
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Representante legal (si es menor de edad)
-                        </label>
-                        <input
-                          type="text"
-                          value={pacienteActivo.hc.representanteLegal}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "representanteLegal",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Nombre, documento y parentesco del representante"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Seguro o convenio médico
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.seguroConvenio}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "seguroConvenio",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar opción</option>
+                            <option value="Particular">Particular</option>
+                            <option value="Seguro">Seguro</option>
+                            <option value="Convenio">Convenio</option>
+                          </select>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Representante legal (si es menor de edad)
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.representanteLegal}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "representanteLegal",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Nombre, documento y parentesco del representante"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2740,9 +2995,16 @@ export default function HomePage() {
                         </div>
                       </div>
                       <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-                          Antecedentes médicos
-                        </h4>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Antecedentes médicos
+                          </h4>
+                          {tieneEnfermedadSisActiva && (
+                            <span className="inline-flex items-center rounded-full bg-rose-100 border border-rose-300 px-2.5 py-0.5 text-xs font-semibold text-rose-900">
+                              Paciente con enfermedad sistémica
+                            </span>
+                          )}
+                        </div>
 
                         <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
                           <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -3542,132 +3804,135 @@ export default function HomePage() {
                     </div>
                   )}
 
-                  {seccionHc === "odontograma" && (
-                    <div className="space-y-4 text-sm">
-                      {renderOdontogramaMsp(pacienteActivo.hc)}
+                  {seccionHc === "odontograma" && (() => {
+                    const cpod = obtenerValoresCpod(pacienteActivo.hc);
+                    return (
+                      <div className="space-y-4 text-sm">
+                        {renderOdontogramaMsp(pacienteActivo.hc)}
 
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Resumen general del odontograma
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={pacienteActivo.hc.notasOdontograma}
-                          onChange={(e) =>
-                            actualizarCampoHc("notasOdontograma", e.target.value)
-                          }
-                          placeholder="Notas generales de piezas, restauraciones o patologías..."
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <div className="flex items-center justify-between">
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
                           <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                            Índice CPOD
+                            Resumen general del odontograma
                           </label>
-                          <span className="text-xs font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
-                            Total CPOD: {calcularTotalCpod(pacienteActivo.hc)}
-                          </span>
+                          <textarea
+                            rows={3}
+                            value={pacienteActivo.hc.notasOdontograma}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "notasOdontograma",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Notas generales de piezas, restauraciones o patologías..."
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          />
                         </div>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs border-collapse bg-white rounded-lg overflow-hidden">
-                            <thead>
-                              <tr className="bg-slate-100 text-slate-700">
-                                <th className="border border-slate-200 px-3 py-2 text-center">
-                                  C (Cariados)
-                                </th>
-                                <th className="border border-slate-200 px-3 py-2 text-center">
-                                  P (Perdidos)
-                                </th>
-                                <th className="border border-slate-200 px-3 py-2 text-center">
-                                  O (Obturados)
-                                </th>
-                                <th className="border border-slate-200 px-3 py-2 text-center">
-                                  Total CPOD
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td className="border border-slate-200 p-2 text-center">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={pacienteActivo.hc.cpodCariados}
-                                    onChange={(e) =>
-                                      actualizarCampoHc(
-                                        "cpodCariados",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="0"
-                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
-                                  />
-                                </td>
-                                <td className="border border-slate-200 p-2 text-center">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={pacienteActivo.hc.cpodPerdidos}
-                                    onChange={(e) =>
-                                      actualizarCampoHc(
-                                        "cpodPerdidos",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="0"
-                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
-                                  />
-                                </td>
-                                <td className="border border-slate-200 p-2 text-center">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={pacienteActivo.hc.cpodObturados}
-                                    onChange={(e) =>
-                                      actualizarCampoHc(
-                                        "cpodObturados",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="0"
-                                    className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm"
-                                  />
-                                </td>
-                                <td className="border border-slate-200 p-2 text-center font-semibold text-slate-900">
-                                  {calcularTotalCpod(pacienteActivo.hc)}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
 
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-medium text-slate-600">
-                          Oclusión / Llave de Angle
-                        </label>
-                        <select
-                          value={pacienteActivo.hc.oclusionLlaveAngle}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "oclusionLlaveAngle",
-                              e.target.value
-                            )
-                          }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        >
-                          <option value="">Seleccionar clasificación</option>
-                          {OPCIONES_OCLUSION_ANGLE.map((op) => (
-                            <option key={op} value={op}>
-                              {op}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                              Índice CPOD (sincronizado con odontograma)
+                            </label>
+                            <span className="text-xs font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
+                              Total CPOD: {cpod.total}
+                            </span>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs border-collapse bg-white rounded-lg overflow-hidden">
+                              <thead>
+                                <tr className="bg-slate-100 text-slate-700">
+                                  <th className="border border-slate-200 px-3 py-2 text-center">
+                                    C (Cariados)
+                                  </th>
+                                  <th className="border border-slate-200 px-3 py-2 text-center">
+                                    P (Perdidos)
+                                  </th>
+                                  <th className="border border-slate-200 px-3 py-2 text-center">
+                                    O (Obturados)
+                                  </th>
+                                  <th className="border border-slate-200 px-3 py-2 text-center">
+                                    Total CPOD
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="border border-slate-200 p-2 text-center">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={cpod.cariados}
+                                      onChange={(e) =>
+                                        actualizarCpodManual(
+                                          "cariados",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm font-semibold text-red-700"
+                                    />
+                                  </td>
+                                  <td className="border border-slate-200 p-2 text-center">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={cpod.perdidos}
+                                      onChange={(e) =>
+                                        actualizarCpodManual(
+                                          "perdidos",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm font-semibold text-slate-800"
+                                    />
+                                  </td>
+                                  <td className="border border-slate-200 p-2 text-center">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={cpod.obturados}
+                                      onChange={(e) =>
+                                        actualizarCpodManual(
+                                          "obturados",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-20 text-center rounded border border-slate-300 px-2 py-1 text-sm font-semibold text-blue-700"
+                                    />
+                                  </td>
+                                  <td className="border border-slate-200 p-2 text-center font-semibold text-slate-900">
+                                    {cpod.total}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                          <label className="block text-xs font-medium text-slate-600">
+                            Oclusión / Llave de Angle
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.oclusionLlaveAngle}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "oclusionLlaveAngle",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar clasificación</option>
+                            {OPCIONES_OCLUSION_ANGLE.map((op) => (
+                              <option key={op} value={op}>
+                                {op}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {seccionHc === "diagnostico" && (
                     <div className="space-y-3 text-sm">
@@ -3823,4 +4088,4 @@ export default function HomePage() {
       )}
     </main>
   );
-}
+} 
