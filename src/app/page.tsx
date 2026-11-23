@@ -13,9 +13,7 @@ type ModuloActivo =
 
 type SeccionHC =
   | "identificacion"
-  | "motivo"
-  | "medicos"
-  | "odontologicos"
+  | "motivo_antecedentes"
   | "clinico"
   | "examenes"
   | "odontograma"
@@ -101,7 +99,7 @@ interface HistoriaClinicaCompleta {
   medicacionActual: string;
   cirugiasPrevias: string;
   antecedentesFamiliares: string;
-  noRefiereHabitos: boolean;
+  tieneHabitos: boolean;
   habitosGenerales: string;
   tratamientosPrevios: string[];
   otrosTratamientosPrevios: string;
@@ -216,9 +214,9 @@ const OPCIONES_TEJIDOS_BLANDOS = [
 ];
 
 const OPCIONES_OCLUSION_ANGLE = [
-  "Clase I de Angle", "Clase II División 1", "Clase II División 2",
-  "Clase III de Angle", "Borde a borde", "Mordida abierta",
-  "Mordida cruzada", "No valorable / edéntulo", "Otros",
+  "Clase I",
+  "Clase II",
+  "Clase III",
 ];
 
 const MOVILIDAD_MILLER = [
@@ -390,10 +388,26 @@ function nombreCompletoPaciente(hc: HistoriaClinicaCompleta): string {
 
 function pacienteTieneAlergias(hc: HistoriaClinicaCompleta): boolean {
   return (
-    !hc.alergicoMedicamentos ||
+    hc.alergicoMedicamentos ||
     Boolean(hc.medicamentoAlergia?.trim()) ||
     Boolean(hc.alergias?.trim())
   );
+}
+
+function obtenerLeyendaAlergia(hc: HistoriaClinicaCompleta): string {
+  const partes: string[] = [];
+  if (hc.alergicoMedicamentos || hc.medicamentoAlergia?.trim()) {
+    const med = hc.medicamentoAlergia?.trim();
+    partes.push(
+      med
+        ? `Alérgico a medicamentos: ${med}`
+        : "Alérgico a medicamentos"
+    );
+  }
+  if (hc.alergias?.trim()) {
+    partes.push(`Otras alergias: ${hc.alergias.trim()}`);
+  }
+  return partes.join(" · ");
 }
 
 function crearHcVacia(
@@ -407,11 +421,11 @@ function crearHcVacia(
     correo: "", ocupacion: "", contactoAdicional: "", seguroConvenio: "",
     representanteLegal: "", motivoConsulta: "", enfermedadActual: "",
     noPresentaDolor: false, intensidadDolor: "", enfermedadesSistemicas: [],
-    otrasEnfermedadesSistemicas: "", alergicoMedicamentos: true,
+    otrasEnfermedadesSistemicas: "", alergicoMedicamentos: false,
     medicamentoAlergia: "", alergias: "", problemasHemorragias: "",
     detalleHemorragias: "", problemasAnestesiaDental: "",
     detalleAnestesiaDental: "", medicacionActual: "", cirugiasPrevias: "",
-    antecedentesFamiliares: "", noRefiereHabitos: false, habitosGenerales: "",
+    antecedentesFamiliares: "", tieneHabitos: false, habitosGenerales: "",
     tratamientosPrevios: [], otrosTratamientosPrevios: "", frecuenciaVisitas: "",
     otraFrecuenciaVisitas: "", experienciasAnteriores: "",
     otraExperienciaAnterior: "", ansiedadDental: "", otraAnsiedadDental: "",
@@ -838,7 +852,7 @@ export default function HomePage() {
           hc: {
             ...pac.hc,
             alergicoMedicamentos: siguiente,
-            medicamentoAlergia: siguiente ? "" : pac.hc.medicamentoAlergia,
+            medicamentoAlergia: siguiente ? pac.hc.medicamentoAlergia : "",
           },
         };
       })
@@ -1342,23 +1356,19 @@ export default function HomePage() {
     );
   }
 
-  function toggleNoRefiereHabitos() {
+  function toggleTieneHabitos() {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
-        const nuevoEstado = !pac.hc.noRefiereHabitos;
+        const siguiente = !pac.hc.tieneHabitos;
         return {
           ...pac,
           hc: {
             ...pac.hc,
-            noRefiereHabitos: nuevoEstado,
-            habitosGenerales: nuevoEstado
-              ? "Refiere no tener hábitos"
-              : pac.hc.habitosGenerales === "Refiere no tener hábitos"
-              ? ""
-              : pac.hc.habitosGenerales,
+            tieneHabitos: siguiente,
+            habitosGenerales: siguiente ? pac.hc.habitosGenerales : "",
           },
         };
       })
@@ -2181,18 +2191,19 @@ export default function HomePage() {
   }
   const pestanasHc: { id: SeccionHC; titulo: string }[] = [
     { id: "identificacion", titulo: "1. Identificación" },
-    { id: "motivo", titulo: "2. Motivo y enfermedad" },
-    { id: "medicos", titulo: "3. Ant. médicos" },
-    { id: "odontologicos", titulo: "4. Ant. odontológicos" },
-    { id: "clinico", titulo: "5. Signos y examen" },
-    { id: "examenes", titulo: "6. Exámenes y fotos" },
-    { id: "odontograma", titulo: "7. Odontograma e índice CPOD" },
-    { id: "diagnostico", titulo: "8. Diagnóstico CIE-10 y plan" },
+    { id: "motivo_antecedentes", titulo: "2. Motivo y antecedentes" },
+    { id: "clinico", titulo: "3. Signos y examen" },
+    { id: "examenes", titulo: "4. Exámenes y fotos" },
+    { id: "odontograma", titulo: "5. Odontograma e índice CPOD" },
+    { id: "diagnostico", titulo: "6. Diagnóstico CIE-10 y plan" },
   ];
 
   const tieneAlergiaActiva = pacienteActivo
     ? pacienteTieneAlergias(pacienteActivo.hc)
     : false;
+  const leyendaAlergiaActiva = pacienteActivo
+    ? obtenerLeyendaAlergia(pacienteActivo.hc)
+    : "";
 
   return (
     <main className="min-h-screen p-4 max-w-5xl mx-auto space-y-6">
@@ -2328,6 +2339,7 @@ export default function HomePage() {
                 </span>
                 {pacientes.map((pac) => {
                   const alertaPac = pacienteTieneAlergias(pac.hc);
+                  const detalleAlergiaPac = obtenerLeyendaAlergia(pac.hc);
                   return (
                     <button
                       key={pac.id}
@@ -2351,7 +2363,7 @@ export default function HomePage() {
                               : "bg-amber-100 text-amber-900 border border-amber-300"
                           }`}
                         >
-                          Alergia
+                          {detalleAlergiaPac || "Alergia"}
                         </span>
                       )}
                     </button>
@@ -2369,10 +2381,7 @@ export default function HomePage() {
                         </h3>
                         {tieneAlergiaActiva && (
                           <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
-                            Padece alergias
-                            {pacienteActivo.hc.medicamentoAlergia?.trim()
-                              ? `: ${pacienteActivo.hc.medicamentoAlergia.trim()}`
-                              : ""}
+                            {leyendaAlergiaActiva || "Padece alergias"}
                           </span>
                         )}
                       </div>
@@ -2394,15 +2403,7 @@ export default function HomePage() {
 
                   {tieneAlergiaActiva && (
                     <div className="rounded-xl bg-amber-50 border border-amber-300 px-3.5 py-2.5 text-xs font-medium text-amber-950">
-                      <strong>Aviso de alergia:</strong> Este paciente padece
-                      alergias
-                      {pacienteActivo.hc.medicamentoAlergia?.trim()
-                        ? ` a medicamento(s): ${pacienteActivo.hc.medicamentoAlergia.trim()}`
-                        : ""}
-                      {pacienteActivo.hc.alergias?.trim()
-                        ? ` · Otras alergias: ${pacienteActivo.hc.alergias.trim()}`
-                        : ""}
-                      .
+                      <strong>Alerta de alergia:</strong> {leyendaAlergiaActiva}.
                     </div>
                   )}
 
@@ -2654,551 +2655,581 @@ export default function HomePage() {
                     </div>
                   )}
 
-                  {seccionHc === "motivo" && (
-                    <div className="space-y-3 text-sm">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Motivo de consulta (en palabras del paciente)
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={pacienteActivo.hc.motivoConsulta}
-                          onChange={(e) =>
-                            actualizarCampoHc("motivoConsulta", e.target.value)
-                          }
-                          placeholder="Ej. 'Me duele una muela al tomar algo frío'"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Enfermedad actual (síntomas, inicio y evolución)
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={pacienteActivo.hc.enfermedadActual}
-                          onChange={(e) =>
-                            actualizarCampoHc("enfermedadActual", e.target.value)
-                          }
-                          placeholder="Cuándo inició, cómo ha evolucionado y qué lo agrava o alivia"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <label className="block text-xs font-medium text-slate-600">
-                            Intensidad del dolor / molestia (1 al 10)
-                          </label>
-                          <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={pacienteActivo.hc.noPresentaDolor}
-                              onChange={toggleNoPresentaDolor}
-                              className="rounded border-slate-300"
-                            />
-                            <span>No presenta dolor</span>
-                          </label>
-                        </div>
-
-                        <select
-                          disabled={pacienteActivo.hc.noPresentaDolor}
-                          value={
-                            pacienteActivo.hc.noPresentaDolor
-                              ? ""
-                              : pacienteActivo.hc.intensidadDolor
-                          }
-                          onChange={(e) =>
-                            actualizarCampoHc("intensidadDolor", e.target.value)
-                          }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
-                        >
-                          <option value="">
-                            {pacienteActivo.hc.noPresentaDolor
-                              ? "No presenta dolor"
-                              : "Seleccionar nivel (1 a 10)"}
-                          </option>
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((nivel) => (
-                            <option key={nivel} value={String(nivel)}>
-                              {nivel}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                  {seccionHc === "medicos" && (
-                    <div className="space-y-4 text-sm">
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Enfermedades sistémicas (seleccione una o varias)
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {OPCIONES_ENFERMEDADES.map((enf) => {
-                            const marcada =
-                              pacienteActivo.hc.enfermedadesSistemicas.includes(
-                                enf
-                              );
-                            return (
-                              <label
-                                key={enf}
-                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={marcada}
-                                  onChange={() =>
-                                    toggleEnfermedadSistemica(enf)
-                                  }
-                                  className="rounded border-slate-300"
-                                />
-                                <span>{enf}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-
-                        {pacienteActivo.hc.enfermedadesSistemicas.includes(
-                          "Otros"
-                        ) && (
-                          <div className="pt-1">
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
-                              Especificar otras enfermedades sistémicas
-                            </label>
-                            <input
-                              type="text"
-                              value={
-                                pacienteActivo.hc.otrasEnfermedadesSistemicas
-                              }
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "otrasEnfermedadesSistemicas",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Escriba cuál es la enfermedad..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                            Alergia a medicamentos
-                          </label>
-                          <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={pacienteActivo.hc.alergicoMedicamentos}
-                              onChange={toggleAlergicoMedicamentos}
-                              className="rounded border-slate-300"
-                            />
-                            <span>Alérgico a medicamentos</span>
-                          </label>
-                        </div>
-
-                        {!pacienteActivo.hc.alergicoMedicamentos && (
-                          <div className="pt-1 space-y-1.5">
-                            <label className="block text-xs font-medium text-amber-900">
-                              Medicamento al cual es alérgico
-                            </label>
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.medicamentoAlergia}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "medicamentoAlergia",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Escriba el medicamento al cual es alérgico..."
-                              className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                          <label className="block text-xs font-medium text-slate-600">
-                            ¿Tiene problemas de hemorragias?
-                          </label>
-                          <select
-                            value={pacienteActivo.hc.problemasHemorragias}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "problemasHemorragias",
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          >
-                            <option value="">Seleccionar opción</option>
-                            <option value="No">No</option>
-                            <option value="Sí">Sí</option>
-                            <option value="No sabe / no refiere">
-                              No sabe / no refiere
-                            </option>
-                          </select>
-                          {pacienteActivo.hc.problemasHemorragias === "Sí" && (
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.detalleHemorragias}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "detalleHemorragias",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Detalle el problema de hemorragias..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                            />
-                          )}
-                        </div>
-
-                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                          <label className="block text-xs font-medium text-slate-600">
-                            ¿Tiene problemas con la anestesia dental?
-                          </label>
-                          <select
-                            value={pacienteActivo.hc.problemasAnestesiaDental}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "problemasAnestesiaDental",
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          >
-                            <option value="">Seleccionar opción</option>
-                            <option value="No">No</option>
-                            <option value="Sí">Sí</option>
-                            <option value="Primera vez / no refiere">
-                              Primera vez / no refiere
-                            </option>
-                          </select>
-                          {pacienteActivo.hc.problemasAnestesiaDental ===
-                            "Sí" && (
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.detalleAnestesiaDental}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "detalleAnestesiaDental",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Detalle la reacción o problema con anestesia..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                            />
-                          )}
-                        </div>
+                  {seccionHc === "motivo_antecedentes" && (
+                    <div className="space-y-5 text-sm">
+                      <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-white">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                          Motivo de consulta y enfermedad actual
+                        </h4>
 
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Otras alergias (materiales, alimentos, etc.)
+                            Motivo de consulta (en palabras del paciente)
                           </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.alergias}
+                          <textarea
+                            rows={2}
+                            value={pacienteActivo.hc.motivoConsulta}
                             onChange={(e) =>
-                              actualizarCampoHc("alergias", e.target.value)
+                              actualizarCampoHc("motivoConsulta", e.target.value)
                             }
-                            placeholder="Látex, acrílicos, yodo, alimentos..."
+                            placeholder="Ej. 'Me duele una muela al tomar algo frío'"
                             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Medicación actual
+                            Enfermedad actual (síntomas, inicio y evolución)
                           </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.medicacionActual}
+                          <textarea
+                            rows={3}
+                            value={pacienteActivo.hc.enfermedadActual}
                             onChange={(e) =>
                               actualizarCampoHc(
-                                "medicacionActual",
+                                "enfermedadActual",
                                 e.target.value
                               )
                             }
-                            placeholder="Fármacos y dosis actuales"
+                            placeholder="Cuándo inició, cómo ha evolucionado y qué lo agrava o alivia"
                             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                           />
                         </div>
 
-                        <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Cirugías previas
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.cirugiasPrevias}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "cirugiasPrevias",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Intervenciones quirúrgicas anteriores"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Antecedentes familiares
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.antecedentesFamiliares}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "antecedentesFamiliares",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Patologías relevantes en familiares"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        <div className="sm:col-span-2 border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <label className="block text-xs font-medium text-slate-600">
-                              Hábitos (tabaquismo, alcoholismo, etc.)
+                              Intensidad del dolor / molestia (1 al 10)
                             </label>
                             <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={pacienteActivo.hc.noRefiereHabitos}
-                                onChange={toggleNoRefiereHabitos}
+                                checked={pacienteActivo.hc.noPresentaDolor}
+                                onChange={toggleNoPresentaDolor}
                                 className="rounded border-slate-300"
                               />
-                              <span>Refiere no tener hábitos</span>
+                              <span>No presenta dolor</span>
                             </label>
                           </div>
 
-                          <input
-                            type="text"
-                            disabled={pacienteActivo.hc.noRefiereHabitos}
-                            value={pacienteActivo.hc.habitosGenerales}
+                          <select
+                            disabled={pacienteActivo.hc.noPresentaDolor}
+                            value={
+                              pacienteActivo.hc.noPresentaDolor
+                                ? ""
+                                : pacienteActivo.hc.intensidadDolor
+                            }
                             onChange={(e) =>
                               actualizarCampoHc(
-                                "habitosGenerales",
+                                "intensidadDolor",
                                 e.target.value
                               )
                             }
-                            placeholder="Tabaquismo, alcohol, otros hábitos"
                             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
-                          />
+                          >
+                            <option value="">
+                              {pacienteActivo.hc.noPresentaDolor
+                                ? "No presenta dolor"
+                                : "Seleccionar nivel (1 a 10)"}
+                            </option>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((nivel) => (
+                              <option key={nivel} value={String(nivel)}>
+                                {nivel}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
-                    </div>
-                  )}
+                      <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                          Antecedentes médicos
+                        </h4>
 
-                  {seccionHc === "odontologicos" && (
-                    <div className="space-y-4 text-sm">
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Tratamientos odontológicos previos
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {OPCIONES_TRATAMIENTOS_PREVIOS.map((trat) => {
-                            const marcado =
-                              pacienteActivo.hc.tratamientosPrevios.includes(
-                                trat
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Enfermedades sistémicas (seleccione una o varias)
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {OPCIONES_ENFERMEDADES.map((enf) => {
+                              const marcada =
+                                pacienteActivo.hc.enfermedadesSistemicas.includes(
+                                  enf
+                                );
+                              return (
+                                <label
+                                  key={enf}
+                                  className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={marcada}
+                                    onChange={() =>
+                                      toggleEnfermedadSistemica(enf)
+                                    }
+                                    className="rounded border-slate-300"
+                                  />
+                                  <span>{enf}</span>
+                                </label>
                               );
-                            return (
-                              <label
-                                key={trat}
-                                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
-                              >
+                            })}
+                          </div>
+
+                          {pacienteActivo.hc.enfermedadesSistemicas.includes(
+                            "Otros"
+                          ) && (
+                            <div className="pt-1">
+                              <label className="block text-xs font-medium text-slate-600 mb-1">
+                                Especificar otras enfermedades sistémicas
+                              </label>
+                              <input
+                                type="text"
+                                value={
+                                  pacienteActivo.hc.otrasEnfermedadesSistemicas
+                                }
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "otrasEnfermedadesSistemicas",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba cuál es la enfermedad..."
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                              Alergia a medicamentos
+                            </label>
+                            <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  pacienteActivo.hc.alergicoMedicamentos
+                                }
+                                onChange={toggleAlergicoMedicamentos}
+                                className="rounded border-slate-300"
+                              />
+                              <span>Alérgico a medicamentos</span>
+                            </label>
+                          </div>
+
+                          {pacienteActivo.hc.alergicoMedicamentos && (
+                            <div className="pt-1 space-y-1.5">
+                              <label className="block text-xs font-medium text-amber-900">
+                                Medicamento al cual es alérgico
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.medicamentoAlergia}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "medicamentoAlergia",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba el medicamento al cual es alérgico..."
+                                className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                            <label className="block text-xs font-medium text-slate-600">
+                              ¿Tiene problemas de hemorragias?
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.problemasHemorragias}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "problemasHemorragias",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Seleccionar opción</option>
+                              <option value="No">No</option>
+                              <option value="Sí">Sí</option>
+                              <option value="No sabe / no refiere">
+                                No sabe / no refiere
+                              </option>
+                            </select>
+                            {pacienteActivo.hc.problemasHemorragias ===
+                              "Sí" && (
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.detalleHemorragias}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "detalleHemorragias",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Detalle el problema de hemorragias..."
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            )}
+                          </div>
+
+                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                            <label className="block text-xs font-medium text-slate-600">
+                              ¿Tiene problemas con la anestesia dental?
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.problemasAnestesiaDental}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "problemasAnestesiaDental",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Seleccionar opción</option>
+                              <option value="No">No</option>
+                              <option value="Sí">Sí</option>
+                              <option value="Primera vez / no refiere">
+                                Primera vez / no refiere
+                              </option>
+                            </select>
+                            {pacienteActivo.hc.problemasAnestesiaDental ===
+                              "Sí" && (
+                              <input
+                                type="text"
+                                value={
+                                  pacienteActivo.hc.detalleAnestesiaDental
+                                }
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "detalleAnestesiaDental",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Detalle la reacción o problema con anestesia..."
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Otras alergias (materiales, alimentos, etc.)
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.alergias}
+                              onChange={(e) =>
+                                actualizarCampoHc("alergias", e.target.value)
+                              }
+                              placeholder="Látex, acrílicos, yodo, alimentos..."
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Medicación actual
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.medicacionActual}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "medicacionActual",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Fármacos y dosis actuales"
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Cirugías previas
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.cirugiasPrevias}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "cirugiasPrevias",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Intervenciones quirúrgicas anteriores"
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Antecedentes familiares
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.antecedentesFamiliares}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "antecedentesFamiliares",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Patologías relevantes en familiares"
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <label className="block text-xs font-medium text-slate-600">
+                                Hábitos del paciente
+                              </label>
+                              <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={marcado}
-                                  onChange={() =>
-                                    toggleTratamientoPrevio(trat)
-                                  }
+                                  checked={pacienteActivo.hc.tieneHabitos}
+                                  onChange={toggleTieneHabitos}
                                   className="rounded border-slate-300"
                                 />
-                                <span>{trat}</span>
+                                <span>Presenta hábitos</span>
                               </label>
-                            );
-                          })}
-                        </div>
+                            </div>
 
-                        {pacienteActivo.hc.tratamientosPrevios.includes(
-                          "Otros"
-                        ) && (
-                          <div className="pt-1">
-                            <label className="block text-xs font-medium text-slate-600 mb-1">
-                              Especificar otros tratamientos previos
-                            </label>
                             <input
                               type="text"
-                              value={pacienteActivo.hc.otrosTratamientosPrevios}
+                              disabled={!pacienteActivo.hc.tieneHabitos}
+                              value={pacienteActivo.hc.habitosGenerales}
                               onChange={(e) =>
                                 actualizarCampoHc(
-                                  "otrosTratamientosPrevios",
+                                  "habitosGenerales",
                                   e.target.value
                                 )
                               }
-                              placeholder="Escriba a qué tratamientos se refiere..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              placeholder={
+                                pacienteActivo.hc.tieneHabitos
+                                  ? "Escriba el hábito que presenta el paciente..."
+                                  : "Marque la casilla para habilitar y escribir el hábito"
+                              }
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
                             />
                           </div>
-                        )}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                          <label className="block text-xs font-medium text-slate-600">
-                            Frecuencia de visitas al odontólogo
+                      <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                          Antecedentes odontológicos
+                        </h4>
+
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Tratamientos odontológicos previos
                           </label>
-                          <select
-                            value={pacienteActivo.hc.frecuenciaVisitas}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "frecuenciaVisitas",
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          >
-                            <option value="">Seleccionar opción</option>
-                            {OPCIONES_FRECUENCIA_VISITAS.map((op) => (
-                              <option key={op} value={op}>
-                                {op}
-                              </option>
-                            ))}
-                          </select>
-                          {pacienteActivo.hc.frecuenciaVisitas === "Otros" && (
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.otraFrecuenciaVisitas}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "otraFrecuenciaVisitas",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Escriba a qué se refiere..."
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                            />
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {OPCIONES_TRATAMIENTOS_PREVIOS.map((trat) => {
+                              const marcado =
+                                pacienteActivo.hc.tratamientosPrevios.includes(
+                                  trat
+                                );
+                              return (
+                                <label
+                                  key={trat}
+                                  className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={marcado}
+                                    onChange={() =>
+                                      toggleTratamientoPrevio(trat)
+                                    }
+                                    className="rounded border-slate-300"
+                                  />
+                                  <span>{trat}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+
+                          {pacienteActivo.hc.tratamientosPrevios.includes(
+                            "Otros"
+                          ) && (
+                            <div className="pt-1">
+                              <label className="block text-xs font-medium text-slate-600 mb-1">
+                                Especificar otros tratamientos previos
+                              </label>
+                              <input
+                                type="text"
+                                value={
+                                  pacienteActivo.hc.otrosTratamientosPrevios
+                                }
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "otrosTratamientosPrevios",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba a qué tratamientos se refiere..."
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
                           )}
                         </div>
 
-                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                          <label className="block text-xs font-medium text-slate-600">
-                            Experiencias anteriores
-                          </label>
-                          <select
-                            value={pacienteActivo.hc.experienciasAnteriores}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "experienciasAnteriores",
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          >
-                            <option value="">Seleccionar opción</option>
-                            {OPCIONES_EXPERIENCIAS_ANTERIORES.map((op) => (
-                              <option key={op} value={op}>
-                                {op}
-                              </option>
-                            ))}
-                          </select>
-                          {pacienteActivo.hc.experienciasAnteriores ===
-                            "Otros" && (
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.otraExperienciaAnterior}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                            <label className="block text-xs font-medium text-slate-600">
+                              Frecuencia de visitas al odontólogo
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.frecuenciaVisitas}
                               onChange={(e) =>
                                 actualizarCampoHc(
-                                  "otraExperienciaAnterior",
+                                  "frecuenciaVisitas",
                                   e.target.value
                                 )
                               }
-                              placeholder="Escriba a qué se refiere..."
                               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                            />
-                          )}
-                        </div>
+                            >
+                              <option value="">Seleccionar opción</option>
+                              {OPCIONES_FRECUENCIA_VISITAS.map((op) => (
+                                <option key={op} value={op}>
+                                  {op}
+                                </option>
+                              ))}
+                            </select>
+                            {pacienteActivo.hc.frecuenciaVisitas ===
+                              "Otros" && (
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.otraFrecuenciaVisitas}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "otraFrecuenciaVisitas",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba a qué se refiere..."
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            )}
+                          </div>
 
-                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                          <label className="block text-xs font-medium text-slate-600">
-                            Nivel de ansiedad dental
-                          </label>
-                          <select
-                            value={pacienteActivo.hc.ansiedadDental}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "ansiedadDental",
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          >
-                            <option value="">Seleccionar opción</option>
-                            {OPCIONES_ANSIEDAD_DENTAL.map((op) => (
-                              <option key={op} value={op}>
-                                {op}
-                              </option>
-                            ))}
-                          </select>
-                          {pacienteActivo.hc.ansiedadDental === "Otros" && (
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.otraAnsiedadDental}
+                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                            <label className="block text-xs font-medium text-slate-600">
+                              Experiencias anteriores
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.experienciasAnteriores}
                               onChange={(e) =>
                                 actualizarCampoHc(
-                                  "otraAnsiedadDental",
+                                  "experienciasAnteriores",
                                   e.target.value
                                 )
                               }
-                              placeholder="Escriba a qué se refiere..."
                               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                            />
-                          )}
-                        </div>
+                            >
+                              <option value="">Seleccionar opción</option>
+                              {OPCIONES_EXPERIENCIAS_ANTERIORES.map((op) => (
+                                <option key={op} value={op}>
+                                  {op}
+                                </option>
+                              ))}
+                            </select>
+                            {pacienteActivo.hc.experienciasAnteriores ===
+                              "Otros" && (
+                              <input
+                                type="text"
+                                value={
+                                  pacienteActivo.hc.otraExperienciaAnterior
+                                }
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "otraExperienciaAnterior",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba a qué se refiere..."
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            )}
+                          </div>
 
-                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                          <label className="block text-xs font-medium text-slate-600">
-                            Higiene oral habitual
-                          </label>
-                          <select
-                            value={pacienteActivo.hc.higieneOral}
-                            onChange={(e) =>
-                              actualizarCampoHc("higieneOral", e.target.value)
-                            }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          >
-                            <option value="">Seleccionar opción</option>
-                            {OPCIONES_HIGIENE_ORAL.map((op) => (
-                              <option key={op} value={op}>
-                                {op}
-                              </option>
-                            ))}
-                          </select>
-                          {pacienteActivo.hc.higieneOral === "Otros" && (
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.otraHigieneOral}
+                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                            <label className="block text-xs font-medium text-slate-600">
+                              Nivel de ansiedad dental
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.ansiedadDental}
                               onChange={(e) =>
                                 actualizarCampoHc(
-                                  "otraHigieneOral",
+                                  "ansiedadDental",
                                   e.target.value
                                 )
                               }
-                              placeholder="Escriba a qué se refiere..."
                               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                            />
-                          )}
+                            >
+                              <option value="">Seleccionar opción</option>
+                              {OPCIONES_ANSIEDAD_DENTAL.map((op) => (
+                                <option key={op} value={op}>
+                                  {op}
+                                </option>
+                              ))}
+                            </select>
+                            {pacienteActivo.hc.ansiedadDental === "Otros" && (
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.otraAnsiedadDental}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "otraAnsiedadDental",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba a qué se refiere..."
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            )}
+                          </div>
+
+                          <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                            <label className="block text-xs font-medium text-slate-600">
+                              Higiene oral habitual
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.higieneOral}
+                              onChange={(e) =>
+                                actualizarCampoHc("higieneOral", e.target.value)
+                              }
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Seleccionar opción</option>
+                              {OPCIONES_HIGIENE_ORAL.map((op) => (
+                                <option key={op} value={op}>
+                                  {op}
+                                </option>
+                              ))}
+                            </select>
+                            {pacienteActivo.hc.higieneOral === "Otros" && (
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.otraHigieneOral}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "otraHigieneOral",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba a qué se refiere..."
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                              />
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -3634,20 +3665,6 @@ export default function HomePage() {
                             </option>
                           ))}
                         </select>
-                        {pacienteActivo.hc.oclusionLlaveAngle === "Otros" && (
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.detalleOclusionAngle}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "detalleOclusionAngle",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Detallar clasificación o relación oclusal..."
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          />
-                        )}
                       </div>
                     </div>
                   )}
@@ -3806,4 +3823,4 @@ export default function HomePage() {
       )}
     </main>
   );
-} 
+}
