@@ -856,21 +856,60 @@ export default function HomePage() {
     );
   }
 
-  function limpiarSeleccionCarasYPiezas() {
+  function borrarCariesYRestauraciones() {
     if (!pacienteSeleccionadoId) return;
-    setMensajeGuardado("Selección limpiada.");
 
     setPacientes((prev) =>
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
+        const piezasSel = pac.hc.piezasSeleccionadas || [];
+        const codigosObjetivo =
+          piezasSel.length > 0
+            ? piezasSel
+            : Object.keys(pac.hc.odontogramaMsp || {});
+
+        if (codigosObjetivo.length === 0) {
+          setMensajeGuardado(
+            "No hay caries ni restauraciones registradas para borrar."
+          );
+          return pac;
+        }
+
+        const nuevoOdontograma = { ...pac.hc.odontogramaMsp };
+
+        for (const cod of codigosObjetivo) {
+          const actualPieza = nuevoOdontograma[cod] || piezaVacia();
+          const simbolosRestantes = (actualPieza.simbolos || []).filter(
+            (s) => s.tipo !== "caries" && s.tipo !== "restauracion"
+          );
+
+          nuevoOdontograma[cod] = {
+            ...actualPieza,
+            O: "ninguno",
+            V: "ninguno",
+            L: "ninguno",
+            M: "ninguno",
+            D: "ninguno",
+            simbolos: simbolosRestantes,
+          };
+        }
+
+        setMensajeGuardado(
+          piezasSel.length > 0
+            ? `Se borraron caries y restauraciones en pieza(s) #${piezasSel.join(
+                ", #"
+              )}.`
+            : "Se borraron todas las caries y restauraciones del odontograma."
+        );
+
         return {
           ...pac,
           hc: {
             ...pac.hc,
+            odontogramaMsp: nuevoOdontograma,
             piezaSeleccionada: "",
             piezasSeleccionadas: [],
             carasSeleccionadas: [],
-            procedimientoActivo: "ninguno",
           },
         };
       })
@@ -1597,17 +1636,31 @@ export default function HomePage() {
           <div className="h-5 mt-0.5" aria-hidden="true" />
         )}
 
-        <input
-          type="text"
+        <select
           value={d.movilidadRecesion}
           onClick={(e) => e.stopPropagation()}
           onChange={(e) =>
             actualizarDatoPieza(codigoPieza, "movilidadRecesion", e.target.value)
           }
-          placeholder="M/R"
-          title={`Movilidad (M0-M3) / Retracción (R-I..R-IV) pieza ${codigoPieza}`}
-          className="w-9 mt-0.5 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-600 px-0.5 py-0.5"
-        />
+          title={`Movilidad / Retracción pieza ${codigoPieza}`}
+          className="w-12 mt-0.5 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-700 px-0.5 py-0.5"
+        >
+          <option value="">M/R</option>
+          <optgroup label="Movilidad (Miller)">
+            {MOVILIDAD_MILLER.map((m) => (
+              <option key={m.codigo} value={m.codigo}>
+                {m.codigo}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Retracción / Recesión (Miller)">
+            {RETRACCION_MILLER.map((r) => (
+              <option key={r.codigo} value={r.codigo}>
+                {r.codigo}
+              </option>
+            ))}
+          </optgroup>
+        </select>
       </div>
     );
   }
@@ -1738,10 +1791,10 @@ export default function HomePage() {
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={limpiarSeleccionCarasYPiezas}
-                className="rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 px-3 py-2 text-xs font-semibold"
+                onClick={borrarCariesYRestauraciones}
+                className="rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 text-xs font-semibold"
               >
-                Dejar de seleccionar
+                Borrar
               </button>
               <button
                 type="button"
@@ -2071,7 +2124,6 @@ export default function HomePage() {
       </main>
     );
   }
-
   const pestanasHc: { id: SeccionHC; titulo: string }[] = [
     { id: "identificacion", titulo: "1. Identificación" },
     { id: "motivo", titulo: "2. Motivo y enfermedad" },
@@ -2504,6 +2556,7 @@ export default function HomePage() {
                       </div>
                     </div>
                   )}
+
                   {seccionHc === "motivo" && (
                     <div className="space-y-3 text-sm">
                       <div>
@@ -3608,4 +3661,4 @@ export default function HomePage() {
       )}
     </main>
   );
-} 
+}
