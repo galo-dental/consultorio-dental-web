@@ -41,12 +41,22 @@ interface Props {
   onSeleccionarPieza?: (codigo: string) => void;
 }
 
-const SUPERIOR = [
+const PERMANENTE_SUPERIOR = [
   "18", "17", "16", "15", "14", "13", "12", "11",
   "21", "22", "23", "24", "25", "26", "27", "28",
 ];
 
-const INFERIOR = [
+const TEMPORAL_SUPERIOR = [
+  "55", "54", "53", "52", "51",
+  "61", "62", "63", "64", "65",
+];
+
+const TEMPORAL_INFERIOR = [
+  "85", "84", "83", "82", "81",
+  "71", "72", "73", "74", "75",
+];
+
+const PERMANENTE_INFERIOR = [
   "48", "47", "46", "45", "44", "43", "42", "41",
   "31", "32", "33", "34", "35", "36", "37", "38",
 ];
@@ -60,7 +70,23 @@ type TipoAnatomico =
 
 function obtenerTipoAnatomico(codigo: string): TipoAnatomico {
   const ult = Number(codigo.slice(-1));
-  const esSup = codigo.startsWith("1") || codigo.startsWith("2");
+  const esSup =
+    codigo.startsWith("1") ||
+    codigo.startsWith("2") ||
+    codigo.startsWith("5") ||
+    codigo.startsWith("6");
+
+  if (
+    codigo.startsWith("5") ||
+    codigo.startsWith("6") ||
+    codigo.startsWith("7") ||
+    codigo.startsWith("8")
+  ) {
+    if (ult === 5 || ult === 4) return esSup ? "molar_sup" : "molar_inf";
+    if (ult === 3) return "canino";
+    return "incisivo";
+  }
+
   if (ult >= 6) return esSup ? "molar_sup" : "molar_inf";
   if (ult === 4 || ult === 5) return "premolar";
   if (ult === 3) return "canino";
@@ -68,11 +94,21 @@ function obtenerTipoAnatomico(codigo: string): TipoAnatomico {
 }
 
 function esCuadranteDerecho(codigo: string): boolean {
-  return codigo.startsWith("1") || codigo.startsWith("4");
+  return (
+    codigo.startsWith("1") ||
+    codigo.startsWith("4") ||
+    codigo.startsWith("5") ||
+    codigo.startsWith("8")
+  );
 }
 
 function esArcadaSuperior(codigo: string): boolean {
-  return codigo.startsWith("1") || codigo.startsWith("2");
+  return (
+    codigo.startsWith("1") ||
+    codigo.startsWith("2") ||
+    codigo.startsWith("5") ||
+    codigo.startsWith("6")
+  );
 }
 
 function obtenerCarasRelativas(codigo: string): {
@@ -121,9 +157,9 @@ function renderEndodonciaEnRaices(
           fill="none"
           pointerEvents="none"
         >
-          <path d="M13.5 41 L13.5 12" />
-          <path d="M22.5 41 L22.5 10" />
-          <path d="M30.5 41 L30.5 14" />
+          <line x1="13.5" y1="40" x2="13.5" y2="11" />
+          <line x1="22.5" y1="40" x2="22.5" y2="9" />
+          <line x1="30.5" y1="40" x2="30.5" y2="13" />
         </g>
       );
     }
@@ -136,7 +172,7 @@ function renderEndodonciaEnRaices(
         fill="none"
         pointerEvents="none"
       >
-        <path d="M22 41 L22 11" />
+        <line x1="22" y1="40" x2="22" y2="10" />
       </g>
     );
   }
@@ -151,8 +187,8 @@ function renderEndodonciaEnRaices(
         fill="none"
         pointerEvents="none"
       >
-        <path d="M15.5 29 L15.5 57" />
-        <path d="M28 29 L28 56" />
+        <line x1="15.5" y1="29" x2="15.5" y2="57" />
+        <line x1="28" y1="29" x2="28" y2="56" />
       </g>
     );
   }
@@ -166,23 +202,20 @@ function renderEndodonciaEnRaices(
       fill="none"
       pointerEvents="none"
     >
-      <path d="M22 29 L22 58" />
+      <line x1="22" y1="29" x2="22" y2="58" />
     </g>
   );
 }
 
-function renderImplanteEspiral(
+// Espiral de tornillo colocada estrictamente sobre la zona radicular
+function renderImplanteSobreRaiz(
   superior: boolean,
   color: string,
   key: string
 ) {
-  const yStart = superior ? 12 : 33;
-  const dir = superior ? 1 : -1;
-  const y1 = yStart + dir * 4;
-  const y2 = yStart + dir * 9;
-  const y3 = yStart + dir * 14;
-  const y4 = yStart + dir * 19;
-  const yEnd = yStart + dir * 23;
+  const yTop = superior ? 9 : 34;
+  const yBot = superior ? 36 : 60;
+  const step = (yBot - yTop) / 5;
 
   return (
     <g
@@ -194,29 +227,102 @@ function renderImplanteEspiral(
       fill="none"
       pointerEvents="none"
     >
-      {/* Cuello/plataforma */}
-      <line x1="16.5" y1={yStart} x2="27.5" y2={yStart} strokeWidth="2.4" />
-      {/* Espiral roscada del tornillo */}
-      <path
-        d={`M17.5 ${y1} L26.5 ${y1 + dir * 1.5}
-            M17.5 ${y2} L26.5 ${y2 + dir * 1.5}
-            M17.5 ${y3} L26.5 ${y3 + dir * 1.5}
-            M17.5 ${y4} L26.5 ${y4 + dir * 1.5}`}
-      />
-      {/* Ápice cónico del tornillo */}
-      <path d={`M18 ${y4 + dir * 1.5} L22 ${yEnd} L26 ${y4 + dir * 1.5}`} />
+      <line x1="16" y1={yTop} x2="28" y2={yTop} strokeWidth="2.4" />
+      {[1, 2, 3, 4].map((n) => {
+        const y = yTop + step * n;
+        return (
+          <path
+            key={n}
+            d={`M17 ${y - 1.5} L27 ${y + 1.5}`}
+          />
+        );
+      })}
+      <path d={`M17.5 ${yBot - 2} L22 ${yBot} L26.5 ${yBot - 2}`} />
     </g>
   );
 }
 
-function renderOtrosSimbolosOverlay(
+// Cobertura total de corona o prótesis sobre la corona (vista lateral)
+function renderCoberturaTotalCoronaLateral(
+  sim: SimboloAplicado,
+  superior: boolean,
+  key: string
+) {
+  const esCoberturaCorona =
+    sim.tipo === "corona" ||
+    sim.tipo === "protesis_fija" ||
+    sim.tipo === "protesis_removible" ||
+    sim.tipo === "protesis_total";
+
+  if (!esCoberturaCorona) return null;
+
+  const color = hexColorSimbolo(sim.color);
+  const pathCorona = superior
+    ? "M8.5 40.5 Q22 38 35.5 40.5 Q37.8 52 34.8 63.5 Q22 66.5 9.2 63.5 Q6.2 52 8.5 40.5 Z"
+    : "M8.5 5.5 Q22 3 35.5 5.5 Q37.8 17 34.8 28.5 Q22 31 9.2 28.5 Q6.2 17 8.5 5.5 Z";
+
+  return (
+    <path
+      key={key}
+      d={pathCorona}
+      fill={color}
+      fillOpacity="0.28"
+      stroke={color}
+      strokeWidth="2.2"
+      pointerEvents="none"
+    />
+  );
+}
+
+// Cobertura total de corona o prótesis sobre la corona (vista oclusal)
+function renderCoberturaTotalCoronaOclusal(
+  sim: SimboloAplicado,
+  key: string
+) {
+  const esCoberturaCorona =
+    sim.tipo === "corona" ||
+    sim.tipo === "protesis_fija" ||
+    sim.tipo === "protesis_removible" ||
+    sim.tipo === "protesis_total";
+
+  if (!esCoberturaCorona) return null;
+
+  const color = hexColorSimbolo(sim.color);
+
+  return (
+    <rect
+      key={key}
+      x="4"
+      y="4"
+      width="36"
+      height="36"
+      rx="6"
+      fill={color}
+      fillOpacity="0.26"
+      stroke={color}
+      strokeWidth="2.3"
+      pointerEvents="none"
+    />
+  );
+}
+
+function renderOtrosSimbolos(
   sim: SimboloAplicado,
   idx: number,
   xCenter = 22,
   yCenter = 22,
   scale = 0.72
 ) {
-  if (sim.tipo === "endodoncia" || sim.tipo === "implante") return null;
+  if (
+    sim.tipo === "endodoncia" ||
+    sim.tipo === "implante" ||
+    sim.tipo === "corona" ||
+    sim.tipo === "protesis_fija" ||
+    sim.tipo === "protesis_removible" ||
+    sim.tipo === "protesis_total"
+  ) {
+    return null;
+  }
 
   const color = hexColorSimbolo(sim.color);
   const offset = (idx - 0.5) * 6;
@@ -244,32 +350,6 @@ function renderOtrosSimbolosOverlay(
           )}
         </g>
       )}
-      {sim.tipo === "protesis_fija" && (
-        <g stroke={color} strokeWidth="3.4" fill="none">
-          <circle cx="7" cy="22" r="3.5" />
-          <line x1="11" y1="22" x2="33" y2="22" strokeDasharray="3 2" />
-          <circle cx="37" cy="22" r="3.5" />
-        </g>
-      )}
-      {sim.tipo === "protesis_removible" && (
-        <g stroke={color} strokeWidth="3.4" fill="none">
-          <path d="M10 9 Q4 22 10 35" />
-          <line x1="13" y1="22" x2="31" y2="22" strokeDasharray="3 2" />
-          <path d="M34 9 Q40 22 34 35" />
-        </g>
-      )}
-      {sim.tipo === "protesis_total" && (
-        <g stroke={color} strokeWidth="3.8" strokeLinecap="round">
-          <line x1="6" y1="17" x2="38" y2="17" />
-          <line x1="6" y1="27" x2="38" y2="27" />
-        </g>
-      )}
-      {sim.tipo === "corona" && (
-        <g stroke={color} strokeWidth="3.3" fill="none">
-          <rect x="6" y="6" width="32" height="32" />
-          <rect x="13" y="13" width="18" height="18" />
-        </g>
-      )}
       {sim.tipo === "ortodoncia" && (
         <g stroke={color} strokeWidth="3.2" fill="none">
           <rect
@@ -279,7 +359,7 @@ function renderOtrosSimbolosOverlay(
             height="22"
             rx="2"
             fill="#ffffff"
-            fillOpacity="0.8"
+            fillOpacity="0.85"
           />
           <line x1="3" y1="22" x2="11" y2="22" />
           <line x1="33" y1="22" x2="41" y2="22" />
@@ -290,26 +370,27 @@ function renderOtrosSimbolosOverlay(
   );
 }
 
-function VistaRaiz3DSvg({
+function VistaRaizSvg({
   codigo,
   superior,
   estado,
+  esTemporal,
 }: {
   codigo: string;
   superior: boolean;
   estado: EstadoPiezaMsp | undefined;
+  esTemporal: boolean;
 }) {
   const tipo = obtenerTipoAnatomico(codigo);
   const caras = obtenerCarasRelativas(codigo);
   const simbolos = estado?.simbolos || [];
-  const gradId = `esmalte-3d-${codigo}`;
 
   const colorCoronaBase =
     estado?.V === "por_realizar"
       ? "#fca5a5"
       : estado?.V === "realizado"
       ? "#93c5fd"
-      : "#fbf7ea";
+      : "#f8f5ea";
 
   const colorRaizBase = "#e6d8b5";
 
@@ -326,130 +407,96 @@ function VistaRaiz3DSvg({
   return (
     <svg
       viewBox="0 0 44 68"
-      className={`w-8 h-12 sm:w-9 sm:h-14 select-none ${
-        perdida ? "opacity-30" : ""
-      }`}
+      className={`${
+        esTemporal ? "w-7 h-10 sm:w-8 sm:h-12" : "w-8 h-12 sm:w-9 sm:h-14"
+      } select-none ${perdida ? "opacity-30" : ""}`}
       aria-label={`Raíz y corona ${codigo}`}
     >
-      <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.65" />
-          <stop offset="45%" stopColor="#ffffff" stopOpacity="0.05" />
-          <stop offset="100%" stopColor="#334155" stopOpacity="0.34" />
-        </linearGradient>
-      </defs>
-
       {superior ? (
         <g>
-          {/* Raíces superiores estilizadas */}
           {tipo === "molar_sup" && (
-            <g fill={colorRaizBase} stroke="#57534e" strokeWidth="1.25">
-              <path d="M10.5 40 C9.5 23 11.5 10 14 5 C16.5 13 17 26 17 40 Z" />
-              <path d="M19.5 40 C19.5 18 21.2 7 23 3 C25 10 25.8 24 25.5 40 Z" />
-              <path d="M27.5 40 C28.5 24 30.2 12 33 7 C34 15 33 27 32 40 Z" />
+            <g fill={colorRaizBase} stroke="#5c5346" strokeWidth="1.2">
+              <path d="M10.5 40.5 C9.2 26 10.8 12 13.8 5 C16.2 12 17.2 26 17.2 40.5 Z" />
+              <path d="M19.5 40.5 C19.5 22 20.8 9 23 3 C25.2 9 26.2 22 25.8 40.5 Z" />
+              <path d="M27.5 40.5 C28.2 26 30 14 33.2 8 C34.5 16 33.5 28 32 40.5 Z" />
             </g>
           )}
           {tipo === "premolar" && (
             <path
-              d="M14.5 40 C14.5 21 17.5 10 22 5 C26.5 10 29 21 29 40 Z"
+              d="M14.2 40.5 C14.2 23 17.2 11 22 5.5 C26.8 11 29.2 23 29.2 40.5 Z"
               fill={colorRaizBase}
-              stroke="#57534e"
-              strokeWidth="1.25"
+              stroke="#5c5346"
+              strokeWidth="1.2"
             />
           )}
           {tipo === "canino" && (
             <path
-              d="M15.5 41 C15.5 19 18.5 7 22 2 C25.5 7 28 19 28 41 Z"
+              d="M15 41.5 C15 21 18.2 8 22 2 C25.8 8 28.5 21 28.5 41.5 Z"
               fill={colorRaizBase}
-              stroke="#57534e"
-              strokeWidth="1.25"
+              stroke="#5c5346"
+              strokeWidth="1.2"
             />
           )}
           {tipo === "incisivo" && (
             <path
-              d="M16.5 41 C16.5 21 19 10 22 5 C25 10 27 21 27 41 Z"
+              d="M16 41.5 C16 22 18.8 11 22 5.5 C25.2 11 27.5 22 27.5 41.5 Z"
               fill={colorRaizBase}
-              stroke="#57534e"
-              strokeWidth="1.25"
+              stroke="#5c5346"
+              strokeWidth="1.2"
             />
           )}
 
-          {/* Corona superior con contorno anatómico */}
           <path
-            d="M8.5 40 Q22 37.5 35.5 40 Q37.5 52.5 34.5 64 Q22 66.5 9.5 64 Q6.5 52.5 8.5 40 Z"
+            d="M8.5 40.5 Q22 38 35.5 40.5 Q37.8 52 34.8 63.5 Q22 66.5 9.2 63.5 Q6.2 52 8.5 40.5 Z"
             fill={colorCoronaBase}
             stroke="#475569"
-            strokeWidth="1.35"
-          />
-          <rect
-            x="8.5"
-            y="45"
-            width="5"
-            height="14"
-            rx="1.5"
-            fill={fillCara(estado?.[caras.izq], "transparent")}
-          />
-          <rect
-            x="30.5"
-            y="45"
-            width="5"
-            height="14"
-            rx="1.5"
-            fill={fillCara(estado?.[caras.der], "transparent")}
+            strokeWidth="1.3"
           />
           <path
-            d="M8.5 40 Q22 37.5 35.5 40 Q37.5 52.5 34.5 64 Q22 66.5 9.5 64 Q6.5 52.5 8.5 40 Z"
-            fill={`url(#${gradId})`}
-            pointerEvents="none"
+            d="M8.5 43 L13.5 44 L13.5 62 L9.5 62.5 Z"
+            fill={fillCara(estado?.[caras.izq], "transparent")}
+          />
+          <path
+            d="M35.5 43 L30.5 44 L30.5 62 L34.5 62.5 Z"
+            fill={fillCara(estado?.[caras.der], "transparent")}
           />
         </g>
       ) : (
         <g>
-          {/* Corona inferior con contorno anatómico */}
           <path
-            d="M8.5 5 Q22 3 35.5 5 Q37.5 17 34.5 29 Q22 31 9.5 29 Q6.5 17 8.5 5 Z"
+            d="M8.5 5.5 Q22 3 35.5 5.5 Q37.8 17 34.8 28.5 Q22 31 9.2 28.5 Q6.2 17 8.5 5.5 Z"
             fill={colorCoronaBase}
             stroke="#475569"
-            strokeWidth="1.35"
-          />
-          <rect
-            x="8.5"
-            y="10"
-            width="5"
-            height="14"
-            rx="1.5"
-            fill={fillCara(estado?.[caras.izq], "transparent")}
-          />
-          <rect
-            x="30.5"
-            y="10"
-            width="5"
-            height="14"
-            rx="1.5"
-            fill={fillCara(estado?.[caras.der], "transparent")}
+            strokeWidth="1.3"
           />
           <path
-            d="M8.5 5 Q22 3 35.5 5 Q37.5 17 34.5 29 Q22 31 9.5 29 Q6.5 17 8.5 5 Z"
-            fill={`url(#${gradId})`}
-            pointerEvents="none"
+            d="M8.8 7 L13.5 7.5 L13.5 26.5 L8.8 27.5 Z"
+            fill={fillCara(estado?.[caras.izq], "transparent")}
+          />
+          <path
+            d="M35.2 7 L30.5 7.5 L30.5 26.5 L35.2 27.5 Z"
+            fill={fillCara(estado?.[caras.der], "transparent")}
           />
 
-          {/* Raíces inferiores estilizadas */}
           {tipo === "molar_inf" && (
-            <g fill={colorRaizBase} stroke="#57534e" strokeWidth="1.25">
-              <path d="M11.5 29 C11.5 45 13.5 57 16 64 C18.5 55 19 42 20 29 Z" />
-              <path d="M23.5 29 C24.5 42 25.5 55 28 63 C30.5 55 31.5 44 31.5 29 Z" />
+            <g fill={colorRaizBase} stroke="#5c5346" strokeWidth="1.2">
+              <path d="M11 28.5 C10.8 44 12.8 56 16 64 C18.5 55 19.2 42 20 28.5 Z" />
+              <path d="M23.5 28.5 C24.2 42 25.2 55 28 63 C31 55 32 43 32 28.5 Z" />
             </g>
           )}
           {tipo !== "molar_inf" && (
             <path
-              d="M16.5 29 C16.5 46 19 57 22 65 C25 57 27 46 27 29 Z"
+              d="M16 28.5 C16 45 18.8 57 22 65 C25.2 57 27.5 45 27.5 28.5 Z"
               fill={colorRaizBase}
-              stroke="#57534e"
-              strokeWidth="1.25"
+              stroke="#5c5346"
+              strokeWidth="1.2"
             />
           )}
         </g>
+      )}
+
+      {simbolos.map((sim, idx) =>
+        renderCoberturaTotalCoronaLateral(sim, superior, `cov-lat-${codigo}-${idx}`)
       )}
 
       {endodoncias.map((sim, i) =>
@@ -462,29 +509,28 @@ function VistaRaiz3DSvg({
       )}
 
       {implantes.map((sim, i) =>
-        renderImplanteEspiral(
+        renderImplanteSobreRaiz(
           superior,
           hexColorSimbolo(sim.color),
           `imp-${codigo}-${i}`
         )
       )}
 
-      {simbolos
-        .filter((s) => s.tipo !== "endodoncia" && s.tipo !== "implante")
-        .slice(0, 2)
-        .map((sim, i) =>
-          renderOtrosSimbolosOverlay(sim, i, 22, superior ? 52 : 17, 0.55)
-        )}
+      {simbolos.map((sim, idx) =>
+        renderOtrosSimbolos(sim, idx, 22, superior ? 52 : 17, 0.55)
+      )}
     </svg>
   );
 }
 
-function VistaOclusalCarasSvg({
+function VistaOclusalSvg({
   codigo,
   estado,
+  esTemporal,
 }: {
   codigo: string;
   estado: EstadoPiezaMsp | undefined;
+  esTemporal: boolean;
 }) {
   const tipo = obtenerTipoAnatomico(codigo);
   const caras = obtenerCarasRelativas(codigo);
@@ -502,85 +548,87 @@ function VistaOclusalCarasSvg({
   return (
     <svg
       viewBox="0 0 44 44"
-      className={`w-8 h-8 sm:w-9 sm:h-9 select-none ${
-        perdida ? "opacity-30" : ""
-      }`}
+      className={`${
+        esTemporal ? "w-7 h-7 sm:w-8 sm:h-8" : "w-8 h-8 sm:w-9 sm:h-9"
+      } select-none ${perdida ? "opacity-30" : ""}`}
       aria-label={`Caras oclusales ${codigo}`}
     >
       {esMolarOPremolar ? (
-        <g stroke="#475569" strokeWidth="1.2">
-          <polygon
-            points="3,3 41,3 32,12 12,12"
-            fill={fillCara(estado?.[caras.arriba], "#fbf7ea")}
-          />
-          <polygon
-            points="12,32 32,32 41,41 3,41"
-            fill={fillCara(estado?.[caras.abajo], "#f2e7ca")}
-          />
-          <polygon
-            points="3,3 12,12 12,32 3,41"
-            fill={fillCara(estado?.[caras.izq], "#f6eed8")}
-          />
-          <polygon
-            points="32,12 41,3 41,41 32,32"
-            fill={fillCara(estado?.[caras.der], "#e8d9b7")}
-          />
-          <rect
-            x="12"
-            y="12"
-            width="20"
-            height="20"
-            rx="3.5"
-            fill={fillCara(estado?.O, "#fffdf6")}
+        <g stroke="#475569" strokeWidth="1.15">
+          <path
+            d="M5 6 Q22 2 39 6 L31 13 Q22 11 13 13 Z"
+            fill={fillCara(estado?.[caras.arriba], "#f8f5ea")}
           />
           <path
-            d="M15 22 H29 M22 15 V29"
-            stroke="#94a3b8"
+            d="M13 31 Q22 33 31 31 L39 38 Q22 42 5 38 Z"
+            fill={fillCara(estado?.[caras.abajo], "#efe5c8")}
+          />
+          <path
+            d="M5 6 Q2 22 5 38 L13 31 Q11 22 13 13 Z"
+            fill={fillCara(estado?.[caras.izq], "#f5eed8")}
+          />
+          <path
+            d="M39 6 Q42 22 39 38 L31 31 Q33 22 31 13 Z"
+            fill={fillCara(estado?.[caras.der], "#e8d6ad")}
+          />
+          <rect
+            x="13"
+            y="13"
+            width="18"
+            height="18"
+            rx="4"
+            fill={fillCara(estado?.O, "#fcfaf2")}
+          />
+          <path
+            d="M15.5 22 H28.5 M22 15.5 V28.5"
+            stroke="#78716c"
             strokeWidth="1.05"
+            strokeLinecap="round"
             fill="none"
             pointerEvents="none"
           />
         </g>
       ) : (
-        <g stroke="#475569" strokeWidth="1.2">
-          <polygon
-            points="4,4 40,4 31,13 13,13"
-            fill={fillCara(estado?.[caras.arriba], "#fbf7ea")}
+        <g stroke="#475569" strokeWidth="1.15">
+          <path
+            d="M6 6 Q22 3 38 6 L30 13 Q22 11.5 14 13 Z"
+            fill={fillCara(estado?.[caras.arriba], "#f8f5ea")}
           />
-          <polygon
-            points="13,31 31,31 40,40 4,40"
-            fill={fillCara(estado?.[caras.abajo], "#f2e7ca")}
+          <path
+            d="M14 31 Q22 32.5 30 31 L38 38 Q22 41 6 38 Z"
+            fill={fillCara(estado?.[caras.abajo], "#efe5c8")}
           />
-          <polygon
-            points="4,4 13,13 13,31 4,40"
-            fill={fillCara(estado?.[caras.izq], "#f6eed8")}
+          <path
+            d="M6 6 Q3 22 6 38 L14 31 Q12.5 22 14 13 Z"
+            fill={fillCara(estado?.[caras.izq], "#f5eed8")}
           />
-          <polygon
-            points="31,13 40,4 40,40 31,31"
-            fill={fillCara(estado?.[caras.der], "#e8d9b7")}
+          <path
+            d="M38 6 Q41 22 38 38 L30 31 Q31.5 22 30 13 Z"
+            fill={fillCara(estado?.[caras.der], "#e8d6ad")}
           />
           <ellipse
             cx="22"
             cy="22"
-            rx="9"
-            ry="9"
-            fill={fillCara(estado?.O, "#fffdf6")}
+            rx="8.5"
+            ry="8.5"
+            fill={fillCara(estado?.O, "#fcfaf2")}
           />
         </g>
       )}
 
       {simbolos.map((sim, idx) =>
-        renderOtrosSimbolosOverlay(sim, idx, 22, 22, 0.72)
+        renderCoberturaTotalCoronaOclusal(sim, `cov-oc-${codigo}-${idx}`)
+      )}
+
+      {simbolos.map((sim, idx) =>
+        renderOtrosSimbolos(sim, idx, 22, 22, 0.72)
       )}
     </svg>
   );
 }
 
-export default function Odontograma3D({
-  odontogramaMsp,
-}: Props) {
-  const [visible, setVisible] = useState(true);
-  const [inclinacion, setInclinacion] = useState(6);
+export default function Odontograma3D({ odontogramaMsp }: Props) {
+  const [mostrarParaPaciente, setMostrarParaPaciente] = useState(false);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const contenedorRef = useRef<HTMLDivElement | null>(null);
 
@@ -609,38 +657,64 @@ export default function Odontograma3D({
     }
   }
 
-  const renderFilaDoble = (codigos: string[], superior: boolean) => (
-    <div className="flex items-center justify-center gap-0.5 sm:gap-1 min-w-[760px]">
+  const renderFila = (
+    codigos: string[],
+    superior: boolean,
+    esTemporal: boolean
+  ) => (
+    <div className="flex items-center justify-center gap-0.5 sm:gap-1">
       {codigos.map((codigo) => {
         const estado = odontogramaMsp[codigo];
 
         return (
           <div
             key={codigo}
-            className="flex flex-col items-center px-0.5 py-1 rounded-lg"
+            className="flex flex-col items-center px-0.5 py-0.5 select-none"
           >
             {superior ? (
               <>
-                <VistaRaiz3DSvg
+                <VistaRaizSvg
                   codigo={codigo}
                   superior={true}
                   estado={estado}
+                  esTemporal={esTemporal}
                 />
-                <VistaOclusalCarasSvg codigo={codigo} estado={estado} />
-                <span className="mt-0.5 text-[10px] sm:text-[11px] font-semibold text-slate-800">
+                <VistaOclusalSvg
+                  codigo={codigo}
+                  estado={estado}
+                  esTemporal={esTemporal}
+                />
+                <span
+                  className={`mt-0.5 font-semibold text-slate-800 ${
+                    esTemporal
+                      ? "text-[9px] sm:text-[10px]"
+                      : "text-[10px] sm:text-[11px]"
+                  }`}
+                >
                   {codigo}
                 </span>
               </>
             ) : (
               <>
-                <span className="mb-0.5 text-[10px] sm:text-[11px] font-semibold text-slate-800">
+                <span
+                  className={`mb-0.5 font-semibold text-slate-800 ${
+                    esTemporal
+                      ? "text-[9px] sm:text-[10px]"
+                      : "text-[10px] sm:text-[11px]"
+                  }`}
+                >
                   {codigo}
                 </span>
-                <VistaOclusalCarasSvg codigo={codigo} estado={estado} />
-                <VistaRaiz3DSvg
+                <VistaOclusalSvg
+                  codigo={codigo}
+                  estado={estado}
+                  esTemporal={esTemporal}
+                />
+                <VistaRaizSvg
                   codigo={codigo}
                   superior={false}
                   estado={estado}
+                  esTemporal={esTemporal}
                 />
               </>
             )}
@@ -650,78 +724,62 @@ export default function Odontograma3D({
     </div>
   );
 
+  if (!mostrarParaPaciente) {
+    return (
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setMostrarParaPaciente(true)}
+          className="rounded-lg bg-sky-700 hover:bg-sky-800 text-white px-3 py-1.5 text-xs font-semibold transition"
+        >
+          Mostrar para el paciente
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={contenedorRef}
       className={
         pantallaCompleta
-          ? "fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-slate-200 via-slate-300 to-slate-200 p-4 sm:p-6 text-slate-900 flex flex-col justify-center space-y-4"
-          : "rounded-2xl border border-slate-300 bg-gradient-to-b from-slate-200 via-slate-300 to-slate-200 p-3.5 sm:p-4 text-slate-900 space-y-3 shadow-sm"
+          ? "fixed inset-0 z-50 overflow-y-auto bg-slate-200 p-4 sm:p-6 text-slate-900 flex flex-col justify-center space-y-4"
+          : "rounded-2xl border border-slate-300 bg-slate-200 p-3.5 sm:p-4 text-slate-900 space-y-3 shadow-sm"
       }
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-xs font-bold text-slate-900">
-            Vista anatómica 3D (solo visualización)
-          </p>
-          <p className="text-[11px] text-slate-700">
-            Refleja las caras y símbolos cargados en el odontograma inicial.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {visible && (
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-800 bg-white/85 border border-slate-300 rounded-lg px-2.5 py-1">
-              <span>Ángulo ({inclinacion}°)</span>
-              <input
-                type="range"
-                min={0}
-                max={18}
-                value={inclinacion}
-                onChange={(e) => setInclinacion(Number(e.target.value))}
-                className="w-20 accent-sky-700"
-              />
-            </label>
-          )}
-
-          {visible && (
-            <button
-              type="button"
-              onClick={alternarPantallaCompleta}
-              className="rounded-lg bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 text-xs font-semibold transition"
-            >
-              {pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setVisible((prev) => !prev)}
-            className="rounded-lg bg-sky-700 hover:bg-sky-800 text-white px-3 py-1.5 text-xs font-semibold transition"
-          >
-            {visible ? "Ocultar vista" : "Mostrar vista"}
-          </button>
-        </div>
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={alternarPantallaCompleta}
+          className="rounded-lg bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 text-xs font-semibold transition"
+        >
+          Pantalla completa
+        </button>
       </div>
 
-      {visible && (
-        <div
-          style={{ perspective: "850px" }}
-          className="overflow-x-auto rounded-xl bg-slate-300/80 border border-slate-400/50 p-2.5"
-        >
-          <div
-            style={{
-              transform: `rotateX(${inclinacion}deg)`,
-              transformStyle: "preserve-3d",
-            }}
-            className="space-y-2 transition-transform duration-150"
-          >
-            {renderFilaDoble(SUPERIOR, true)}
-            <div className="border-t-2 border-slate-500/70 my-1" />
-            {renderFilaDoble(INFERIOR, false)}
+      <div className="overflow-x-auto rounded-xl bg-slate-300/80 border border-slate-400/50 p-3">
+        <div className="min-w-[760px] space-y-2">
+          {renderFila(PERMANENTE_SUPERIOR, true, false)}
+
+          <div className="pt-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 text-center mb-0.5">
+              Temporal superior
+            </p>
+            {renderFila(TEMPORAL_SUPERIOR, true, true)}
           </div>
+
+          <div className="border-t-2 border-slate-500/75 my-1.5" />
+
+          <div className="pb-0.5">
+            {renderFila(TEMPORAL_INFERIOR, false, true)}
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600 text-center mt-0.5">
+              Temporal inferior
+            </p>
+          </div>
+
+          {renderFila(PERMANENTE_INFERIOR, false, false)}
         </div>
-      )}
+      </div>
     </div>
   );
 }
