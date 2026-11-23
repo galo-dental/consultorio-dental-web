@@ -52,6 +52,8 @@ interface EstadoPiezaMsp {
   M: EstadoColorDiente;
   D: EstadoColorDiente;
   simbolos: SimboloAplicado[];
+  movilidad: string;
+  recesion: string;
   movilidadRecesion: string;
   observacion: string;
 }
@@ -216,17 +218,17 @@ const OPCIONES_OCLUSION_ANGLE = [
 ];
 
 const MOVILIDAD_MILLER = [
-  { codigo: "M0", etiqueta: "Grado 0 (fisiológica ≤0,2 mm)" },
-  { codigo: "M1", etiqueta: "Grado 1 (horizontal <1 mm)" },
-  { codigo: "M2", etiqueta: "Grado 2 (horizontal ≥1 mm)" },
-  { codigo: "M3", etiqueta: "Grado 3 (horizontal y vertical)" },
+  { codigo: "M0", etiqueta: "Grado 0: fisiológica (≤0,2 mm)" },
+  { codigo: "M1", etiqueta: "Grado 1: horizontal (<1 mm)" },
+  { codigo: "M2", etiqueta: "Grado 2: horizontal (≥1 mm)" },
+  { codigo: "M3", etiqueta: "Grado 3: horizontal y vertical" },
 ];
 
 const RETRACCION_MILLER = [
-  { codigo: "R-I", etiqueta: "Clase I (no alcanza LMG; sin pérdida ósea/interdental)" },
-  { codigo: "R-II", etiqueta: "Clase II (hasta/más allá LMG; sin pérdida ósea/interdental)" },
-  { codigo: "R-III", etiqueta: "Clase III (hasta/más allá LMG; pérdida ósea/interdental o malposición)" },
-  { codigo: "R-IV", etiqueta: "Clase IV (supera LMG; pérdida ósea/interdental severa)" },
+  { codigo: "R-I", etiqueta: "Clase I: no alcanza LMG; sin pérdida ósea/interdental" },
+  { codigo: "R-II", etiqueta: "Clase II: hasta/más allá LMG; sin pérdida ósea/interdental" },
+  { codigo: "R-III", etiqueta: "Clase III: hasta/más allá LMG; pérdida ósea/interdental o malposición" },
+  { codigo: "R-IV", etiqueta: "Clase IV: supera LMG; pérdida ósea/interdental severa" },
 ];
 
 const PROCEDIMIENTOS_MSP: {
@@ -345,9 +347,23 @@ function piezaVacia(): EstadoPiezaMsp {
     M: "ninguno",
     D: "ninguno",
     simbolos: [],
+    movilidad: "",
+    recesion: "",
     movilidadRecesion: "",
     observacion: "",
   };
+}
+
+function obtenerMovilidadPieza(d: EstadoPiezaMsp): string {
+  if (d.movilidad) return d.movilidad;
+  if (d.movilidadRecesion?.startsWith("M")) return d.movilidadRecesion;
+  return "";
+}
+
+function obtenerRecesionPieza(d: EstadoPiezaMsp): string {
+  if (d.recesion) return d.recesion;
+  if (d.movilidadRecesion?.startsWith("R-")) return d.movilidadRecesion;
+  return "";
 }
 
 function hexPorColorMsp(color: ColorMsp): string {
@@ -1257,7 +1273,7 @@ export default function HomePage() {
 
   function actualizarDatoPieza(
     pieza: string,
-    campo: "movilidadRecesion" | "observacion",
+    campo: "movilidad" | "recesion" | "movilidadRecesion" | "observacion",
     valor: string
   ) {
     if (!pieza || !pacienteSeleccionadoId) return;
@@ -1266,6 +1282,12 @@ export default function HomePage() {
       prev.map((pac) => {
         if (pac.id !== pacienteSeleccionadoId) return pac;
         const actualPieza = pac.hc.odontogramaMsp[pieza] || piezaVacia();
+        const siguienteMov =
+          campo === "movilidad" ? valor : obtenerMovilidadPieza(actualPieza);
+        const siguienteRec =
+          campo === "recesion" ? valor : obtenerRecesionPieza(actualPieza);
+        const combinado = [siguienteMov, siguienteRec].filter(Boolean).join("/");
+
         return {
           ...pac,
           hc: {
@@ -1274,7 +1296,12 @@ export default function HomePage() {
               ...pac.hc.odontogramaMsp,
               [pieza]: {
                 ...actualPieza,
-                [campo]: valor,
+                movilidad: siguienteMov,
+                recesion: siguienteRec,
+                movilidadRecesion:
+                  campo === "movilidadRecesion" ? valor : combinado,
+                observacion:
+                  campo === "observacion" ? valor : actualPieza.observacion,
               },
             },
           },
@@ -1479,6 +1506,8 @@ export default function HomePage() {
     const temporal = esPiezaTemporal(codigoPieza);
     const superior = esArcadaSuperior(codigoPieza);
     const caras = carasPorPieza(codigoPieza);
+    const valorMov = obtenerMovilidadPieza(d);
+    const valorRec = obtenerRecesionPieza(d);
 
     return (
       <div
@@ -1636,31 +1665,41 @@ export default function HomePage() {
           <div className="h-5 mt-0.5" aria-hidden="true" />
         )}
 
-        <select
-          value={d.movilidadRecesion}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) =>
-            actualizarDatoPieza(codigoPieza, "movilidadRecesion", e.target.value)
-          }
-          title={`Movilidad / Retracción pieza ${codigoPieza}`}
-          className="w-12 mt-0.5 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-700 px-0.5 py-0.5"
-        >
-          <option value="">M/R</option>
-          <optgroup label="Movilidad (Miller)">
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          <select
+            value={valorMov}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) =>
+              actualizarDatoPieza(codigoPieza, "movilidad", e.target.value)
+            }
+            title={`Movilidad (Miller) pieza ${codigoPieza}`}
+            className="w-12 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-700 px-0.5 py-0.5"
+          >
+            <option value="">M</option>
             {MOVILIDAD_MILLER.map((m) => (
               <option key={m.codigo} value={m.codigo}>
                 {m.codigo}
               </option>
             ))}
-          </optgroup>
-          <optgroup label="Retracción / Recesión (Miller)">
+          </select>
+
+          <select
+            value={valorRec}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) =>
+              actualizarDatoPieza(codigoPieza, "recesion", e.target.value)
+            }
+            title={`Retracción / Recesión (Miller) pieza ${codigoPieza}`}
+            className="w-12 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-700 px-0.5 py-0.5"
+          >
+            <option value="">R</option>
             {RETRACCION_MILLER.map((r) => (
               <option key={r.codigo} value={r.codigo}>
                 {r.codigo}
               </option>
             ))}
-          </optgroup>
-        </select>
+          </select>
+        </div>
       </div>
     );
   }
@@ -1854,7 +1893,7 @@ export default function HomePage() {
             <span><strong>D</strong> = Distal</span>
             <span><strong>O</strong> = Oclusal</span>
             <span>
-              <strong>M/R</strong> = Movilidad (M0–M3) / Retracción Miller (R-I..R-IV)
+              <strong>M</strong> = Movilidad (M0–M3) · <strong>R</strong> = Retracción/Recesión (R-I..R-IV)
             </span>
           </div>
 
@@ -1912,6 +1951,31 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-50/90 border border-slate-200/90 rounded-lg p-2.5 text-[11px] text-slate-600">
+            <div className="space-y-0.5">
+              <p className="font-semibold text-slate-700">
+                Leyenda Movilidad (Miller)
+              </p>
+              {MOVILIDAD_MILLER.map((m) => (
+                <p key={m.codigo}>
+                  <strong>{m.codigo}:</strong>{" "}
+                  {m.etiqueta.replace(/^Grado \d:\s*/, "")}
+                </p>
+              ))}
+            </div>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-slate-700">
+                Leyenda Retracción / Recesión (Miller)
+              </p>
+              {RETRACCION_MILLER.map((r) => (
+                <p key={r.codigo}>
+                  <strong>{r.codigo}:</strong>{" "}
+                  {r.etiqueta.replace(/^Clase [I]+V?:\s*/, "")}
+                </p>
+              ))}
             </div>
           </div>
         </div>
@@ -3481,184 +3545,4 @@ export default function HomePage() {
                       {renderOdontogramaMsp(pacienteActivo.hc)}
 
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Resumen general del odontograma
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={pacienteActivo.hc.notasOdontograma}
-                          onChange={(e) =>
-                            actualizarCampoHc("notasOdontograma", e.target.value)
-                          }
-                          placeholder="Notas generales de piezas, restauraciones o patologías..."
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-3">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Periodontograma (Clasificación de Miller)
-                        </label>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white border border-slate-200 rounded-xl p-3 text-xs">
-                          <div className="space-y-1.5">
-                            <p className="font-semibold text-slate-700">
-                              Movilidad dental (Miller)
-                            </p>
-                            {MOVILIDAD_MILLER.map((item) => (
-                              <button
-                                key={item.codigo}
-                                type="button"
-                                onClick={() =>
-                                  anexarNotaPeriodontal(
-                                    `Movilidad ${item.etiqueta}`
-                                  )
-                                }
-                                className="w-full text-left rounded-lg border border-slate-200 hover:bg-slate-50 px-2.5 py-1.5 text-slate-700"
-                              >
-                                <strong>{item.codigo}:</strong> {item.etiqueta}
-                              </button>
-                            ))}
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <p className="font-semibold text-slate-700">
-                              Retracción gingival (Miller)
-                            </p>
-                            {RETRACCION_MILLER.map((item) => (
-                              <button
-                                key={item.codigo}
-                                type="button"
-                                onClick={() =>
-                                  anexarNotaPeriodontal(
-                                    `Retracción ${item.etiqueta}`
-                                  )
-                                }
-                                className="w-full text-left rounded-lg border border-slate-200 hover:bg-slate-50 px-2.5 py-1.5 text-slate-700"
-                              >
-                                <strong>{item.codigo}:</strong> {item.etiqueta}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <textarea
-                          rows={4}
-                          value={pacienteActivo.hc.notasPeriodontograma}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "notasPeriodontograma",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Profundidad de sondaje, sangrado al sondaje, movilidad (Grados 0–3) y retracción gingival (Clases I–IV de Miller)..."
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMensajeGuardado(
-                          "Cambios aplicados en la ficha clínica activa."
-                        )
-                      }
-                      className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-medium hover:bg-slate-800"
-                    >
-                      Confirmar registro de esta sección
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {moduloActivo === "agenda" && (
-            <div className="space-y-4">
-              <form
-                onSubmit={agregarCita}
-                className="grid grid-cols-1 sm:grid-cols-4 gap-2"
-              >
-                <input
-                  type="text"
-                  required
-                  value={pacienteCita}
-                  onChange={(e) => setPacienteCita(e.target.value)}
-                  placeholder="Nombre del paciente"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-                <input
-                  type="text"
-                  required
-                  value={motivoCita}
-                  onChange={(e) => setMotivoCita(e.target.value)}
-                  placeholder="Motivo de cita"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-                <input
-                  type="time"
-                  value={horaCita}
-                  onChange={(e) => setHoraCita(e.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-medium"
-                >
-                  Agregar cita
-                </button>
-              </form>
-
-              <ul className="divide-y divide-slate-100">
-                {citas.map((cita) => (
-                  <li
-                    key={cita.id}
-                    className="py-2.5 flex items-center justify-between gap-2 text-sm"
-                  >
-                    <div>
-                      <strong className="text-slate-900">{cita.hora}</strong> —{" "}
-                      {cita.paciente} ({cita.motivo})
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCitas((prev) =>
-                          prev.map((item) =>
-                            item.id === cita.id
-                              ? { ...item, confirmada: !item.confirmada }
-                              : item
-                          )
-                        )
-                      }
-                      className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
-                        cita.confirmada
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      {cita.confirmada ? "Confirmada" : "Marcar recordatorio"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {(moduloActivo === "pagos" || moduloActivo === "inventario") && (
-            <p className="text-sm text-slate-600">
-              Este módulo ya tiene su vista abierta y lista para añadirle
-              campos. Dime si quieres que armemos primero{" "}
-              {moduloActivo === "pagos"
-                ? "el registro de presupuestos y abonos"
-                : "el control de insumos y cantidades"}
-              .
-            </p>
-          )}
-        </section>
-      )}
-    </main>
-  );
-}
+                        <label className="block
