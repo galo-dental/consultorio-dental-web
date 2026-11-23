@@ -17,7 +17,8 @@ type SeccionHC =
   | "clinico"
   | "odontograma"
   | "diagnostico"
-  | "examenes";
+  | "examenes"
+  | "prescripciones";
 
 type ColorMsp = "rojo" | "azul";
 type EstadoColorDiente = "ninguno" | "realizado" | "por_realizar";
@@ -66,6 +67,32 @@ interface RegistroFoto {
   nombreArchivo: string;
   dataUrl: string;
   fecha: string;
+}
+
+interface DiagnosticoRegistrado {
+  id: string;
+  codigoCie10: string;
+  descripcion: string;
+  pieza: string;
+}
+
+interface ItemPlanTratamiento {
+  id: string;
+  pieza: string;
+  procedimiento: string;
+}
+
+interface MedicamentoCatalogo {
+  id: string;
+  nombre: string;
+  presentacion: string;
+}
+
+interface PrescripcionItem {
+  id: string;
+  medicamentoId: string;
+  medicamentoTexto: string;
+  indicaciones: string;
 }
 
 interface HistoriaClinicaCompleta {
@@ -143,8 +170,15 @@ interface HistoriaClinicaCompleta {
   odontogramaMsp: Record<string, EstadoPiezaMsp>;
   codigoCie10: string;
   diagnostico: string;
+  diagnosticosRegistrados: DiagnosticoRegistrado[];
+  piezaPlanSeleccionada: string;
+  procedimientoPlanSeleccionado: string;
+  itemsPlanTratamiento: ItemPlanTratamiento[];
   planTratamiento: string;
   notasOdontograma: string;
+  medicamentoPrescribirId: string;
+  indicacionesPrescripcion: string;
+  prescripciones: PrescripcionItem[];
 }
 
 interface Paciente {
@@ -319,6 +353,22 @@ const INF_IZQ_TEMP = ["71", "72", "73", "74", "75"];
 const INF_DER_PERM = ["48", "47", "46", "45", "44", "43", "42", "41"];
 const INF_IZQ_PERM = ["31", "32", "33", "34", "35", "36", "37", "38"];
 const ARCADA_INFERIOR_COMPLETA = [...INF_DER_PERM, ...INF_IZQ_PERM];
+
+const TODAS_LAS_PIEZAS = [
+  ...ARCADA_SUPERIOR_COMPLETA,
+  ...SUP_DER_TEMP,
+  ...SUP_IZQ_TEMP,
+  ...INF_DER_TEMP,
+  ...INF_IZQ_TEMP,
+  ...ARCADA_INFERIOR_COMPLETA,
+];
+
+const CATALOGO_MEDICAMENTOS_INICIAL: MedicamentoCatalogo[] = [
+  { id: "med-1", nombre: "Amoxicilina", presentacion: "500 mg cápsulas" },
+  { id: "med-2", nombre: "Ibuprofeno", presentacion: "400 mg tabletas" },
+  { id: "med-3", nombre: "Paracetamol", presentacion: "500 mg tabletas" },
+  { id: "med-4", nombre: "Clorhexidina", presentacion: "0.12% enjuague bucal" },
+];
 
 const LINEA_DIAGRAMA_TENUE = "#94a3b8";
 
@@ -582,7 +632,11 @@ function crearHcVacia(
     piezasSeleccionadas: [], carasSeleccionadas: [],
     procedimientoActivo: "ninguno", colorCaries: "rojo", colorRestauracion: "azul",
     colorMspActivo: "rojo", pincelEstado: "por_realizar", odontogramaMsp: {},
-    codigoCie10: "", diagnostico: "", planTratamiento: "", notasOdontograma: "",
+    codigoCie10: "", diagnostico: "", diagnosticosRegistrados: [],
+    piezaPlanSeleccionada: "", procedimientoPlanSeleccionado: "",
+    itemsPlanTratamiento: [], planTratamiento: "", notasOdontograma: "",
+    medicamentoPrescribirId: "", indicacionesPrescripcion: "",
+    prescripciones: [],
   };
 }
 function calcularEdad(fechaNacimiento: string): string {
@@ -849,6 +903,12 @@ export default function HomePage() {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [moduloActivo, setModuloActivo] = useState<ModuloActivo>(null);
 
+  const [catalogoMedicamentos, setCatalogoMedicamentos] = useState<
+    MedicamentoCatalogo[]
+  >(CATALOGO_MEDICAMENTOS_INICIAL);
+  const [nuevoMedNombre, setNuevoMedNombre] = useState("");
+  const [nuevoMedPresentacion, setNuevoMedPresentacion] = useState("");
+
   const [pacientes, setPacientes] = useState<Paciente[]>([
     {
       id: "pac-1",
@@ -1019,6 +1079,226 @@ export default function HomePage() {
     );
   }
 
+  function registrarDiagnosticoSeleccionado() {
+    if (!pacienteSeleccionadoId) return;
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const cod = pac.hc.codigoCie10.trim();
+        const desc =
+          pac.hc.diagnostico.trim() ||
+          CODIGOS_CIE10_ODONTO.find((c) => c.codigo === cod)?.descripcion ||
+          "";
+
+        if (!cod && !desc) {
+          setMensajeGuardado(
+            "Seleccione o escriba un diagnóstico CIE-10 antes de registrar."
+          );
+          return pac;
+        }
+
+        const piezaRef =
+          pac.hc.piezaPlanSeleccionada ||
+          pac.hc.piezasSeleccionadas[0] ||
+          pac.hc.piezaSeleccionada ||
+          "General";
+
+        const nuevoDiag: DiagnosticoRegistrado = {
+          id: `diag-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          codigoCie10: cod || "Sin código",
+          descripcion: desc || "Diagnóstico odontológico",
+          pieza: piezaRef,
+        };
+
+        const procRef =
+          pac.hc.procedimientoPlanSeleccionado ||
+          PROCEDIMIENTOS_MSP.find((p) => p.id === pac.hc.procedimientoActivo)
+            ?.titulo ||
+          "";
+
+        let siguientesItemsPlan = pac.hc.itemsPlanTratamiento || [];
+        if (procRef) {
+          siguientesItemsPlan = [
+            ...siguientesItemsPlan,
+            {
+              id: `plan-${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 6)}`,
+              pieza: piezaRef,
+              procedimiento: procRef,
+            },
+          ];
+        }
+
+        setMensajeGuardado(
+          `Diagnóstico ${nuevoDiag.codigoCie10} registrado (${piezaRef}).`
+        );
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            diagnosticosRegistrados: [
+              ...(pac.hc.diagnosticosRegistrados || []),
+              nuevoDiag,
+            ],
+            itemsPlanTratamiento: siguientesItemsPlan,
+            codigoCie10: "",
+            diagnostico: "",
+          },
+        };
+      })
+    );
+  }
+
+  function eliminarDiagnosticoRegistrado(diagId: string) {
+    setPacientes((prev) =>
+      prev.map((pac) =>
+        pac.id === pacienteSeleccionadoId
+          ? {
+              ...pac,
+              hc: {
+                ...pac.hc,
+                diagnosticosRegistrados: (
+                  pac.hc.diagnosticosRegistrados || []
+                ).filter((d) => d.id !== diagId),
+              },
+            }
+          : pac
+      )
+    );
+  }
+
+  function agregarItemPlanTratamiento() {
+    if (!pacienteSeleccionadoId) return;
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const pieza =
+          pac.hc.piezaPlanSeleccionada ||
+          pac.hc.piezasSeleccionadas[0] ||
+          "General";
+        const proc = pac.hc.procedimientoPlanSeleccionado.trim();
+        if (!proc) {
+          setMensajeGuardado(
+            "Seleccione o escriba el procedimiento a realizar para el plan de tratamiento."
+          );
+          return pac;
+        }
+        const nuevoItem: ItemPlanTratamiento = {
+          id: `plan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          pieza,
+          procedimiento: proc,
+        };
+        setMensajeGuardado(
+          `Procedimiento '${proc}' añadido en pieza ${pieza}.`
+        );
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            itemsPlanTratamiento: [
+              ...(pac.hc.itemsPlanTratamiento || []),
+              nuevoItem,
+            ],
+            procedimientoPlanSeleccionado: "",
+          },
+        };
+      })
+    );
+  }
+
+  function eliminarItemPlanTratamiento(itemId: string) {
+    setPacientes((prev) =>
+      prev.map((pac) =>
+        pac.id === pacienteSeleccionadoId
+          ? {
+              ...pac,
+              hc: {
+                ...pac.hc,
+                itemsPlanTratamiento: (
+                  pac.hc.itemsPlanTratamiento || []
+                ).filter((i) => i.id !== itemId),
+              },
+            }
+          : pac
+      )
+    );
+  }
+
+  function agregarMedicamentoCatalogo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nuevoMedNombre.trim()) return;
+    const creado: MedicamentoCatalogo = {
+      id: `med-${Date.now()}`,
+      nombre: nuevoMedNombre.trim(),
+      presentacion: nuevoMedPresentacion.trim() || "Presentación general",
+    };
+    setCatalogoMedicamentos((prev) => [creado, ...prev]);
+    setNuevoMedNombre("");
+    setNuevoMedPresentacion("");
+    if (pacienteSeleccionadoId) {
+      actualizarCampoHc("medicamentoPrescribirId", creado.id);
+    }
+  }
+
+  function agregarPrescripcionPaciente() {
+    if (!pacienteSeleccionadoId) return;
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const medObj = catalogoMedicamentos.find(
+          (m) => m.id === pac.hc.medicamentoPrescribirId
+        );
+        if (!medObj) {
+          setMensajeGuardado(
+            "Seleccione un medicamento de la lista general antes de prescribir."
+          );
+          return pac;
+        }
+        const textoMed = `${medObj.nombre} (${medObj.presentacion})`;
+        const indTexto =
+          pac.hc.indicacionesPrescripcion.trim() ||
+          "Según indicación clínica";
+
+        const nuevaPresc: PrescripcionItem = {
+          id: `presc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          medicamentoId: medObj.id,
+          medicamentoTexto: textoMed,
+          indicaciones: indTexto,
+        };
+
+        setMensajeGuardado(`Prescripción añadida: ${textoMed}.`);
+
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            prescripciones: [...(pac.hc.prescripciones || []), nuevaPresc],
+            indicacionesPrescripcion: "",
+          },
+        };
+      })
+    );
+  }
+
+  function eliminarPrescripcionPaciente(prescId: string) {
+    setPacientes((prev) =>
+      prev.map((pac) =>
+        pac.id === pacienteSeleccionadoId
+          ? {
+              ...pac,
+              hc: {
+                ...pac.hc,
+                prescripciones: (pac.hc.prescripciones || []).filter(
+                  (p) => p.id !== prescId
+                ),
+              },
+            }
+          : pac
+      )
+    );
+  }
   function handleSubirFotoCarne(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
     if (!archivo || !pacienteSeleccionadoId) return;
@@ -1097,6 +1377,7 @@ export default function HomePage() {
       })
     );
   }
+
   function seleccionarColorMsp(color: ColorMsp) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1235,6 +1516,7 @@ export default function HomePage() {
             ...pac.hc,
             piezaSeleccionada: piezaFoco,
             piezasSeleccionadas: siguientes,
+            piezaPlanSeleccionada: piezaFoco || pac.hc.piezaPlanSeleccionada,
           },
         };
       })
@@ -1262,6 +1544,9 @@ export default function HomePage() {
             ...pac.hc,
             piezaSeleccionada: piezaFoco,
             piezasSeleccionadas: siguientes,
+            piezaPlanSeleccionada: !existe
+              ? codigoPieza
+              : piezaFoco || pac.hc.piezaPlanSeleccionada,
           },
         };
       })
@@ -1289,6 +1574,7 @@ export default function HomePage() {
               ...pac.hc,
               piezaSeleccionada: pieza,
               piezasSeleccionadas: siguientesPiezas,
+              piezaPlanSeleccionada: pieza,
             },
           };
         }
@@ -1321,6 +1607,7 @@ export default function HomePage() {
             ...pac.hc,
             piezaSeleccionada: pieza,
             piezasSeleccionadas: siguientesPiezas,
+            piezaPlanSeleccionada: pieza,
             carasSeleccionadas: siguientesCaras,
             colorMspActivo: colorAplicar,
             pincelEstado: estadoObjetivo,
@@ -1336,6 +1623,8 @@ export default function HomePage() {
   ) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
+
+    const procObj = PROCEDIMIENTOS_MSP.find((p) => p.id === procedimiento);
 
     setPacientes((prev) =>
       prev.map((pac) => {
@@ -1354,6 +1643,9 @@ export default function HomePage() {
           hc: {
             ...pac.hc,
             procedimientoActivo: siguienteProc,
+            procedimientoPlanSeleccionado: !esMismo && procObj
+              ? procObj.titulo
+              : pac.hc.procedimientoPlanSeleccionado,
             colorMspActivo: colorAsociado,
             pincelEstado: estadoCaraPorColor(colorAsociado),
             carasSeleccionadas: esProcedimientoConCaras(siguienteProc)
@@ -1364,7 +1656,6 @@ export default function HomePage() {
       })
     );
   }
-
   function cargarInformacionSeleccionada(
     procedimientoForzado?: "caries" | "restauracion"
   ) {
@@ -1539,6 +1830,7 @@ export default function HomePage() {
       })
     );
   }
+
   function actualizarDatoPieza(
     pieza: string,
     campo: "movilidad" | "recesion" | "movilidadRecesion",
@@ -1965,7 +2257,6 @@ export default function HomePage() {
       </div>
     );
   }
-
   function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
     const piezasSel = hc.piezasSeleccionadas || [];
     const procActualObj = PROCEDIMIENTOS_MSP.find(
@@ -2065,6 +2356,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
         <div className="bg-white/95 border border-sky-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-sky-950">
@@ -2311,7 +2603,6 @@ export default function HomePage() {
       </div>
     );
   }
-
   const pacienteActivo =
     pacientes.find((p) => p.id === pacienteSeleccionadoId) || null;
 
@@ -2383,6 +2674,7 @@ export default function HomePage() {
       </main>
     );
   }
+
   const pestanasHc: { id: SeccionHC; titulo: string }[] = [
     { id: "identificacion", titulo: "1. Identificación" },
     { id: "motivo_antecedentes", titulo: "2. Motivo y antecedentes" },
@@ -2390,6 +2682,7 @@ export default function HomePage() {
     { id: "odontograma", titulo: "4. Odontograma" },
     { id: "diagnostico", titulo: "5. Diagnóstico y plan" },
     { id: "examenes", titulo: "6. Exámenes y fotos" },
+    { id: "prescripciones", titulo: "7. Prescripciones" },
   ];
 
   const tieneAlergiaActiva = pacienteActivo
@@ -2644,7 +2937,6 @@ export default function HomePage() {
                       </button>
                     ))}
                   </div>
-
                   {seccionHc === "identificacion" && (
                     <div className="space-y-4 text-sm">
                       <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 flex flex-col sm:flex-row items-center gap-4">
@@ -3026,6 +3318,7 @@ export default function HomePage() {
                           </select>
                         </div>
                       </div>
+
                       <div className="border border-sky-200 rounded-xl p-4 space-y-4 bg-white">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
@@ -3889,80 +4182,246 @@ export default function HomePage() {
                   })()}
 
                   {seccionHc === "diagnostico" && (
-                    <div className="space-y-3 text-sm">
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                    <div className="space-y-4 text-sm">
+                      {renderOdontogramaMsp(pacienteActivo.hc)}
+
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
                         <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          Lista desplegable CIE-10 (Códigos K y Z02.1)
+                          Diagnóstico CIE-10 (Códigos K y Z02.1)
                         </label>
-                        <select
-                          value={
-                            CODIGOS_CIE10_ODONTO.some(
-                              (c) => c.codigo === pacienteActivo.hc.codigoCie10
-                            )
-                              ? pacienteActivo.hc.codigoCie10
-                              : ""
-                          }
-                          onChange={(e) =>
-                            seleccionarCie10DesdeLista(e.target.value)
-                          }
-                          className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
-                        >
-                          <option value="">
-                            Seleccionar código CIE-10 (K / Z02.1)...
-                          </option>
-                          {CODIGOS_CIE10_ODONTO.map((item) => (
-                            <option key={item.codigo} value={item.codigo}>
-                              {item.codigo} — {item.descripcion}
+
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <select
+                            value={
+                              CODIGOS_CIE10_ODONTO.some(
+                                (c) =>
+                                  c.codigo === pacienteActivo.hc.codigoCie10
+                              )
+                                ? pacienteActivo.hc.codigoCie10
+                                : ""
+                            }
+                            onChange={(e) =>
+                              seleccionarCie10DesdeLista(e.target.value)
+                            }
+                            className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Seleccionar código CIE-10 (K / Z02.1)...
                             </option>
-                          ))}
-                        </select>
-                      </div>
+                            {CODIGOS_CIE10_ODONTO.map((item) => (
+                              <option key={item.codigo} value={item.codigo}>
+                                {item.codigo} — {item.descripcion}
+                              </option>
+                            ))}
+                          </select>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-sky-900 mb-1">
-                            Código CIE-10
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.codigoCie10}
-                            onChange={(e) =>
-                              actualizarCampoHc("codigoCie10", e.target.value)
-                            }
-                            placeholder="Ej. K02.1 o Z02.1"
-                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                          />
+                          <button
+                            type="button"
+                            onClick={registrarDiagnosticoSeleccionado}
+                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold shrink-0"
+                          >
+                            Registrar
+                          </button>
                         </div>
 
-                        <div className="sm:col-span-2">
-                          <label className="block text-xs font-medium text-sky-900 mb-1">
-                            Diagnóstico presuntivo o definitivo (CIE-10)
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.diagnostico}
-                            onChange={(e) =>
-                              actualizarCampoHc("diagnostico", e.target.value)
-                            }
-                            placeholder="Diagnóstico clínico según CIE-10"
-                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                          />
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-sky-900 mb-1">
+                              Código CIE-10
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.codigoCie10}
+                              onChange={(e) =>
+                                actualizarCampoHc("codigoCie10", e.target.value)
+                              }
+                              placeholder="Ej. K02.1 o Z02.1"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-medium text-sky-900 mb-1">
+                              Diagnóstico presuntivo o definitivo (CIE-10)
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.diagnostico}
+                              onChange={(e) =>
+                                actualizarCampoHc("diagnostico", e.target.value)
+                              }
+                              placeholder="Diagnóstico clínico según CIE-10"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
                         </div>
+
+                        {(pacienteActivo.hc.diagnosticosRegistrados || [])
+                          .length > 0 && (
+                          <div className="space-y-1.5 pt-1">
+                            <p className="text-xs font-semibold text-sky-900">
+                              Diagnósticos registrados:
+                            </p>
+                            <ul className="space-y-1.5">
+                              {pacienteActivo.hc.diagnosticosRegistrados.map(
+                                (d) => (
+                                  <li
+                                    key={d.id}
+                                    className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
+                                  >
+                                    <div>
+                                      <strong className="text-sky-950">
+                                        {d.codigoCie10}
+                                      </strong>{" "}
+                                      — {d.descripcion}{" "}
+                                      <span className="text-sky-700 font-medium">
+                                        (Pieza: {d.pieza})
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        eliminarDiagnosticoRegistrado(d.id)
+                                      }
+                                      className="text-red-600 hover:underline shrink-0"
+                                    >
+                                      Quitar
+                                    </button>
+                                  </li>
+                                )
+                              )}
+                            </ul>
+                          </div>
+                        )}
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-sky-900 mb-1">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
                           Plan de tratamiento
                         </label>
-                        <textarea
-                          rows={3}
-                          value={pacienteActivo.hc.planTratamiento}
-                          onChange={(e) =>
-                            actualizarCampoHc("planTratamiento", e.target.value)
-                          }
-                          placeholder="Secuencia de tratamientos y citas propuestas"
-                          className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                        />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <select
+                            value={pacienteActivo.hc.piezaPlanSeleccionada}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "piezaPlanSeleccionada",
+                                e.target.value
+                              )
+                            }
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Pieza dental ({
+                                pacienteActivo.hc.piezasSeleccionadas[0] ||
+                                  "General"
+                              })
+                            </option>
+                            <option value="General">General</option>
+                            {TODAS_LAS_PIEZAS.map((cod) => (
+                              <option key={cod} value={cod}>
+                                Pieza #{cod}
+                              </option>
+                            ))}
+                          </select>
+
+                          <select
+                            value={
+                              PROCEDIMIENTOS_MSP.some(
+                                (p) =>
+                                  p.titulo ===
+                                  pacienteActivo.hc.procedimientoPlanSeleccionado
+                              )
+                                ? pacienteActivo.hc
+                                    .procedimientoPlanSeleccionado
+                                : ""
+                            }
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "procedimientoPlanSeleccionado",
+                                e.target.value
+                              )
+                            }
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Seleccionar procedimiento...
+                            </option>
+                            {PROCEDIMIENTOS_MSP.map((p) => (
+                              <option key={p.id} value={p.titulo}>
+                                {p.titulo}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={agregarItemPlanTratamiento}
+                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                          >
+                            + Añadir al plan
+                          </button>
+                        </div>
+
+                        <div>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.procedimientoPlanSeleccionado}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "procedimientoPlanSeleccionado",
+                                e.target.value
+                              )
+                            }
+                            placeholder="O escriba el procedimiento a realizar en la pieza..."
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        {(pacienteActivo.hc.itemsPlanTratamiento || []).length >
+                          0 && (
+                          <ul className="space-y-1.5">
+                            {pacienteActivo.hc.itemsPlanTratamiento.map(
+                              (item) => (
+                                <li
+                                  key={item.id}
+                                  className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
+                                >
+                                  <div>
+                                    <strong className="text-sky-950">
+                                      Pieza {item.pieza}
+                                    </strong>{" "}
+                                    — {item.procedimiento}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      eliminarItemPlanTratamiento(item.id)
+                                    }
+                                    className="text-red-600 hover:underline shrink-0"
+                                  >
+                                    Quitar
+                                  </button>
+                                </li>
+                              )
+                            )}
+                          </ul>
+                        )}
+
+                        <div>
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
+                            Observaciones del plan de tratamiento
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={pacienteActivo.hc.planTratamiento}
+                            onChange={(e) =>
+                              actualizarCampoHc("planTratamiento", e.target.value)
+                            }
+                            placeholder="Secuencia general de tratamientos y citas propuestas"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -4040,6 +4499,160 @@ export default function HomePage() {
                               </div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {seccionHc === "prescripciones" && (
+                    <div className="space-y-4 text-sm">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                          Lista general de medicamentos
+                        </h4>
+                        <form
+                          onSubmit={agregarMedicamentoCatalogo}
+                          className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+                        >
+                          <input
+                            type="text"
+                            value={nuevoMedNombre}
+                            onChange={(e) => setNuevoMedNombre(e.target.value)}
+                            placeholder="Nombre del medicamento"
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={nuevoMedPresentacion}
+                            onChange={(e) =>
+                              setNuevoMedPresentacion(e.target.value)
+                            }
+                            placeholder="Concentración / presentación"
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                          >
+                            + Agregar a lista general
+                          </button>
+                        </form>
+
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {catalogoMedicamentos.map((med) => {
+                            const activa =
+                              pacienteActivo.hc.medicamentoPrescribirId ===
+                              med.id;
+                            return (
+                              <button
+                                key={med.id}
+                                type="button"
+                                onClick={() =>
+                                  actualizarCampoHc(
+                                    "medicamentoPrescribirId",
+                                    med.id
+                                  )
+                                }
+                                className={`rounded-lg px-2.5 py-1 text-xs border transition ${
+                                  activa
+                                    ? "bg-sky-200 text-sky-950 border-sky-400 font-semibold"
+                                    : "bg-white text-sky-800 border-sky-200 hover:bg-sky-100"
+                                }`}
+                              >
+                                {med.nombre} · {med.presentacion}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            RP (Medicamentos a prescribir)
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.medicamentoPrescribirId}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "medicamentoPrescribirId",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Seleccionar medicamento de la lista...
+                            </option>
+                            {catalogoMedicamentos.map((med) => (
+                              <option key={med.id} value={med.id}>
+                                {med.nombre} ({med.presentacion})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            Indicaciones
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.indicacionesPrescripcion}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "indicacionesPrescripcion",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej. Tomar 1 tableta cada 8 horas por 5 días"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={agregarPrescripcionPaciente}
+                          className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                        >
+                          + Prescribir medicamento
+                        </button>
+                      </div>
+
+                      {(pacienteActivo.hc.prescripciones || []).length > 0 && (
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-white space-y-2">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            RP e Indicaciones del paciente
+                          </h4>
+                          <ul className="divide-y divide-sky-100">
+                            {pacienteActivo.hc.prescripciones.map((presc) => (
+                              <li
+                                key={presc.id}
+                                className="py-2.5 flex items-start justify-between gap-3 text-xs"
+                              >
+                                <div className="space-y-0.5">
+                                  <p className="font-semibold text-sky-950">
+                                    RP: {presc.medicamentoTexto}
+                                  </p>
+                                  <p className="text-sky-800">
+                                    <strong>Indicaciones:</strong>{" "}
+                                    {presc.indicaciones}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    eliminarPrescripcionPaciente(presc.id)
+                                  }
+                                  className="text-red-600 hover:underline shrink-0"
+                                >
+                                  Quitar
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                     </div>
@@ -4148,4 +4761,4 @@ export default function HomePage() {
       )}
     </main>
   );
-}
+} 
