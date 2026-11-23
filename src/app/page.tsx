@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
+
+const Odontograma3D = dynamic(() => import("./Odontograma3D"), {
+  ssr: false,
+});
 
 type RolUsuario = "odontologo" | "asistente" | "recepcionista" | string;
 type ModuloActivo =
@@ -902,6 +907,7 @@ export default function HomePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [moduloActivo, setModuloActivo] = useState<ModuloActivo>(null);
+  const [mostrarVista3D, setMostrarVista3D] = useState(false);
 
   const [catalogoMedicamentos, setCatalogoMedicamentos] = useState<
     MedicamentoCatalogo[]
@@ -2279,6 +2285,26 @@ export default function HomePage() {
 
     return (
       <div className="border border-sky-200 rounded-2xl p-3.5 bg-sky-50/60 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setMostrarVista3D((prev) => !prev)}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white hover:bg-sky-700"
+          >
+            {mostrarVista3D ? "Ocultar vista 3D" : "Ver en 3D para el paciente"}
+          </button>
+        </div>
+
+        {mostrarVista3D && (
+          <div className="mb-2">
+            <Odontograma3D
+              odontogramaMsp={hc.odontogramaMsp || {}}
+              piezaSeleccionada={hc.piezaSeleccionada || piezasSel[0] || ""}
+              onSeleccionarPieza={(codigo) => alternarSeleccionPieza(codigo)}
+            />
+          </div>
+        )}
+
         <div className="bg-white border border-sky-200 rounded-xl p-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-sky-950">
@@ -4761,4 +4787,4 @@ export default function HomePage() {
       )}
     </main>
   );
-} 
+}
