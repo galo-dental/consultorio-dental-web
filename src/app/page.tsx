@@ -18,8 +18,8 @@ type SeccionHC =
   | "odontologicos"
   | "clinico"
   | "examenes"
-  | "diagnostico"
-  | "odontograma";
+  | "odontograma"
+  | "diagnostico";
 
 type ColorMsp = "rojo" | "azul";
 type EstadoColorDiente = "ninguno" | "realizado" | "por_realizar";
@@ -137,7 +137,6 @@ interface HistoriaClinicaCompleta {
   diagnostico: string;
   planTratamiento: string;
   notasOdontograma: string;
-  notasPeriodontograma: string;
 }
 
 interface Paciente {
@@ -409,7 +408,6 @@ function crearHcVacia(
     procedimientoActivo: "ninguno", colorCaries: "rojo", colorRestauracion: "azul",
     colorMspActivo: "rojo", pincelEstado: "por_realizar", odontogramaMsp: {},
     codigoCie10: "", diagnostico: "", planTratamiento: "", notasOdontograma: "",
-    notasPeriodontograma: "",
   };
 }
 
@@ -2153,8 +2151,8 @@ export default function HomePage() {
     { id: "odontologicos", titulo: "4. Ant. odontológicos" },
     { id: "clinico", titulo: "5. Signos y examen" },
     { id: "examenes", titulo: "6. Exámenes y fotos" },
-    { id: "diagnostico", titulo: "7. Diagnóstico CIE-10 y plan" },
-    { id: "odontograma", titulo: "8. Odontograma y periodontograma" },
+    { id: "odontograma", titulo: "7. Odontograma e índice CPOD" },
+    { id: "diagnostico", titulo: "8. Diagnóstico CIE-10 y plan" },
   ];
 
   return (
@@ -3245,6 +3243,142 @@ export default function HomePage() {
                         )}
                       </div>
 
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-medium text-slate-600">
+                          Oclusión / Llave de Angle
+                        </label>
+                        <select
+                          value={pacienteActivo.hc.oclusionLlaveAngle}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "oclusionLlaveAngle",
+                              e.target.value
+                            )
+                          }
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="">Seleccionar clasificación</option>
+                          {OPCIONES_OCLUSION_ANGLE.map((op) => (
+                            <option key={op} value={op}>
+                              {op}
+                            </option>
+                          ))}
+                        </select>
+                        {pacienteActivo.hc.oclusionLlaveAngle === "Otros" && (
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.detalleOclusionAngle}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "detalleOclusionAngle",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Detallar clasificación o relación oclusal..."
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {seccionHc === "examenes" && (
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">
+                          Exámenes complementarios (radiografías, fotografías
+                          clínicas, tomografías, laboratorio)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={pacienteActivo.hc.examenesComplementarios}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "examenesComplementarios",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-800">
+                          Tomar foto con cámara
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+
+                        <label className="cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-100">
+                          Adjuntar foto o imagen
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {pacienteActivo.hc.fotos.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {pacienteActivo.hc.fotos.map((foto) => (
+                            <div
+                              key={foto.id}
+                              className="border border-slate-200 rounded-xl overflow-hidden bg-white"
+                            >
+                              <img
+                                src={foto.dataUrl}
+                                alt={foto.nombreArchivo}
+                                className="w-full h-36 object-cover bg-slate-100"
+                              />
+                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
+                                <div className="truncate">
+                                  <p className="font-medium text-slate-800 truncate">
+                                    {foto.nombreArchivo}
+                                  </p>
+                                  <p className="text-slate-500">{foto.fecha}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarFoto(foto.id)}
+                                  className="text-red-600 hover:underline shrink-0"
+                                >
+                                  Quitar
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {seccionHc === "odontograma" && (
+                    <div className="space-y-4 text-sm">
+                      {renderOdontogramaMsp(pacienteActivo.hc)}
+
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Resumen general del odontograma
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pacienteActivo.hc.notasOdontograma}
+                          onChange={(e) =>
+                            actualizarCampoHc("notasOdontograma", e.target.value)
+                          }
+                          placeholder="Notas generales de piezas, restauraciones o patologías..."
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -3327,123 +3461,6 @@ export default function HomePage() {
                           </table>
                         </div>
                       </div>
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-medium text-slate-600">
-                          Oclusión / Llave de Angle
-                        </label>
-                        <select
-                          value={pacienteActivo.hc.oclusionLlaveAngle}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "oclusionLlaveAngle",
-                              e.target.value
-                            )
-                          }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        >
-                          <option value="">Seleccionar clasificación</option>
-                          {OPCIONES_OCLUSION_ANGLE.map((op) => (
-                            <option key={op} value={op}>
-                              {op}
-                            </option>
-                          ))}
-                        </select>
-                        {pacienteActivo.hc.oclusionLlaveAngle === "Otros" && (
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.detalleOclusionAngle}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "detalleOclusionAngle",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Detallar clasificación o relación oclusal..."
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {seccionHc === "examenes" && (
-                    <div className="space-y-4 text-sm">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">
-                          Exámenes complementarios (radiografías, fotografías
-                          clínicas, tomografías, laboratorio)
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={pacienteActivo.hc.examenesComplementarios}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "examenesComplementarios",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      {renderOdontogramaMsp(pacienteActivo.hc)}
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                        <label className="cursor-pointer rounded-lg bg-slate-900 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-800">
-                          Tomar foto con cámara
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-
-                        <label className="cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-100">
-                          Adjuntar foto o imagen
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-
-                      {pacienteActivo.hc.fotos.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {pacienteActivo.hc.fotos.map((foto) => (
-                            <div
-                              key={foto.id}
-                              className="border border-slate-200 rounded-xl overflow-hidden bg-white"
-                            >
-                              <img
-                                src={foto.dataUrl}
-                                alt={foto.nombreArchivo}
-                                className="w-full h-36 object-cover bg-slate-100"
-                              />
-                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
-                                <div className="truncate">
-                                  <p className="font-medium text-slate-800 truncate">
-                                    {foto.nombreArchivo}
-                                  </p>
-                                  <p className="text-slate-500">{foto.fecha}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarFoto(foto.id)}
-                                  className="text-red-600 hover:underline shrink-0"
-                                >
-                                  Quitar
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -3493,46 +3510,6 @@ export default function HomePage() {
                           }
                           placeholder="Secuencia de tratamientos y citas propuestas"
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {seccionHc === "odontograma" && (
-                    <div className="space-y-4 text-sm">
-                      {renderOdontogramaMsp(pacienteActivo.hc)}
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Resumen general del odontograma
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={pacienteActivo.hc.notasOdontograma}
-                          onChange={(e) =>
-                            actualizarCampoHc("notasOdontograma", e.target.value)
-                          }
-                          placeholder="Notas generales de piezas, restauraciones o patologías..."
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Periodontograma (Clasificación de Miller)
-                        </label>
-
-                        <textarea
-                          rows={4}
-                          value={pacienteActivo.hc.notasPeriodontograma}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "notasPeriodontograma",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Profundidad de sondaje, sangrado al sondaje, movilidad (Grados 0–3) y retracción gingival (Clases I–IV de Miller)..."
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                         />
                       </div>
                     </div>
