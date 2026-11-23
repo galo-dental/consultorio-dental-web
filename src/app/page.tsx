@@ -55,7 +55,6 @@ interface EstadoPiezaMsp {
   movilidad: string;
   recesion: string;
   movilidadRecesion: string;
-  observacion: string;
 }
 
 interface Perfil {
@@ -350,7 +349,6 @@ function piezaVacia(): EstadoPiezaMsp {
     movilidad: "",
     recesion: "",
     movilidadRecesion: "",
-    observacion: "",
   };
 }
 
@@ -813,22 +811,6 @@ export default function HomePage() {
     );
   }
 
-  function anexarNotaPeriodontal(texto: string) {
-    if (!pacienteSeleccionadoId) return;
-    setMensajeGuardado(null);
-    setPacientes((prev) =>
-      prev.map((pac) => {
-        if (pac.id !== pacienteSeleccionadoId) return pac;
-        const actual = pac.hc.notasPeriodontograma || "";
-        const siguiente = actual ? `${actual} · ${texto}` : texto;
-        return {
-          ...pac,
-          hc: { ...pac.hc, notasPeriodontograma: siguiente },
-        };
-      })
-    );
-  }
-
   function seleccionarColorMsp(color: ColorMsp) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1273,7 +1255,7 @@ export default function HomePage() {
 
   function actualizarDatoPieza(
     pieza: string,
-    campo: "movilidad" | "recesion" | "movilidadRecesion" | "observacion",
+    campo: "movilidad" | "recesion" | "movilidadRecesion",
     valor: string
   ) {
     if (!pieza || !pacienteSeleccionadoId) return;
@@ -1300,8 +1282,6 @@ export default function HomePage() {
                 recesion: siguienteRec,
                 movilidadRecesion:
                   campo === "movilidadRecesion" ? valor : combinado,
-                observacion:
-                  campo === "observacion" ? valor : actualPieza.observacion,
               },
             },
           },
@@ -2090,28 +2070,6 @@ export default function HomePage() {
               Cargar
             </button>
           </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
-          <label className="block text-xs font-semibold text-slate-700">
-            Observación clínica
-            {piezaFoco ? ` — Pieza #${piezaFoco}` : ""}
-            {descripcionPieza ? ` (${descripcionPieza})` : ""}
-          </label>
-          <input
-            type="text"
-            disabled={!piezaFoco}
-            value={piezaFoco ? piezaAct.observacion : ""}
-            onChange={(e) =>
-              actualizarDatoPieza(piezaFoco, "observacion", e.target.value)
-            }
-            placeholder={
-              piezaFoco
-                ? `Detalle para pieza #${piezaFoco}...`
-                : "Selecciona una pieza para escribir una observación..."
-            }
-            className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm disabled:bg-slate-50 disabled:text-slate-400"
-          />
         </div>
       </div>
     );
@@ -3559,52 +3517,10 @@ export default function HomePage() {
                         />
                       </div>
 
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-3">
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
                         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
                           Periodontograma (Clasificación de Miller)
                         </label>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white border border-slate-200 rounded-xl p-3 text-xs">
-                          <div className="space-y-1.5">
-                            <p className="font-semibold text-slate-700">
-                              Movilidad dental (Miller)
-                            </p>
-                            {MOVILIDAD_MILLER.map((item) => (
-                              <button
-                                key={item.codigo}
-                                type="button"
-                                onClick={() =>
-                                  anexarNotaPeriodontal(
-                                    `Movilidad ${item.etiqueta}`
-                                  )
-                                }
-                                className="w-full text-left rounded-lg border border-slate-200 hover:bg-slate-50 px-2.5 py-1.5 text-slate-700"
-                              >
-                                <strong>{item.codigo}:</strong> {item.etiqueta}
-                              </button>
-                            ))}
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <p className="font-semibold text-slate-700">
-                              Retracción gingival (Miller)
-                            </p>
-                            {RETRACCION_MILLER.map((item) => (
-                              <button
-                                key={item.codigo}
-                                type="button"
-                                onClick={() =>
-                                  anexarNotaPeriodontal(
-                                    `Retracción ${item.etiqueta}`
-                                  )
-                                }
-                                className="w-full text-left rounded-lg border border-slate-200 hover:bg-slate-50 px-2.5 py-1.5 text-slate-700"
-                              >
-                                <strong>{item.codigo}:</strong> {item.etiqueta}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
 
                         <textarea
                           rows={4}
