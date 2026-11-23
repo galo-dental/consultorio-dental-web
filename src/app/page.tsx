@@ -91,7 +91,13 @@ interface HistoriaClinicaCompleta {
   intensidadDolor: string;
   enfermedadesSistemicas: string[];
   otrasEnfermedadesSistemicas: string;
+  alergicoMedicamentos: boolean;
+  medicamentoAlergia: string;
   alergias: string;
+  problemasHemorragias: string;
+  detalleHemorragias: string;
+  problemasAnestesiaDental: string;
+  detalleAnestesiaDental: string;
   medicacionActual: string;
   cirugiasPrevias: string;
   antecedentesFamiliares: string;
@@ -382,6 +388,14 @@ function nombreCompletoPaciente(hc: HistoriaClinicaCompleta): string {
   return full || "Paciente sin nombre";
 }
 
+function pacienteTieneAlergias(hc: HistoriaClinicaCompleta): boolean {
+  return (
+    !hc.alergicoMedicamentos ||
+    Boolean(hc.medicamentoAlergia?.trim()) ||
+    Boolean(hc.alergias?.trim())
+  );
+}
+
 function crearHcVacia(
   nombres = "",
   apellidos = "",
@@ -393,10 +407,13 @@ function crearHcVacia(
     correo: "", ocupacion: "", contactoAdicional: "", seguroConvenio: "",
     representanteLegal: "", motivoConsulta: "", enfermedadActual: "",
     noPresentaDolor: false, intensidadDolor: "", enfermedadesSistemicas: [],
-    otrasEnfermedadesSistemicas: "", alergias: "", medicacionActual: "",
-    cirugiasPrevias: "", antecedentesFamiliares: "", noRefiereHabitos: false,
-    habitosGenerales: "", tratamientosPrevios: [], otrosTratamientosPrevios: "",
-    frecuenciaVisitas: "", otraFrecuenciaVisitas: "", experienciasAnteriores: "",
+    otrasEnfermedadesSistemicas: "", alergicoMedicamentos: true,
+    medicamentoAlergia: "", alergias: "", problemasHemorragias: "",
+    detalleHemorragias: "", problemasAnestesiaDental: "",
+    detalleAnestesiaDental: "", medicacionActual: "", cirugiasPrevias: "",
+    antecedentesFamiliares: "", noRefiereHabitos: false, habitosGenerales: "",
+    tratamientosPrevios: [], otrosTratamientosPrevios: "", frecuenciaVisitas: "",
+    otraFrecuenciaVisitas: "", experienciasAnteriores: "",
     otraExperienciaAnterior: "", ansiedadDental: "", otraAnsiedadDental: "",
     higieneOral: "", otraHigieneOral: "", presionArterial: "", pulso: "",
     temperatura: "", frecuenciaRespiratoria: "", examenExtraoral: [],
@@ -410,7 +427,6 @@ function crearHcVacia(
     codigoCie10: "", diagnostico: "", planTratamiento: "", notasOdontograma: "",
   };
 }
-
 function calcularEdad(fechaNacimiento: string): string {
   if (!fechaNacimiento) return "—";
   const nac = new Date(fechaNacimiento);
@@ -654,6 +670,7 @@ function renderMarcadoresExternosPieza(
     </div>
   );
 }
+
 export default function HomePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -809,6 +826,24 @@ export default function HomePage() {
     );
   }
 
+  function toggleAlergicoMedicamentos() {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const siguiente = !pac.hc.alergicoMedicamentos;
+        return {
+          ...pac,
+          hc: {
+            ...pac.hc,
+            alergicoMedicamentos: siguiente,
+            medicamentoAlergia: siguiente ? "" : pac.hc.medicamentoAlergia,
+          },
+        };
+      })
+    );
+  }
   function seleccionarColorMsp(color: ColorMsp) {
     if (!pacienteSeleccionadoId) return;
     setMensajeGuardado(null);
@@ -1177,6 +1212,7 @@ export default function HomePage() {
       })
     );
   }
+
   function borrarInformacionSeleccionada() {
     if (!pacienteSeleccionadoId) return;
 
@@ -1250,7 +1286,6 @@ export default function HomePage() {
       })
     );
   }
-
   function actualizarDatoPieza(
     pieza: string,
     campo: "movilidad" | "recesion" | "movilidadRecesion",
@@ -1681,6 +1716,7 @@ export default function HomePage() {
       </div>
     );
   }
+
   function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
     const piezasSel = hc.piezasSeleccionadas || [];
     const piezaFoco =
@@ -1825,7 +1861,6 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
         <div className="bg-white/95 border border-slate-200 rounded-xl p-2.5 space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-slate-700">
@@ -2155,6 +2190,10 @@ export default function HomePage() {
     { id: "diagnostico", titulo: "8. Diagnóstico CIE-10 y plan" },
   ];
 
+  const tieneAlergiaActiva = pacienteActivo
+    ? pacienteTieneAlergias(pacienteActivo.hc)
+    : false;
+
   return (
     <main className="min-h-screen p-4 max-w-5xl mx-auto space-y-6">
       <header className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
@@ -2287,33 +2326,57 @@ export default function HomePage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Paciente activo:
                 </span>
-                {pacientes.map((pac) => (
-                  <button
-                    key={pac.id}
-                    type="button"
-                    onClick={() => {
-                      setPacienteSeleccionadoId(pac.id);
-                      setMensajeGuardado(null);
-                    }}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${
-                      pac.id === pacienteActivo?.id
-                        ? "bg-slate-900 text-white border-slate-900"
-                        : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    {nombreCompletoPaciente(pac.hc)}
-                  </button>
-                ))}
+                {pacientes.map((pac) => {
+                  const alertaPac = pacienteTieneAlergias(pac.hc);
+                  return (
+                    <button
+                      key={pac.id}
+                      type="button"
+                      onClick={() => {
+                        setPacienteSeleccionadoId(pac.id);
+                        setMensajeGuardado(null);
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border ${
+                        pac.id === pacienteActivo?.id
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{nombreCompletoPaciente(pac.hc)}</span>
+                      {alertaPac && (
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            pac.id === pacienteActivo?.id
+                              ? "bg-amber-400 text-slate-950"
+                              : "bg-amber-100 text-amber-900 border border-amber-300"
+                          }`}
+                        >
+                          Alergia
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {pacienteActivo && (
                 <div className="space-y-4 border border-slate-200 rounded-2xl p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                     <div>
-                      <h3 className="text-base font-semibold text-slate-900">
-                        {nombreCompletoPaciente(pacienteActivo.hc)}
-                      </h3>
-                      <p className="text-xs text-slate-500">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-semibold text-slate-900">
+                          {nombreCompletoPaciente(pacienteActivo.hc)}
+                        </h3>
+                        {tieneAlergiaActiva && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+                            Padece alergias
+                            {pacienteActivo.hc.medicamentoAlergia?.trim()
+                              ? `: ${pacienteActivo.hc.medicamentoAlergia.trim()}`
+                              : ""}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
                         Edad calculada:{" "}
                         <strong>
                           {calcularEdad(pacienteActivo.hc.fechaNacimiento)}
@@ -2328,6 +2391,20 @@ export default function HomePage() {
                       </span>
                     )}
                   </div>
+
+                  {tieneAlergiaActiva && (
+                    <div className="rounded-xl bg-amber-50 border border-amber-300 px-3.5 py-2.5 text-xs font-medium text-amber-950">
+                      <strong>Aviso de alergia:</strong> Este paciente padece
+                      alergias
+                      {pacienteActivo.hc.medicamentoAlergia?.trim()
+                        ? ` a medicamento(s): ${pacienteActivo.hc.medicamentoAlergia.trim()}`
+                        : ""}
+                      {pacienteActivo.hc.alergias?.trim()
+                        ? ` · Otras alergias: ${pacienteActivo.hc.alergias.trim()}`
+                        : ""}
+                      .
+                    </div>
+                  )}
 
                   <div className="flex gap-1.5 overflow-x-auto pb-1">
                     {pestanasHc.map((tab) => (
@@ -2651,7 +2728,6 @@ export default function HomePage() {
                       </div>
                     </div>
                   )}
-
                   {seccionHc === "medicos" && (
                     <div className="space-y-4 text-sm">
                       <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
@@ -2708,10 +2784,122 @@ export default function HomePage() {
                         )}
                       </div>
 
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Alergia a medicamentos
+                          </label>
+                          <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={pacienteActivo.hc.alergicoMedicamentos}
+                              onChange={toggleAlergicoMedicamentos}
+                              className="rounded border-slate-300"
+                            />
+                            <span>Alérgico a medicamentos</span>
+                          </label>
+                        </div>
+
+                        {!pacienteActivo.hc.alergicoMedicamentos && (
+                          <div className="pt-1 space-y-1.5">
+                            <label className="block text-xs font-medium text-amber-900">
+                              Medicamento al cual es alérgico
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.medicamentoAlergia}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "medicamentoAlergia",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Escriba el medicamento al cual es alérgico..."
+                              className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                          <label className="block text-xs font-medium text-slate-600">
+                            ¿Tiene problemas de hemorragias?
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.problemasHemorragias}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "problemasHemorragias",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar opción</option>
+                            <option value="No">No</option>
+                            <option value="Sí">Sí</option>
+                            <option value="No sabe / no refiere">
+                              No sabe / no refiere
+                            </option>
+                          </select>
+                          {pacienteActivo.hc.problemasHemorragias === "Sí" && (
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.detalleHemorragias}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "detalleHemorragias",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Detalle el problema de hemorragias..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          )}
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                          <label className="block text-xs font-medium text-slate-600">
+                            ¿Tiene problemas con la anestesia dental?
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.problemasAnestesiaDental}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "problemasAnestesiaDental",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Seleccionar opción</option>
+                            <option value="No">No</option>
+                            <option value="Sí">Sí</option>
+                            <option value="Primera vez / no refiere">
+                              Primera vez / no refiere
+                            </option>
+                          </select>
+                          {pacienteActivo.hc.problemasAnestesiaDental ===
+                            "Sí" && (
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.detalleAnestesiaDental}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "detalleAnestesiaDental",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Detalle la reacción o problema con anestesia..."
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                            />
+                          )}
+                        </div>
+
                         <div>
                           <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Alergias (medicamentos o materiales)
+                            Otras alergias (materiales, alimentos, etc.)
                           </label>
                           <input
                             type="text"
@@ -2719,7 +2907,7 @@ export default function HomePage() {
                             onChange={(e) =>
                               actualizarCampoHc("alergias", e.target.value)
                             }
-                            placeholder="Penicilina, anestésicos, látex, acrílicos..."
+                            placeholder="Látex, acrílicos, yodo, alimentos..."
                             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                           />
                         </div>
@@ -3242,43 +3430,6 @@ export default function HomePage() {
                           </div>
                         )}
                       </div>
-
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
-                        <label className="block text-xs font-medium text-slate-600">
-                          Oclusión / Llave de Angle
-                        </label>
-                        <select
-                          value={pacienteActivo.hc.oclusionLlaveAngle}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "oclusionLlaveAngle",
-                              e.target.value
-                            )
-                          }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                        >
-                          <option value="">Seleccionar clasificación</option>
-                          {OPCIONES_OCLUSION_ANGLE.map((op) => (
-                            <option key={op} value={op}>
-                              {op}
-                            </option>
-                          ))}
-                        </select>
-                        {pacienteActivo.hc.oclusionLlaveAngle === "Otros" && (
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.detalleOclusionAngle}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "detalleOclusionAngle",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Detallar clasificación o relación oclusal..."
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                          />
-                        )}
-                      </div>
                     </div>
                   )}
 
@@ -3461,6 +3612,43 @@ export default function HomePage() {
                           </table>
                         </div>
                       </div>
+
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                        <label className="block text-xs font-medium text-slate-600">
+                          Oclusión / Llave de Angle
+                        </label>
+                        <select
+                          value={pacienteActivo.hc.oclusionLlaveAngle}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "oclusionLlaveAngle",
+                              e.target.value
+                            )
+                          }
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="">Seleccionar clasificación</option>
+                          {OPCIONES_OCLUSION_ANGLE.map((op) => (
+                            <option key={op} value={op}>
+                              {op}
+                            </option>
+                          ))}
+                        </select>
+                        {pacienteActivo.hc.oclusionLlaveAngle === "Otros" && (
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.detalleOclusionAngle}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "detalleOclusionAngle",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Detallar clasificación o relación oclusal..."
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                          />
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -3618,4 +3806,4 @@ export default function HomePage() {
       )}
     </main>
   );
-}
+} 
