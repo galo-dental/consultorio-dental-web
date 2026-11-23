@@ -215,6 +215,20 @@ const OPCIONES_OCLUSION_ANGLE = [
   "Mordida cruzada", "No valorable / edéntulo", "Otros",
 ];
 
+const MOVILIDAD_MILLER = [
+  { codigo: "M0", etiqueta: "Grado 0 (fisiológica ≤0,2 mm)" },
+  { codigo: "M1", etiqueta: "Grado 1 (horizontal <1 mm)" },
+  { codigo: "M2", etiqueta: "Grado 2 (horizontal ≥1 mm)" },
+  { codigo: "M3", etiqueta: "Grado 3 (horizontal y vertical)" },
+];
+
+const RETRACCION_MILLER = [
+  { codigo: "R-I", etiqueta: "Clase I (no alcanza LMG; sin pérdida ósea/interdental)" },
+  { codigo: "R-II", etiqueta: "Clase II (hasta/más allá LMG; sin pérdida ósea/interdental)" },
+  { codigo: "R-III", etiqueta: "Clase III (hasta/más allá LMG; pérdida ósea/interdental o malposición)" },
+  { codigo: "R-IV", etiqueta: "Clase IV (supera LMG; pérdida ósea/interdental severa)" },
+];
+
 const PROCEDIMIENTOS_MSP: {
   id: Exclude<TipoProcedimientoMsp, "ninguno">;
   titulo: string;
@@ -628,7 +642,6 @@ function renderMarcadoresExternosPieza(
     </div>
   );
 }
-
 export default function HomePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -781,6 +794,22 @@ export default function HomePage() {
           ? { ...pac, hc: { ...pac.hc, [campo]: valor } }
           : pac
       )
+    );
+  }
+
+  function anexarNotaPeriodontal(texto: string) {
+    if (!pacienteSeleccionadoId) return;
+    setMensajeGuardado(null);
+    setPacientes((prev) =>
+      prev.map((pac) => {
+        if (pac.id !== pacienteSeleccionadoId) return pac;
+        const actual = pac.hc.notasPeriodontograma || "";
+        const siguiente = actual ? `${actual} · ${texto}` : texto;
+        return {
+          ...pac,
+          hc: { ...pac.hc, notasPeriodontograma: siguiente },
+        };
+      })
     );
   }
 
@@ -1113,7 +1142,6 @@ export default function HomePage() {
       })
     );
   }
-
   function borrarInformacionSeleccionada() {
     if (!pacienteSeleccionadoId) return;
 
@@ -1577,8 +1605,8 @@ export default function HomePage() {
             actualizarDatoPieza(codigoPieza, "movilidadRecesion", e.target.value)
           }
           placeholder="M/R"
-          title={`Movilidad/Recesión pieza ${codigoPieza}`}
-          className="w-8 mt-0.5 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-600 px-0.5 py-0.5"
+          title={`Movilidad (M0-M3) / Retracción (R-I..R-IV) pieza ${codigoPieza}`}
+          className="w-9 mt-0.5 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-600 px-0.5 py-0.5"
         />
       </div>
     );
@@ -1769,11 +1797,11 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 bg-slate-50/80 border border-slate-200/80 rounded-lg px-2.5 py-1.5">
             <span><strong>V</strong> = Vestibular</span>
             <span><strong>P</strong> = Palatino / <strong>L</strong> = Lingual</span>
-            <span><strong>M</strong> = Mesial (hacia línea media)</span>
+            <span><strong>M</strong> = Mesial</span>
             <span><strong>D</strong> = Distal</span>
-            <span><strong>O</strong> = Oclusal / Central</span>
-            <span className="text-slate-400">
-              · Endodoncia/Implante/Ortodoncia: arriba (superior) / abajo (inferior)
+            <span><strong>O</strong> = Oclusal</span>
+            <span>
+              <strong>M/R</strong> = Movilidad (M0–M3) / Retracción Miller (R-I..R-IV)
             </span>
           </div>
 
@@ -2476,7 +2504,6 @@ export default function HomePage() {
                       </div>
                     </div>
                   )}
-
                   {seccionHc === "motivo" && (
                     <div className="space-y-3 text-sm">
                       <div>
@@ -3415,10 +3442,53 @@ export default function HomePage() {
                         />
                       </div>
 
-                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-2">
+                      <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 space-y-3">
                         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Periodontograma
+                          Periodontograma (Clasificación de Miller)
                         </label>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white border border-slate-200 rounded-xl p-3 text-xs">
+                          <div className="space-y-1.5">
+                            <p className="font-semibold text-slate-700">
+                              Movilidad dental (Miller)
+                            </p>
+                            {MOVILIDAD_MILLER.map((item) => (
+                              <button
+                                key={item.codigo}
+                                type="button"
+                                onClick={() =>
+                                  anexarNotaPeriodontal(
+                                    `Movilidad ${item.etiqueta}`
+                                  )
+                                }
+                                className="w-full text-left rounded-lg border border-slate-200 hover:bg-slate-50 px-2.5 py-1.5 text-slate-700"
+                              >
+                                <strong>{item.codigo}:</strong> {item.etiqueta}
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <p className="font-semibold text-slate-700">
+                              Retracción gingival (Miller)
+                            </p>
+                            {RETRACCION_MILLER.map((item) => (
+                              <button
+                                key={item.codigo}
+                                type="button"
+                                onClick={() =>
+                                  anexarNotaPeriodontal(
+                                    `Retracción ${item.etiqueta}`
+                                  )
+                                }
+                                className="w-full text-left rounded-lg border border-slate-200 hover:bg-slate-50 px-2.5 py-1.5 text-slate-700"
+                              >
+                                <strong>{item.codigo}:</strong> {item.etiqueta}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
                         <textarea
                           rows={4}
                           value={pacienteActivo.hc.notasPeriodontograma}
@@ -3428,7 +3498,7 @@ export default function HomePage() {
                               e.target.value
                             )
                           }
-                          placeholder="Profundidad de sondaje, sangrado al sondaje, movilidad dental, margen gingival..."
+                          placeholder="Profundidad de sondaje, sangrado al sondaje, movilidad (Grados 0–3) y retracción gingival (Clases I–IV de Miller)..."
                           className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                         />
                       </div>
