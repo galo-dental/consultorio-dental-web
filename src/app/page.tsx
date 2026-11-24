@@ -16,7 +16,8 @@ type ModuloActivo =
   | "pagos"
   | "inventario"
   | "profesionales"
-  | "servicios";
+  | "servicios"
+  | "proveedores";
 
 type SeccionHC =
   | "identificacion"
@@ -115,19 +116,90 @@ interface ProfesionalEquipo {
   nombre: string;
   cargo: TipoCargoPersonal;
   especialidad: string;
+  registroAces: string;
+  codigoMsp: string;
   esquemaPago: EsquemaPagoPersonal;
   salarioMensual: string;
   porcentajePago: string;
+  aplicaIess: boolean;
+  porcentajeIess: string;
   horarioTrabajo: string;
+}
+
+type EspecialidadOdontologia =
+  | "Odontología General"
+  | "Operatoria y Estética Dental"
+  | "Endodoncia"
+  | "Periodoncia"
+  | "Cirugía Oral y Maxilofacial"
+  | "Rehabilitación Oral y Prótesis"
+  | "Ortodoncia y Ortopedia"
+  | "Odontopediatría"
+  | "Implantología"
+  | "Diagnóstico y Radiología";
+
+interface CostoFijoItem {
+  id: string;
+  concepto: string;
+  montoMensual: number;
+}
+
+interface CostoVariableItem {
+  id: string;
+  concepto: string;
+  costoUnitario: number;
 }
 
 interface ServicioCartera {
   id: string;
   nombre: string;
-  categoria: string;
-  duracionMin: string;
-  precioReferencial: string;
+  especialidad: EspecialidadOdontologia;
+  duracionMin: number;
+  precioNormal: number;
+  precioConvenio: number;
+  aplicaConvenio: boolean;
+  costoVariableDirecto: number;
+  honorarioTipo: "porcentaje" | "fijo";
+  honorarioValor: number;
   descripcion: string;
+}
+
+interface InsumoRapido {
+  id: string;
+  nombre: string;
+  categoria: string;
+  cantidad: number;
+  stockMinimo: number;
+  costoUnitario: number;
+  caducidad: string;
+}
+
+interface EquipoInstrumental {
+  id: string;
+  nombre: string;
+  tipoBien: "Equipo odontológico" | "Instrumental clínico";
+  valorAdquisicion: number;
+  vidaUtilAnios: number;
+  estado: "Operativo" | "Mantenimiento" | "Por renovar";
+}
+
+type RubroProveedor =
+  | "Laboratorios dentales"
+  | "Servicios de marketing y redes sociales"
+  | "Insumos y biomateriales"
+  | "Equipos y mantenimiento"
+  | "Arriendo y servicios básicos"
+  | "Otros";
+
+interface ProveedorRegistro {
+  id: string;
+  nombre: string;
+  rubro: RubroProveedor;
+  detalleServicio: string;
+  modalidadPago: string;
+  montoReferencial: string;
+  contacto: string;
+  notas: string;
 }
 
 interface HistoriaClinicaCompleta {
@@ -286,10 +358,28 @@ const OPCIONES_TEJIDOS_BLANDOS = [
   "Lesión en mucosa yugal o paladar", "Alteración en piso de boca", "Otros",
 ];
 
-const OPCIONES_OCLUSION_ANGLE = [
-  "Clase I",
-  "Clase II",
-  "Clase III",
+const OPCIONES_OCLUSION_ANGLE = ["Clase I", "Clase II", "Clase III"];
+
+const ESPECIALIDADES_ODONTOLOGIA: EspecialidadOdontologia[] = [
+  "Odontología General",
+  "Operatoria y Estética Dental",
+  "Endodoncia",
+  "Periodoncia",
+  "Cirugía Oral y Maxilofacial",
+  "Rehabilitación Oral y Prótesis",
+  "Ortodoncia y Ortopedia",
+  "Odontopediatría",
+  "Implantología",
+  "Diagnóstico y Radiología",
+];
+
+const RUBROS_PROVEEDOR: RubroProveedor[] = [
+  "Laboratorios dentales",
+  "Servicios de marketing y redes sociales",
+  "Insumos y biomateriales",
+  "Equipos y mantenimiento",
+  "Arriendo y servicios básicos",
+  "Otros",
 ];
 
 const CODIGOS_CIE10_ODONTO: { codigo: string; descripcion: string }[] = [
@@ -411,9 +501,13 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
     nombre: "Dra. Valeria Paredes",
     cargo: "Odontólogo",
     especialidad: "Odontología general y estética",
+    registroAces: "ACES-OD-10482",
+    codigoMsp: "MSP-1718293041",
     esquemaPago: "mixto",
-    salarioMensual: "900",
+    salarioMensual: "850",
     porcentajePago: "25",
+    aplicaIess: true,
+    porcentajeIess: "11.15",
     horarioTrabajo: "Lun a Vie 08:30 - 16:30",
   },
   {
@@ -421,9 +515,13 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
     nombre: "Camila Herrera",
     cargo: "Auxiliar / Asistente",
     especialidad: "Asistencia clínica y esterilización",
+    registroAces: "ACES-AX-20911",
+    codigoMsp: "MSP-1729384756",
     esquemaPago: "salario_fijo",
-    salarioMensual: "550",
+    salarioMensual: "520",
     porcentajePago: "0",
+    aplicaIess: true,
+    porcentajeIess: "11.15",
     horarioTrabajo: "Lun a Vie 08:00 - 17:00",
   },
   {
@@ -431,9 +529,13 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
     nombre: "Andrea López",
     cargo: "Recepcionista",
     especialidad: "Agenda, caja y atención al paciente",
+    registroAces: "N/A",
+    codigoMsp: "N/A",
     esquemaPago: "salario_fijo",
-    salarioMensual: "520",
+    salarioMensual: "500",
     porcentajePago: "0",
+    aplicaIess: true,
+    porcentajeIess: "11.15",
     horarioTrabajo: "Lun a Sáb 08:30 - 14:30",
   },
   {
@@ -441,49 +543,165 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
     nombre: "Dr. Esteban Molina",
     cargo: "Especialista",
     especialidad: "Endodoncia",
+    registroAces: "ACES-ES-30554",
+    codigoMsp: "MSP-1711223344",
     esquemaPago: "porcentaje",
     salarioMensual: "0",
     porcentajePago: "40",
+    aplicaIess: false,
+    porcentajeIess: "11.15",
     horarioTrabajo: "Mié y Vie 14:00 - 19:00",
   },
+];
+
+const COSTOS_FIJOS_INICIALES: CostoFijoItem[] = [
+  { id: "cf-1", concepto: "Arriendo del consultorio", montoMensual: 550 },
+  { id: "cf-2", concepto: "Servicios básicos, internet y telefonía", montoMensual: 110 },
+  { id: "cf-3", concepto: "Bioseguridad, esterilización y software", montoMensual: 95 },
+];
+
+const COSTOS_VARIABLES_INICIALES: CostoVariableItem[] = [
+  { id: "cv-1", concepto: "Kit bioseguridad descartable (guantes, mascarilla, eyector, campo)", costoUnitario: 2.2 },
+  { id: "cv-2", concepto: "Cartucho anestesia + aguja tópica/cárpule", costoUnitario: 2.8 },
+  { id: "cv-3", concepto: "Resina compuesta, grabador, adhesivo y pulido", costoUnitario: 7.5 },
+  { id: "cv-4", concepto: "Insumos endodoncia (limas, irrigantes, conos, cemento)", costoUnitario: 24.0 },
 ];
 
 const SERVICIOS_INICIALES: ServicioCartera[] = [
   {
     id: "srv-1",
-    nombre: "Consulta y valoración odontológica",
-    categoria: "Diagnóstico",
-    duracionMin: "30",
-    precioReferencial: "20",
-    descripcion: "Evaluación clínica inicial, revisión y orientación.",
+    nombre: "Consulta y diagnóstico odontológico",
+    especialidad: "Odontología General",
+    duracionMin: 30,
+    precioNormal: 20,
+    precioConvenio: 15,
+    aplicaConvenio: true,
+    costoVariableDirecto: 2.2,
+    honorarioTipo: "porcentaje",
+    honorarioValor: 30,
+    descripcion: "Evaluación clínica, revisión periodontal y plan de tratamiento.",
   },
   {
     id: "srv-2",
-    nombre: "Profilaxis dental y destartraje",
-    categoria: "Preventiva",
-    duracionMin: "45",
-    precioReferencial: "35",
-    descripcion: "Limpieza ultrasónica, eliminación de cálculo y pulido.",
+    nombre: "Restauración estética con resina",
+    especialidad: "Operatoria y Estética Dental",
+    duracionMin: 45,
+    precioNormal: 45,
+    precioConvenio: 36,
+    aplicaConvenio: true,
+    costoVariableDirecto: 12.5,
+    honorarioTipo: "porcentaje",
+    honorarioValor: 30,
+    descripcion: "Obturación directa estética por superficie o cavidad.",
   },
   {
     id: "srv-3",
-    nombre: "Restauración con resina estética",
+    nombre: "Endodoncia unirradicular",
+    especialidad: "Endodoncia",
+    duracionMin: 90,
+    precioNormal: 140,
+    precioConvenio: 115,
+    aplicaConvenio: true,
+    costoVariableDirecto: 29.0,
+    honorarioTipo: "porcentaje",
+    honorarioValor: 40,
+    descripcion: "Tratamiento de conductos con instrumentación y obturación.",
+  },
+];
+
+const INSUMOS_INICIALES: InsumoRapido[] = [
+  {
+    id: "ins-1",
+    nombre: "Resina nanohíbrida A2",
     categoria: "Operatoria",
-    duracionMin: "45",
-    precioReferencial: "45",
-    descripcion: "Obturación directa en resina compuesta del color del diente.",
+    cantidad: 8,
+    stockMinimo: 3,
+    costoUnitario: 28,
+    caducidad: "2027-08",
   },
   {
-    id: "srv-4",
-    nombre: "Endodoncia unirradicular / multirradicular",
-    categoria: "Endodoncia",
-    duracionMin: "90",
-    precioReferencial: "140",
-    descripcion: "Tratamiento de conductos radiculares bajo protocolo clínico.",
+    id: "ins-2",
+    nombre: "Anestesia lidocaína 2% con epinefrina (caja x50)",
+    categoria: "Anestesia",
+    cantidad: 4,
+    stockMinimo: 2,
+    costoUnitario: 26,
+    caducidad: "2027-05",
+  },
+  {
+    id: "ins-3",
+    nombre: "Guantes de nitrilo (caja x100)",
+    categoria: "Bioseguridad",
+    cantidad: 6,
+    stockMinimo: 3,
+    costoUnitario: 8.5,
+    caducidad: "2028-01",
+  },
+];
+
+const EQUIPOS_INICIALES: EquipoInstrumental[] = [
+  {
+    id: "eq-1",
+    nombre: "Lámpara de fotocurado LED inalámbrica",
+    tipoBien: "Equipo odontológico",
+    valorAdquisicion: 420,
+    vidaUtilAnios: 5,
+    estado: "Operativo",
+  },
+  {
+    id: "eq-2",
+    nombre: "Autoclave de vapor clase B",
+    tipoBien: "Equipo odontológico",
+    valorAdquisicion: 2400,
+    vidaUtilAnios: 8,
+    estado: "Operativo",
+  },
+  {
+    id: "eq-3",
+    nombre: "Set básico instrumental (espejo, sonda, pinza, curetas)",
+    tipoBien: "Instrumental clínico",
+    valorAdquisicion: 240,
+    vidaUtilAnios: 4,
+    estado: "Operativo",
+  },
+];
+
+const PROVEEDORES_INICIALES: ProveedorRegistro[] = [
+  {
+    id: "prv-1",
+    nombre: "Laboratorio Dental Andes",
+    rubro: "Laboratorios dentales",
+    detalleServicio: "Coronas en zirconio, prótesis removibles y guardas",
+    modalidadPago: "Por trabajo / caso",
+    montoReferencial: "Variable según orden",
+    contacto: "0998112233",
+    notas: "Entrega en 4 días hábiles.",
+  },
+  {
+    id: "prv-2",
+    nombre: "Agencia Pulso Dental Digital",
+    rubro: "Servicios de marketing y redes sociales",
+    detalleServicio: "Gestión de Instagram, TikTok, reels educativos y pauta local",
+    modalidadPago: "Mensualidad fija",
+    montoReferencial: "$180/mes",
+    contacto: "0987654321",
+    notas: "Enfocado en pacientes con agenda limitada y citas programadas.",
   },
 ];
 
 const LINEA_DIAGRAMA_TENUE = "#94a3b8";
+
+function calcularAportePatronalIess(prof: ProfesionalEquipo): number {
+  if (!prof.aplicaIess) return 0;
+  const salario = parseFloat(prof.salarioMensual || "0") || 0;
+  const pct = parseFloat(prof.porcentajeIess || "11.15") || 0;
+  return Number(((salario * pct) / 100).toFixed(2));
+}
+
+function calcularDepreciacionMensualEquipo(eq: EquipoInstrumental): number {
+  const vidaMeses = Math.max(1, (eq.vidaUtilAnios || 1) * 12);
+  return Number(((eq.valorAdquisicion || 0) / vidaMeses).toFixed(2));
+}
 
 function colorFijoPorTipo(tipo: "caries" | "restauracion"): ColorMsp {
   return tipo === "caries" ? "rojo" : "azul";
@@ -612,9 +830,7 @@ function obtenerLeyendaAlergia(hc: HistoriaClinicaCompleta): string {
   if (hc.alergicoMedicamentos || hc.medicamentoAlergia?.trim()) {
     const med = hc.medicamentoAlergia?.trim();
     partes.push(
-      med
-        ? `Alérgico a medicamentos: ${med}`
-        : "Alérgico a medicamentos"
+      med ? `Alérgico a medicamentos: ${med}` : "Alérgico a medicamentos"
     );
   }
   if (hc.alergias?.trim()) {
@@ -1024,27 +1240,96 @@ export default function HomePage() {
   const [nuevoMedNombre, setNuevoMedNombre] = useState("");
   const [nuevoMedPresentacion, setNuevoMedPresentacion] = useState("");
 
+  // Profesionales y Equipo
   const [profesionales, setProfesionales] = useState<ProfesionalEquipo[]>(
     PROFESIONALES_INICIALES
   );
   const [profNombre, setProfNombre] = useState("");
   const [profCargo, setProfCargo] = useState<TipoCargoPersonal>("Odontólogo");
   const [profEspecialidad, setProfEspecialidad] = useState("");
+  const [profRegistroAces, setProfRegistroAces] = useState("");
+  const [profCodigoMsp, setProfCodigoMsp] = useState("");
   const [profEsquemaPago, setProfEsquemaPago] =
     useState<EsquemaPagoPersonal>("salario_fijo");
   const [profSalario, setProfSalario] = useState("");
   const [profPorcentaje, setProfPorcentaje] = useState("");
+  const [profAplicaIess, setProfAplicaIess] = useState(true);
+  const [profPorcentajeIess, setProfPorcentajeIess] = useState("11.15");
   const [profHorario, setProfHorario] = useState("");
+
+  // Costos fijos y variables + Cartera de Servicios
+  const [horasAtencionMensual, setHorasAtencionMensual] = useState("160");
+  const [costosFijos, setCostosFijos] = useState<CostoFijoItem[]>(
+    COSTOS_FIJOS_INICIALES
+  );
+  const [nuevoCfConcepto, setNuevoCfConcepto] = useState("");
+  const [nuevoCfMonto, setNuevoCfMonto] = useState("");
+
+  const [costosVariables, setCostosVariables] = useState<CostoVariableItem[]>(
+    COSTOS_VARIABLES_INICIALES
+  );
+  const [nuevoCvConcepto, setNuevoCvConcepto] = useState("");
+  const [nuevoCvMonto, setNuevoCvMonto] = useState("");
 
   const [servicios, setServicios] = useState<ServicioCartera[]>(
     SERVICIOS_INICIALES
   );
   const [srvNombre, setSrvNombre] = useState("");
-  const [srvCategoria, setSrvCategoria] = useState("Operatoria");
+  const [srvEspecialidad, setSrvEspecialidad] =
+    useState<EspecialidadOdontologia>("Odontología General");
   const [srvDuracion, setSrvDuracion] = useState("45");
-  const [srvPrecio, setSrvPrecio] = useState("");
+  const [srvPrecioNormal, setSrvPrecioNormal] = useState("");
+  const [srvPrecioConvenio, setSrvPrecioConvenio] = useState("");
+  const [srvAplicaConvenio, setSrvAplicaConvenio] = useState(true);
+  const [srvCostoVariable, setSrvCostoVariable] = useState("5");
+  const [srvHonorarioTipo, setSrvHonorarioTipo] = useState<
+    "porcentaje" | "fijo"
+  >("porcentaje");
+  const [srvHonorarioValor, setSrvHonorarioValor] = useState("30");
   const [srvDescripcion, setSrvDescripcion] = useState("");
+  const [filtroEspecialidadSrv, setFiltroEspecialidadSrv] =
+    useState<string>("Todas");
 
+  // Inventario dividido en Insumos y Equipos/Instrumental
+  const [tabInventario, setTabInventario] = useState<"insumos" | "equipos">(
+    "insumos"
+  );
+  const [insumos, setInsumos] = useState<InsumoRapido[]>(INSUMOS_INICIALES);
+  const [insNombre, setInsNombre] = useState("");
+  const [insCategoria, setInsCategoria] = useState("Bioseguridad");
+  const [insCantidad, setInsCantidad] = useState("1");
+  const [insStockMinimo, setInsStockMinimo] = useState("2");
+  const [insCostoUnitario, setInsCostoUnitario] = useState("");
+  const [insCaducidad, setInsCaducidad] = useState("");
+
+  const [equipos, setEquipos] = useState<EquipoInstrumental[]>(
+    EQUIPOS_INICIALES
+  );
+  const [eqNombre, setEqNombre] = useState("");
+  const [eqTipoBien, setEqTipoBien] = useState<
+    "Equipo odontológico" | "Instrumental clínico"
+  >("Equipo odontológico");
+  const [eqValorAdquisicion, setEqValorAdquisicion] = useState("");
+  const [eqVidaUtilAnios, setEqVidaUtilAnios] = useState("5");
+  const [eqEstado, setEqEstado] = useState<
+    "Operativo" | "Mantenimiento" | "Por renovar"
+  >("Operativo");
+
+  // Proveedores
+  const [proveedores, setProveedores] = useState<ProveedorRegistro[]>(
+    PROVEEDORES_INICIALES
+  );
+  const [prvNombre, setPrvNombre] = useState("");
+  const [prvRubro, setPrvRubro] = useState<RubroProveedor>(
+    "Servicios de marketing y redes sociales"
+  );
+  const [prvDetalle, setPrvDetalle] = useState("");
+  const [prvModalidad, setPrvModalidad] = useState("Mensualidad fija");
+  const [prvMonto, setPrvMonto] = useState("");
+  const [prvContacto, setPrvContacto] = useState("");
+  const [prvNotas, setPrvNotas] = useState("");
+
+  // Pacientes y HC
   const [pacientes, setPacientes] = useState<Paciente[]>([
     {
       id: "pac-1",
@@ -1158,15 +1443,21 @@ export default function HomePage() {
       nombre: profNombre.trim(),
       cargo: profCargo,
       especialidad: profEspecialidad.trim() || "Práctica general",
+      registroAces: profRegistroAces.trim() || "Pendiente",
+      codigoMsp: profCodigoMsp.trim() || "Pendiente",
       esquemaPago: profEsquemaPago,
       salarioMensual: profSalario.trim() || "0",
       porcentajePago: profPorcentaje.trim() || "0",
+      aplicaIess: profAplicaIess,
+      porcentajeIess: profPorcentajeIess.trim() || "11.15",
       horarioTrabajo: profHorario.trim() || "Por definir",
     };
 
     setProfesionales((prev) => [nuevo, ...prev]);
     setProfNombre("");
     setProfEspecialidad("");
+    setProfRegistroAces("");
+    setProfCodigoMsp("");
     setProfSalario("");
     setProfPorcentaje("");
     setProfHorario("");
@@ -1176,27 +1467,229 @@ export default function HomePage() {
     setProfesionales((prev) => prev.filter((p) => p.id !== id));
   }
 
+  // Cálculos de costos fijos, depreciación y servicios
+  const totalSalariosFijosEquipo = profesionales.reduce(
+    (acc, p) => acc + (parseFloat(p.salarioMensual || "0") || 0),
+    0
+  );
+  const totalAportesIessPatronales = profesionales.reduce(
+    (acc, p) => acc + calcularAportePatronalIess(p),
+    0
+  );
+  const totalDepreciacionMensualEquipos = equipos.reduce(
+    (acc, eq) => acc + calcularDepreciacionMensualEquipo(eq),
+    0
+  );
+  const totalCostosFijosRegistrados = costosFijos.reduce(
+    (acc, cf) => acc + (cf.montoMensual || 0),
+    0
+  );
+  const costoFijoTotalMensualOperativo = Number(
+    (
+      totalCostosFijosRegistrados +
+      totalSalariosFijosEquipo +
+      totalAportesIessPatronales +
+      totalDepreciacionMensualEquipos
+    ).toFixed(2)
+  );
+
+  const horasMes = Math.max(1, parseFloat(horasAtencionMensual || "160") || 160);
+  const minutosMes = horasMes * 60;
+  const costoFijoPorMinuto = costoFijoTotalMensualOperativo / minutosMes;
+
+  function calcularEconomiaServicio(srv: {
+    duracionMin: number;
+    precioNormal: number;
+    precioConvenio: number;
+    aplicaConvenio: boolean;
+    costoVariableDirecto: number;
+    honorarioTipo: "porcentaje" | "fijo";
+    honorarioValor: number;
+  }) {
+    const duracion = Math.max(1, srv.duracionMin || 30);
+    const costoFijoAsignado = duracion * costoFijoPorMinuto;
+    const costoVariable = Math.max(0, srv.costoVariableDirecto || 0);
+    const costoTotalOperativo = costoFijoAsignado + costoVariable;
+
+    const calcularParaTarifa = (precioVenta: number) => {
+      const honorario =
+        srv.honorarioTipo === "fijo"
+          ? Math.max(0, srv.honorarioValor || 0)
+          : (precioVenta * Math.max(0, srv.honorarioValor || 0)) / 100;
+      const utilidadNeta = precioVenta - costoTotalOperativo - honorario;
+      const margenPorcentaje =
+        precioVenta > 0 ? (utilidadNeta / precioVenta) * 100 : 0;
+      return {
+        precioVenta,
+        honorario,
+        utilidadNeta,
+        margenPorcentaje,
+      };
+    };
+
+    const normal = calcularParaTarifa(Math.max(0, srv.precioNormal || 0));
+    const convenio = calcularParaTarifa(Math.max(0, srv.precioConvenio || 0));
+
+    return {
+      costoFijoAsignado,
+      costoVariable,
+      costoTotalOperativo,
+      normal,
+      convenio,
+    };
+  }
+
+  function agregarCostoFijo(e: React.FormEvent) {
+    e.preventDefault();
+    const monto = parseFloat(nuevoCfMonto || "0") || 0;
+    if (!nuevoCfConcepto.trim() || monto <= 0) return;
+    setCostosFijos((prev) => [
+      ...prev,
+      {
+        id: `cf-${Date.now()}`,
+        concepto: nuevoCfConcepto.trim(),
+        montoMensual: monto,
+      },
+    ]);
+    setNuevoCfConcepto("");
+    setNuevoCfMonto("");
+  }
+
+  function eliminarCostoFijo(id: string) {
+    setCostosFijos((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  function agregarCostoVariable(e: React.FormEvent) {
+    e.preventDefault();
+    const monto = parseFloat(nuevoCvMonto || "0") || 0;
+    if (!nuevoCvConcepto.trim() || monto <= 0) return;
+    setCostosVariables((prev) => [
+      ...prev,
+      {
+        id: `cv-${Date.now()}`,
+        concepto: nuevoCvConcepto.trim(),
+        costoUnitario: monto,
+      },
+    ]);
+    setNuevoCvConcepto("");
+    setNuevoCvMonto("");
+  }
+
+  function eliminarCostoVariable(id: string) {
+    setCostosVariables((prev) => prev.filter((c) => c.id !== id));
+  }
+
   function agregarServicioCartera(e: React.FormEvent) {
     e.preventDefault();
     if (!srvNombre.trim()) return;
 
+    const precioNorm = parseFloat(srvPrecioNormal || "0") || 0;
+    const precioConv = srvAplicaConvenio
+      ? parseFloat(srvPrecioConvenio || "0") || precioNorm
+      : precioNorm;
+
     const nuevo: ServicioCartera = {
       id: `srv-${Date.now()}`,
       nombre: srvNombre.trim(),
-      categoria: srvCategoria.trim() || "General",
-      duracionMin: srvDuracion.trim() || "30",
-      precioReferencial: srvPrecio.trim() || "0",
-      descripcion: srvDescripcion.trim() || "Procedimiento del consultorio",
+      especialidad: srvEspecialidad,
+      duracionMin: Math.max(5, parseInt(srvDuracion || "30", 10) || 30),
+      precioNormal: precioNorm,
+      precioConvenio: precioConv,
+      aplicaConvenio: srvAplicaConvenio,
+      costoVariableDirecto: parseFloat(srvCostoVariable || "0") || 0,
+      honorarioTipo: srvHonorarioTipo,
+      honorarioValor: parseFloat(srvHonorarioValor || "0") || 0,
+      descripcion: srvDescripcion.trim() || "Procedimiento odontológico",
     };
 
     setServicios((prev) => [nuevo, ...prev]);
     setSrvNombre("");
-    setSrvPrecio("");
+    setSrvPrecioNormal("");
+    setSrvPrecioConvenio("");
     setSrvDescripcion("");
   }
 
   function eliminarServicioCartera(id: string) {
     setServicios((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  function agregarInsumo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!insNombre.trim()) return;
+    const nuevo: InsumoRapido = {
+      id: `ins-${Date.now()}`,
+      nombre: insNombre.trim(),
+      categoria: insCategoria.trim() || "General",
+      cantidad: Math.max(0, parseInt(insCantidad || "0", 10) || 0),
+      stockMinimo: Math.max(0, parseInt(insStockMinimo || "0", 10) || 0),
+      costoUnitario: parseFloat(insCostoUnitario || "0") || 0,
+      caducidad: insCaducidad.trim() || "Sin fecha",
+    };
+    setInsumos((prev) => [nuevo, ...prev]);
+    setInsNombre("");
+    setInsCantidad("1");
+    setInsCostoUnitario("");
+    setInsCaducidad("");
+  }
+
+  function ajustarCantidadInsumo(id: string, delta: number) {
+    setInsumos((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, cantidad: Math.max(0, item.cantidad + delta) }
+          : item
+      )
+    );
+  }
+
+  function eliminarInsumo(id: string) {
+    setInsumos((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  function agregarEquipoInstrumental(e: React.FormEvent) {
+    e.preventDefault();
+    if (!eqNombre.trim()) return;
+    const nuevo: EquipoInstrumental = {
+      id: `eq-${Date.now()}`,
+      nombre: eqNombre.trim(),
+      tipoBien: eqTipoBien,
+      valorAdquisicion: parseFloat(eqValorAdquisicion || "0") || 0,
+      vidaUtilAnios: Math.max(1, parseFloat(eqVidaUtilAnios || "5") || 5),
+      estado: eqEstado,
+    };
+    setEquipos((prev) => [nuevo, ...prev]);
+    setEqNombre("");
+    setEqValorAdquisicion("");
+    setEqVidaUtilAnios("5");
+  }
+
+  function eliminarEquipoInstrumental(id: string) {
+    setEquipos((prev) => prev.filter((eq) => eq.id !== id));
+  }
+
+  function agregarProveedor(e: React.FormEvent) {
+    e.preventDefault();
+    if (!prvNombre.trim()) return;
+    const nuevo: ProveedorRegistro = {
+      id: `prv-${Date.now()}`,
+      nombre: prvNombre.trim(),
+      rubro: prvRubro,
+      detalleServicio: prvDetalle.trim() || "Prestación de servicios",
+      modalidadPago: prvModalidad.trim() || "Por definir",
+      montoReferencial: prvMonto.trim() || "Por definir",
+      contacto: prvContacto.trim() || "Sin teléfono",
+      notas: prvNotas.trim() || "",
+    };
+    setProveedores((prev) => [nuevo, ...prev]);
+    setPrvNombre("");
+    setPrvDetalle("");
+    setPrvMonto("");
+    setPrvContacto("");
+    setPrvNotas("");
+  }
+
+  function eliminarProveedor(id: string) {
+    setProveedores((prev) => prev.filter((p) => p.id !== id));
   }
 
   function crearPaciente(e: React.FormEvent) {
@@ -2939,6 +3432,24 @@ export default function HomePage() {
     ? obtenerDetalleEnfermedadesSistemicas(pacienteActivo.hc)
     : "";
 
+  const serviciosFiltrados =
+    filtroEspecialidadSrv === "Todas"
+      ? servicios
+      : servicios.filter((s) => s.especialidad === filtroEspecialidadSrv);
+
+  const simulacionEconomica = calcularEconomiaServicio({
+    duracionMin: Math.max(5, parseInt(srvDuracion || "30", 10) || 30),
+    precioNormal: parseFloat(srvPrecioNormal || "0") || 0,
+    precioConvenio: srvAplicaConvenio
+      ? parseFloat(srvPrecioConvenio || "0") ||
+        (parseFloat(srvPrecioNormal || "0") || 0)
+      : parseFloat(srvPrecioNormal || "0") || 0,
+    aplicaConvenio: srvAplicaConvenio,
+    costoVariableDirecto: parseFloat(srvCostoVariable || "0") || 0,
+    honorarioTipo: srvHonorarioTipo,
+    honorarioValor: parseFloat(srvHonorarioValor || "0") || 0,
+  });
+
   return (
     <main className="min-h-screen p-4 max-w-5xl mx-auto space-y-6 bg-sky-50/30">
       <header className="flex items-center justify-between bg-white border border-sky-200 rounded-2xl p-4 shadow-sm">
@@ -3003,9 +3514,12 @@ export default function HomePage() {
             onClick={() => setModuloActivo("inventario")}
             className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
           >
-            <h2 className="font-medium text-sky-950">Inventario de Insumos</h2>
+            <h2 className="font-medium text-sky-950">
+              Inventario (Insumos y Equipos)
+            </h2>
             <p className="text-xs text-sky-700 mt-1">
-              Existencias y materiales del consultorio.
+              Insumos ({insumos.length}) y equipos/instrumental ({equipos.length}
+              ) con depreciación.
             </p>
           </button>
 
@@ -3016,8 +3530,7 @@ export default function HomePage() {
           >
             <h2 className="font-medium text-sky-950">Profesionales y Equipo</h2>
             <p className="text-xs text-sky-700 mt-1">
-              Personal ({profesionales.length}): salarios, porcentajes y
-              horarios.
+              Equipo ({profesionales.length}): ACES/MSP, pago, horarios e IESS.
             </p>
           </button>
 
@@ -3028,8 +3541,19 @@ export default function HomePage() {
           >
             <h2 className="font-medium text-sky-950">Cartera de Servicios</h2>
             <p className="text-xs text-sky-700 mt-1">
-              Procedimientos ({servicios.length}) y prestaciones del
-              consultorio.
+              Especialidades, precios/convenio, costos fijos/variables y
+              utilidad.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setModuloActivo("proveedores")}
+            className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
+          >
+            <h2 className="font-medium text-sky-950">Proveedores</h2>
+            <p className="text-xs text-sky-700 mt-1">
+              Laboratorios, marketing y redes sociales ({proveedores.length}).
             </p>
           </button>
         </section>
@@ -3041,9 +3565,12 @@ export default function HomePage() {
                 "Historias Clínicas y Odontograma"}
               {moduloActivo === "agenda" && "Agenda y Recordatorios"}
               {moduloActivo === "pagos" && "Presupuestos y Pagos"}
-              {moduloActivo === "inventario" && "Inventario de Insumos"}
+              {moduloActivo === "inventario" &&
+                "Inventario: Insumos y Equipos / Instrumental"}
               {moduloActivo === "profesionales" && "Profesionales y Equipo"}
-              {moduloActivo === "servicios" && "Cartera de Servicios"}
+              {moduloActivo === "servicios" &&
+                "Cartera de Servicios, Costos y Utilidad"}
+              {moduloActivo === "proveedores" && "Proveedores del Consultorio"}
             </h2>
             <button
               type="button"
@@ -4494,867 +5021,4 @@ export default function HomePage() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-sky-900 mb-1">
-                              Código CIE-10
-                            </label>
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.codigoCie10}
-                              onChange={(e) =>
-                                actualizarCampoHc("codigoCie10", e.target.value)
-                              }
-                              placeholder="Ej. K02.1 o Z02.1"
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-
-                          <div className="sm:col-span-2">
-                            <label className="block text-xs font-medium text-sky-900 mb-1">
-                              Diagnóstico presuntivo o definitivo (CIE-10)
-                            </label>
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.diagnostico}
-                              onChange={(e) =>
-                                actualizarCampoHc("diagnostico", e.target.value)
-                              }
-                              placeholder="Diagnóstico clínico según CIE-10"
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-                        </div>
-
-                        {(pacienteActivo.hc.diagnosticosRegistrados || [])
-                          .length > 0 && (
-                          <div className="space-y-1.5 pt-1">
-                            <p className="text-xs font-semibold text-sky-900">
-                              Diagnósticos registrados:
-                            </p>
-                            <ul className="space-y-1.5">
-                              {pacienteActivo.hc.diagnosticosRegistrados.map(
-                                (d) => (
-                                  <li
-                                    key={d.id}
-                                    className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
-                                  >
-                                    <div>
-                                      <strong className="text-sky-950">
-                                        {d.codigoCie10}
-                                      </strong>{" "}
-                                      — {d.descripcion}{" "}
-                                      <span className="text-sky-700 font-medium">
-                                        (Pieza: {d.pieza})
-                                      </span>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        eliminarDiagnosticoRegistrado(d.id)
-                                      }
-                                      className="text-red-600 hover:underline shrink-0"
-                                    >
-                                      Quitar
-                                    </button>
-                                  </li>
-                                )
-                              )}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          Plan de tratamiento
-                        </label>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <select
-                            value={pacienteActivo.hc.piezaPlanSeleccionada}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "piezaPlanSeleccionada",
-                                e.target.value
-                              )
-                            }
-                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
-                          >
-                            <option value="">
-                              Pieza dental ({
-                                pacienteActivo.hc.piezasSeleccionadas[0] ||
-                                  "General"
-                              })
-                            </option>
-                            <option value="General">General</option>
-                            {TODAS_LAS_PIEZAS.map((cod) => (
-                              <option key={cod} value={cod}>
-                                Pieza #{cod}
-                              </option>
-                            ))}
-                          </select>
-
-                          <select
-                            value={
-                              PROCEDIMIENTOS_MSP.some(
-                                (p) =>
-                                  p.titulo ===
-                                  pacienteActivo.hc.procedimientoPlanSeleccionado
-                              )
-                                ? pacienteActivo.hc
-                                    .procedimientoPlanSeleccionado
-                                : ""
-                            }
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "procedimientoPlanSeleccionado",
-                                e.target.value
-                              )
-                            }
-                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
-                          >
-                            <option value="">
-                              Seleccionar procedimiento...
-                            </option>
-                            {PROCEDIMIENTOS_MSP.map((p) => (
-                              <option key={p.id} value={p.titulo}>
-                                {p.titulo}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button
-                            type="button"
-                            onClick={agregarItemPlanTratamiento}
-                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
-                          >
-                            + Añadir al plan
-                          </button>
-                        </div>
-
-                        <div>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.procedimientoPlanSeleccionado}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "procedimientoPlanSeleccionado",
-                                e.target.value
-                              )
-                            }
-                            placeholder="O escriba el procedimiento a realizar en la pieza..."
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        {(pacienteActivo.hc.itemsPlanTratamiento || []).length >
-                          0 && (
-                          <ul className="space-y-1.5">
-                            {pacienteActivo.hc.itemsPlanTratamiento.map(
-                              (item) => (
-                                <li
-                                  key={item.id}
-                                  className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
-                                >
-                                  <div>
-                                    <strong className="text-sky-950">
-                                      Pieza {item.pieza}
-                                    </strong>{" "}
-                                    — {item.procedimiento}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      eliminarItemPlanTratamiento(item.id)
-                                    }
-                                    className="text-red-600 hover:underline shrink-0"
-                                  >
-                                    Quitar
-                                  </button>
-                                </li>
-                              )
-                            )}
-                          </ul>
-                        )}
-
-                        <div>
-                          <label className="block text-xs font-medium text-sky-900 mb-1">
-                            Observaciones del plan de tratamiento
-                          </label>
-                          <textarea
-                            rows={2}
-                            value={pacienteActivo.hc.planTratamiento}
-                            onChange={(e) =>
-                              actualizarCampoHc("planTratamiento", e.target.value)
-                            }
-                            placeholder="Secuencia general de tratamientos y citas propuestas"
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {seccionHc === "examenes" && (
-                    <div className="space-y-4 text-sm">
-                      <div>
-                        <label className="block text-xs font-medium text-sky-900 mb-1">
-                          Exámenes complementarios (radiografías, fotografías
-                          clínicas, tomografías, laboratorio)
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={pacienteActivo.hc.examenesComplementarios}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "examenesComplementarios",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
-                          className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-sky-50/70 p-3.5 rounded-xl border border-sky-200">
-                        <label className="cursor-pointer rounded-lg bg-sky-600 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-700">
-                          Tomar foto con cámara
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-
-                        <label className="cursor-pointer rounded-lg border border-sky-300 bg-white text-sky-900 px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-100">
-                          Adjuntar foto o imagen
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-
-                      {pacienteActivo.hc.fotos.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {pacienteActivo.hc.fotos.map((foto) => (
-                            <div
-                              key={foto.id}
-                              className="border border-sky-200 rounded-xl overflow-hidden bg-white"
-                            >
-                              <img
-                                src={foto.dataUrl}
-                                alt={foto.nombreArchivo}
-                                className="w-full h-36 object-cover bg-sky-50"
-                              />
-                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
-                                <div className="truncate">
-                                  <p className="font-medium text-sky-950 truncate">
-                                    {foto.nombreArchivo}
-                                  </p>
-                                  <p className="text-sky-600">{foto.fecha}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarFoto(foto.id)}
-                                  className="text-red-600 hover:underline shrink-0"
-                                >
-                                  Quitar
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {seccionHc === "prescripciones" && (
-                    <div className="space-y-4 text-sm">
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
-                          Lista general de medicamentos
-                        </h4>
-                        <form
-                          onSubmit={agregarMedicamentoCatalogo}
-                          className="grid grid-cols-1 sm:grid-cols-3 gap-2"
-                        >
-                          <input
-                            type="text"
-                            value={nuevoMedNombre}
-                            onChange={(e) => setNuevoMedNombre(e.target.value)}
-                            placeholder="Nombre del medicamento"
-                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                          <input
-                            type="text"
-                            value={nuevoMedPresentacion}
-                            onChange={(e) =>
-                              setNuevoMedPresentacion(e.target.value)
-                            }
-                            placeholder="Concentración / presentación"
-                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                          <button
-                            type="submit"
-                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
-                          >
-                            + Agregar a lista general
-                          </button>
-                        </form>
-
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {catalogoMedicamentos.map((med) => {
-                            const activa =
-                              pacienteActivo.hc.medicamentoPrescribirId ===
-                              med.id;
-                            return (
-                              <button
-                                key={med.id}
-                                type="button"
-                                onClick={() =>
-                                  actualizarCampoHc(
-                                    "medicamentoPrescribirId",
-                                    med.id
-                                  )
-                                }
-                                className={`rounded-lg px-2.5 py-1 text-xs border transition ${
-                                  activa
-                                    ? "bg-sky-200 text-sky-950 border-sky-400 font-semibold"
-                                    : "bg-white text-sky-800 border-sky-200 hover:bg-sky-100"
-                                }`}
-                              >
-                                {med.nombre} · {med.presentacion}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
-                            RP (Medicamentos a prescribir)
-                          </label>
-                          <select
-                            value={pacienteActivo.hc.medicamentoPrescribirId}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "medicamentoPrescribirId",
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
-                          >
-                            <option value="">
-                              Seleccionar medicamento de la lista...
-                            </option>
-                            {catalogoMedicamentos.map((med) => (
-                              <option key={med.id} value={med.id}>
-                                {med.nombre} ({med.presentacion})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
-                            Indicaciones
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.indicacionesPrescripcion}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "indicacionesPrescripcion",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ej. Tomar 1 tableta cada 8 horas por 5 días"
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={agregarPrescripcionPaciente}
-                          className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
-                        >
-                          + Prescribir medicamento
-                        </button>
-                      </div>
-
-                      {(pacienteActivo.hc.prescripciones || []).length > 0 && (
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-white space-y-2">
-                          <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
-                            RP e Indicaciones del paciente
-                          </h4>
-                          <ul className="divide-y divide-sky-100">
-                            {pacienteActivo.hc.prescripciones.map((presc) => (
-                              <li
-                                key={presc.id}
-                                className="py-2.5 flex items-start justify-between gap-3 text-xs"
-                              >
-                                <div className="space-y-0.5">
-                                  <p className="font-semibold text-sky-950">
-                                    RP: {presc.medicamentoTexto}
-                                  </p>
-                                  <p className="text-sky-800">
-                                    <strong>Indicaciones:</strong>{" "}
-                                    {presc.indicaciones}
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    eliminarPrescripcionPaciente(presc.id)
-                                  }
-                                  className="text-red-600 hover:underline shrink-0"
-                                >
-                                  Quitar
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {(() => {
-                    const idxActual = pestanasHc.findIndex(
-                      (p) => p.id === seccionHc
-                    );
-                    const mostrarAtras = idxActual > 0;
-                    const esCierreOdontograma = seccionHc === "odontograma";
-                    const mostrarSiguiente =
-                      !esCierreOdontograma && idxActual < pestanasHc.length - 1;
-
-                    return (
-                      <div className="pt-2 flex items-center justify-between gap-2">
-                        {mostrarAtras ? (
-                          <button
-                            type="button"
-                            onClick={retrocederPestana}
-                            className="rounded-lg border border-sky-300 bg-white text-sky-900 px-4 py-2 text-xs font-medium hover:bg-sky-50"
-                          >
-                            Atrás
-                          </button>
-                        ) : (
-                          <div />
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          {mostrarSiguiente && (
-                            <button
-                              type="button"
-                              onClick={guardarYAvanzarPestana}
-                              className="rounded-lg bg-sky-600 text-white px-4 py-2 text-xs font-medium hover:bg-sky-700"
-                            >
-                              Siguiente
-                            </button>
-                          )}
-
-                          {esCierreOdontograma && (
-                            <button
-                              type="button"
-                              onClick={guardarYAvanzarPestana}
-                              className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-xs font-medium hover:bg-emerald-700"
-                            >
-                              Finalizar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-
-          {moduloActivo === "agenda" && (
-            <div className="space-y-4">
-              <form
-                onSubmit={agregarCita}
-                className="grid grid-cols-1 sm:grid-cols-4 gap-2"
-              >
-                <input
-                  type="text"
-                  required
-                  value={pacienteCita}
-                  onChange={(e) => setPacienteCita(e.target.value)}
-                  placeholder="Nombre del paciente"
-                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                />
-                <input
-                  type="text"
-                  required
-                  value={motivoCita}
-                  onChange={(e) => setMotivoCita(e.target.value)}
-                  placeholder="Motivo de cita"
-                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                />
-                <input
-                  type="time"
-                  value={horaCita}
-                  onChange={(e) => setHoraCita(e.target.value)}
-                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-medium hover:bg-sky-700"
-                >
-                  Agregar cita
-                </button>
-              </form>
-
-              <ul className="divide-y divide-sky-100">
-                {citas.map((cita) => (
-                  <li
-                    key={cita.id}
-                    className="py-2.5 flex items-center justify-between gap-2 text-sm"
-                  >
-                    <div>
-                      <strong className="text-sky-950">{cita.hora}</strong> —{" "}
-                      {cita.paciente} ({cita.motivo})
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCitas((prev) =>
-                          prev.map((item) =>
-                            item.id === cita.id
-                              ? { ...item, confirmada: !item.confirmada }
-                              : item
-                          )
-                        )
-                      }
-                      className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
-                        cita.confirmada
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-sky-100 text-sky-900"
-                      }`}
-                    >
-                      {cita.confirmada ? "Confirmada" : "Marcar recordatorio"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {moduloActivo === "profesionales" && (
-            <div className="space-y-5 text-sm">
-              <form
-                onSubmit={agregarProfesional}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
-              >
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Nombre del profesional o colaborador
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={profNombre}
-                    onChange={(e) => setProfNombre(e.target.value)}
-                    placeholder="Ej. Dra. Sofía Ruiz"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Rol o cargo
-                  </label>
-                  <select
-                    value={profCargo}
-                    onChange={(e) =>
-                      setProfCargo(e.target.value as TipoCargoPersonal)
-                    }
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="Odontólogo">Odontólogo</option>
-                    <option value="Auxiliar / Asistente">
-                      Auxiliar / Asistente
-                    </option>
-                    <option value="Recepcionista">Recepcionista</option>
-                    <option value="Especialista">Especialista</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Especialidad o área
-                  </label>
-                  <input
-                    type="text"
-                    value={profEspecialidad}
-                    onChange={(e) => setProfEspecialidad(e.target.value)}
-                    placeholder="Ej. Ortodoncia, Endodoncia, Asistencia"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Esquema de pago
-                  </label>
-                  <select
-                    value={profEsquemaPago}
-                    onChange={(e) =>
-                      setProfEsquemaPago(
-                        e.target.value as EsquemaPagoPersonal
-                      )
-                    }
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="salario_fijo">Salario fijo</option>
-                    <option value="porcentaje">Porcentaje (%)</option>
-                    <option value="mixto">Salario fijo + Porcentaje (%)</option>
-                  </select>
-                </div>
-
-                {(profEsquemaPago === "salario_fijo" ||
-                  profEsquemaPago === "mixto") && (
-                  <div>
-                    <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Salario mensual ($)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={profSalario}
-                      onChange={(e) => setProfSalario(e.target.value)}
-                      placeholder="Ej. 600"
-                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                  </div>
-                )}
-
-                {(profEsquemaPago === "porcentaje" ||
-                  profEsquemaPago === "mixto") && (
-                  <div>
-                    <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Porcentaje asignado (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.5"
-                      value={profPorcentaje}
-                      onChange={(e) => setProfPorcentaje(e.target.value)}
-                      placeholder="Ej. 35"
-                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                  </div>
-                )}
-
-                <div className="sm:col-span-2 lg:col-span-2">
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Horario de trabajo
-                  </label>
-                  <input
-                    type="text"
-                    value={profHorario}
-                    onChange={(e) => setProfHorario(e.target.value)}
-                    placeholder="Ej. Lun a Vie 09:00 - 17:00 o Sábados 08:00 - 13:00"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
-                  >
-                    + Agregar profesional
-                  </button>
-                </div>
-              </form>
-
-              <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
-                {profesionales.map((prof) => (
-                  <div
-                    key={prof.id}
-                    className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <strong className="text-sky-950">{prof.nombre}</strong>
-                        <span className="rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold">
-                          {prof.cargo}
-                        </span>
-                        <span className="text-xs text-sky-700">
-                          · {prof.especialidad}
-                        </span>
-                      </div>
-                      <p className="text-xs text-sky-800">
-                        <strong>Pago:</strong>{" "}
-                        {prof.esquemaPago === "salario_fijo" &&
-                          `Salario $${prof.salarioMensual || "0"}`}
-                        {prof.esquemaPago === "porcentaje" &&
-                          `Porcentaje ${prof.porcentajePago || "0"}%`}
-                        {prof.esquemaPago === "mixto" &&
-                          `Salario $${prof.salarioMensual || "0"} + ${
-                            prof.porcentajePago || "0"
-                          }%`}
-                        {" · "}
-                        <strong>Horario:</strong> {prof.horarioTrabajo}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => eliminarProfesional(prof.id)}
-                      className="text-xs text-red-600 hover:underline self-start sm:self-center shrink-0"
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {moduloActivo === "servicios" && (
-            <div className="space-y-5 text-sm">
-              <form
-                onSubmit={agregarServicioCartera}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
-              >
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Nombre del procedimiento o servicio
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={srvNombre}
-                    onChange={(e) => setSrvNombre(e.target.value)}
-                    placeholder="Ej. Blanqueamiento dental en consultorio"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Categoría
-                  </label>
-                  <input
-                    type="text"
-                    value={srvCategoria}
-                    onChange={(e) => setSrvCategoria(e.target.value)}
-                    placeholder="Ej. Estética, Cirugía, Endodoncia"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Duración estimada (min)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    step="5"
-                    value={srvDuracion}
-                    onChange={(e) => setSrvDuracion(e.target.value)}
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Valor referencial ($)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={srvPrecio}
-                    onChange={(e) => setSrvPrecio(e.target.value)}
-                    placeholder="Ej. 80"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Descripción breve
-                  </label>
-                  <input
-                    type="text"
-                    value={srvDescripcion}
-                    onChange={(e) => setSrvDescripcion(e.target.value)}
-                    placeholder="Detalles clínicos o alcance del procedimiento"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
-                  >
-                    + Agregar servicio
-                  </button>
-                </div>
-              </form>
-
-              <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
-                {servicios.map((srv) => (
-                  <div
-                    key={srv.id}
-                    className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <strong className="text-sky-950">{srv.nombre}</strong>
-                        <span className="rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold">
-                          {srv.categoria}
-                        </span>
-                        <span className="text-xs font-semibold text-emerald-700">
-                          ${srv.precioReferencial || "0"} · {srv.duracionMin}{" "}
-                          min
-                        </span>
-                      </div>
-                      <p className="text-xs text-sky-800">{srv.descripcion}</p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => eliminarServicioCartera(srv.id)}
-                      className="text-xs text-red-600 hover:underline self-start sm:self-center shrink-0"
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {(moduloActivo === "pagos" || moduloActivo === "inventario") && (
-            <p className="text-sm text-sky-800">
-              Este módulo ya tiene su vista abierta y lista para añadirle
-              campos. Dime si quieres que armemos primero{" "}
-              {moduloActivo === "pagos"
-                ? "el registro de presupuestos y abonos"
-                : "el control de insumos y cantidades"}
-              .
-            </p>
-          )}
-        </section>
-      )}
-    </main>
-  );
-}
+                            <label className="block text-xs font-medium text-sky
