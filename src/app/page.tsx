@@ -6525,4 +6525,1038 @@ export default function HomePage() {
 
                   <div>
                     <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Honorario /
+                      Honorario / comisión profesional
+                    </label>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={srvHonorarioTipo}
+                        onChange={(e) =>
+                          setSrvHonorarioTipo(
+                            e.target.value as "porcentaje" | "fijo"
+                          )
+                        }
+                        className="rounded-lg border border-sky-200 bg-white px-2 py-2 text-xs"
+                      >
+                        <option value="porcentaje">%</option>
+                        <option value="fijo">$</option>
+                      </select>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={srvHonorarioValor}
+                        onChange={(e) => setSrvHonorarioValor(e.target.value)}
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Nota breve del servicio
+                    </label>
+                    <input
+                      type="text"
+                      value={srvDescripcion}
+                      onChange={(e) => setSrvDescripcion(e.target.value)}
+                      placeholder="Alcance o detalle clínico"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white border border-sky-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="space-y-0.5">
+                    <p className="font-semibold text-sky-950">
+                      Vista previa económica: Costo fijo asignado $
+                      {simulacionEconomica.costoFijoAsignado.toFixed(2)} +
+                      Variable ${simulacionEconomica.costoVariable.toFixed(2)}{" "}
+                      = Costo total $
+                      {simulacionEconomica.costoTotalOperativo.toFixed(2)}
+                    </p>
+                    <p className="text-sky-800">
+                      Particular: Utilidad{" "}
+                      <strong
+                        className={
+                          simulacionEconomica.normal.utilidadNeta >= 0
+                            ? "text-emerald-700"
+                            : "text-red-700"
+                        }
+                      >
+                        ${simulacionEconomica.normal.utilidadNeta.toFixed(2)}
+                      </strong>{" "}
+                      ({simulacionEconomica.normal.margenPorcentaje.toFixed(1)}
+                      %)
+                      {srvAplicaConvenio && (
+                        <>
+                          {" · "}Convenio: Utilidad{" "}
+                          <strong
+                            className={
+                              simulacionEconomica.convenio.utilidadNeta >= 0
+                                ? "text-emerald-700"
+                                : "text-red-700"
+                            }
+                          >
+                            $
+                            {simulacionEconomica.convenio.utilidadNeta.toFixed(
+                              2
+                            )}
+                          </strong>{" "}
+                          (
+                          {simulacionEconomica.convenio.margenPorcentaje.toFixed(
+                            1
+                          )}
+                          %)
+                        </>
+                      )}
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-sky-600 text-white px-4 py-2 text-xs font-semibold hover:bg-sky-700 shrink-0"
+                  >
+                    + Agregar a cartera
+                  </button>
+                </div>
+              </form>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                  Servicios registrados ({serviciosFiltrados.length})
+                </h3>
+                <select
+                  value={filtroEspecialidadSrv}
+                  onChange={(e) => setFiltroEspecialidadSrv(e.target.value)}
+                  className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs text-sky-950"
+                >
+                  <option value="Todas">Todas las especialidades</option>
+                  {ESPECIALIDADES_ODONTOLOGIA.map((esp) => (
+                    <option key={esp} value={esp}>
+                      {esp}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {serviciosFiltrados.map((srv) => {
+                  const econ = calcularEconomiaServicio(srv);
+                  return (
+                    <div
+                      key={srv.id}
+                      className="border border-sky-200 rounded-xl p-4 bg-white space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="inline-block rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold mb-1">
+                            {srv.especialidad} · {srv.duracionMin} min
+                          </span>
+                          <h4 className="font-semibold text-sky-950">
+                            {srv.nombre}
+                          </h4>
+                          <p className="text-xs text-sky-700">
+                            {srv.descripcion}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => eliminarServicioCartera(srv.id)}
+                          className="text-xs text-red-600 hover:underline shrink-0"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                        <div className="bg-sky-50/70 border border-sky-100 rounded-lg p-2">
+                          <p className="text-sky-700">Precio particular</p>
+                          <p className="text-sm font-bold text-sky-950">
+                            ${srv.precioNormal.toFixed(2)}
+                          </p>
+                          <p
+                            className={`font-semibold ${
+                              econ.normal.utilidadNeta >= 0
+                                ? "text-emerald-700"
+                                : "text-red-700"
+                            }`}
+                          >
+                            Utilidad: ${econ.normal.utilidadNeta.toFixed(2)} (
+                            {econ.normal.margenPorcentaje.toFixed(1)}%)
+                          </p>
+                        </div>
+
+                        <div className="bg-sky-50/70 border border-sky-100 rounded-lg p-2">
+                          <p className="text-sky-700">Precio convenio</p>
+                          {srv.aplicaConvenio ? (
+                            <>
+                              <p className="text-sm font-bold text-sky-950">
+                                ${srv.precioConvenio.toFixed(2)}
+                              </p>
+                              <p
+                                className={`font-semibold ${
+                                  econ.convenio.utilidadNeta >= 0
+                                    ? "text-emerald-700"
+                                    : "text-red-700"
+                                }`}
+                              >
+                                Utilidad: $
+                                {econ.convenio.utilidadNeta.toFixed(2)} (
+                                {econ.convenio.margenPorcentaje.toFixed(1)}%)
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-xs font-medium text-sky-600 pt-1">
+                              No aplica convenio
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-sky-700">
+                        Costo fijo asignado: $
+                        {econ.costoFijoAsignado.toFixed(2)} · Costo variable: $
+                        {econ.costoVariable.toFixed(2)} · Costo total: $
+                        {econ.costoTotalOperativo.toFixed(2)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {moduloActivo === "inventario" && (
+            <div className="space-y-5 text-sm">
+              {totalAlarmasCompra > 0 && (
+                <div className="rounded-xl bg-red-50 border border-red-300 px-4 py-3 text-xs text-red-900 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <strong className="font-bold">
+                      Alarma de stock — Necesidad de compra ({totalAlarmasCompra}
+                      ):
+                    </strong>{" "}
+                    Existen ítems en stock mínimo o por debajo de la cantidad
+                    mínima configurada.
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTabInventario("insumos")}
+                  className={`rounded-lg px-3.5 py-2 text-xs font-semibold border transition ${
+                    tabInventario === "insumos"
+                      ? "bg-sky-200 text-sky-950 border-sky-400"
+                      : "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100"
+                  }`}
+                >
+                  Insumos y materiales ({insumos.length})
+                  {alarmasInsumos > 0 ? ` · ${alarmasInsumos} alerta(s)` : ""}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTabInventario("equipos")}
+                  className={`rounded-lg px-3.5 py-2 text-xs font-semibold border transition ${
+                    tabInventario === "equipos"
+                      ? "bg-sky-200 text-sky-950 border-sky-400"
+                      : "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100"
+                  }`}
+                >
+                  Equipos e instrumental ({equipos.length})
+                  {alarmasEquipos > 0 ? ` · ${alarmasEquipos} alerta(s)` : ""}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTabInventario("propiedades")}
+                  className={`rounded-lg px-3.5 py-2 text-xs font-semibold border transition ${
+                    tabInventario === "propiedades"
+                      ? "bg-sky-200 text-sky-950 border-sky-400"
+                      : "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100"
+                  }`}
+                >
+                  Uniformes, agasajos y seguros ({rubrosPropiedad.length})
+                </button>
+              </div>
+
+              {tabInventario === "insumos" && (
+                <div className="space-y-4">
+                  <form
+                    onSubmit={agregarInsumo}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
+                  >
+                    <div className="sm:col-span-2 lg:col-span-2">
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Seleccionar insumo odontológico
+                      </label>
+                      <select
+                        value={insSeleccionCatalogo}
+                        onChange={(e) =>
+                          handleSeleccionarInsumoCatalogo(e.target.value)
+                        }
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                      >
+                        {CATALOGO_INSUMOS_ODONTOLOGIA.map((item) => (
+                          <option key={item.nombre} value={item.nombre}>
+                            {item.nombre} ({item.categoria})
+                          </option>
+                        ))}
+                        <option value="__OTRO__">
+                          Otro insumo personalizado...
+                        </option>
+                      </select>
+                      {insSeleccionCatalogo === "__OTRO__" && (
+                        <input
+                          type="text"
+                          required
+                          value={insNombreExtra}
+                          onChange={(e) => setInsNombreExtra(e.target.value)}
+                          placeholder="Escriba el nombre del insumo"
+                          className="mt-1.5 w-full rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-sm"
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Categoría
+                      </label>
+                      <input
+                        type="text"
+                        value={insCategoria}
+                        onChange={(e) => setInsCategoria(e.target.value)}
+                        placeholder="Categoría"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Cantidad actual
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={insCantidad}
+                        onChange={(e) => setInsCantidad(e.target.value)}
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Stock mínimo
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={insStockMinimo}
+                        onChange={(e) => setInsStockMinimo(e.target.value)}
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Costo unit. ($)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={insCostoUnitario}
+                        onChange={(e) => setInsCostoUnitario(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Caducidad
+                      </label>
+                      <input
+                        type="text"
+                        value={insCaducidad}
+                        onChange={(e) => setInsCaducidad(e.target.value)}
+                        placeholder="Ej. 2027-08"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2 lg:col-span-5 flex justify-end">
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-sky-600 text-white px-5 py-2 text-sm font-medium hover:bg-sky-700"
+                      >
+                        + Agregar insumo
+                      </button>
+                    </div>
+                  </form>
+
+                  <ul className="divide-y divide-sky-100 border border-sky-200 rounded-xl bg-white">
+                    {insumos.map((item) => {
+                      const alarma = requiereNecesidadCompra(
+                        item.cantidad,
+                        item.stockMinimo
+                      );
+                      return (
+                        <li
+                          key={item.id}
+                          className={`p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm ${
+                            alarma ? "bg-red-50/60" : ""
+                          }`}
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong className="text-sky-950">
+                                {item.nombre}
+                              </strong>
+                              <span className="text-xs text-sky-700">
+                                ({item.categoria})
+                              </span>
+                              {alarma && (
+                                <span className="rounded-full bg-red-600 text-white px-2.5 py-0.5 text-[11px] font-bold">
+                                  Necesidad de compra
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-sky-700">
+                              Stock actual: <strong>{item.cantidad}</strong> ·
+                              Mínimo requerido:{" "}
+                              <strong>{item.stockMinimo}</strong> · Costo unit.:
+                              ${item.costoUnitario.toFixed(2)} · Caducidad:{" "}
+                              {item.caducidad}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 self-end sm:self-center">
+                            <button
+                              type="button"
+                              onClick={() => ajustarCantidadInsumo(item.id, -1)}
+                              className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-bold text-sky-900 hover:bg-sky-100"
+                            >
+                              -1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => ajustarCantidadInsumo(item.id, 1)}
+                              className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-bold text-sky-900 hover:bg-sky-100"
+                            >
+                              +1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => eliminarInsumo(item.id)}
+                              className="text-xs text-red-600 hover:underline ml-1"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {tabInventario === "equipos" && (
+                <div className="space-y-4">
+                  <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-sky-900">
+                      Depreciación mensual estimada de equipos e instrumental
+                      (se integra a costos fijos del consultorio):
+                    </span>
+                    <strong className="text-sm text-sky-950">
+                      ${totalDepreciacionMensualEquipos.toFixed(2)}/mes
+                    </strong>
+                  </div>
+
+                  <form
+                    onSubmit={agregarEquipoInstrumental}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
+                  >
+                    <div className="sm:col-span-2 lg:col-span-2">
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Seleccionar equipo o instrumental
+                      </label>
+                      <select
+                        value={eqSeleccionCatalogo}
+                        onChange={(e) =>
+                          handleSeleccionarEquipoCatalogo(e.target.value)
+                        }
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                      >
+                        {CATALOGO_EQUIPOS_INSTRUMENTAL.map((eq) => (
+                          <option key={eq.nombre} value={eq.nombre}>
+                            {eq.nombre} ({eq.tipoBien})
+                          </option>
+                        ))}
+                        <option value="__OTRO__">
+                          Otro equipo / instrumental personalizado...
+                        </option>
+                      </select>
+                      {eqSeleccionCatalogo === "__OTRO__" && (
+                        <input
+                          type="text"
+                          required
+                          value={eqNombreExtra}
+                          onChange={(e) => setEqNombreExtra(e.target.value)}
+                          placeholder="Escriba el equipo o instrumental"
+                          className="mt-1.5 w-full rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-sm"
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Tipo de bien
+                      </label>
+                      <select
+                        value={eqTipoBien}
+                        onChange={(e) =>
+                          setEqTipoBien(
+                            e.target.value as
+                              | "Equipo odontológico"
+                              | "Instrumental clínico"
+                          )
+                        }
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <option value="Equipo odontológico">
+                          Equipo odontológico
+                        </option>
+                        <option value="Instrumental clínico">
+                          Instrumental clínico
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Cantidad actual
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={eqCantidad}
+                        onChange={(e) => setEqCantidad(e.target.value)}
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Stock mínimo
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={eqStockMinimo}
+                        onChange={(e) => setEqStockMinimo(e.target.value)}
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Valor compra ($)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={eqValorAdquisicion}
+                        onChange={(e) => setEqValorAdquisicion(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Vida útil (años)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={eqVidaUtilAnios}
+                        onChange={(e) => setEqVidaUtilAnios(e.target.value)}
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Estado
+                      </label>
+                      <select
+                        value={eqEstado}
+                        onChange={(e) =>
+                          setEqEstado(
+                            e.target.value as
+                              | "Operativo"
+                              | "Mantenimiento"
+                              | "Por renovar"
+                          )
+                        }
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <option value="Operativo">Operativo</option>
+                        <option value="Mantenimiento">Mantenimiento</option>
+                        <option value="Por renovar">Por renovar</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-sky-600 text-white px-5 py-2 text-sm font-medium hover:bg-sky-700"
+                      >
+                        + Registrar equipo / instrumental
+                      </button>
+                    </div>
+                  </form>
+
+                  <ul className="divide-y divide-sky-100 border border-sky-200 rounded-xl bg-white">
+                    {equipos.map((eq) => {
+                      const depMensual = calcularDepreciacionMensualEquipo(eq);
+                      const alarma = requiereNecesidadCompra(
+                        eq.cantidad,
+                        eq.stockMinimo
+                      );
+                      return (
+                        <li
+                          key={eq.id}
+                          className={`p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm ${
+                            alarma ? "bg-red-50/60" : ""
+                          }`}
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong className="text-sky-950">
+                                {eq.nombre}
+                              </strong>
+                              <span className="rounded-full bg-sky-100 text-sky-900 px-2 py-0.5 text-[11px] font-semibold">
+                                {eq.tipoBien}
+                              </span>
+                              <span className="text-xs text-sky-700">
+                                · {eq.estado}
+                              </span>
+                              {alarma && (
+                                <span className="rounded-full bg-red-600 text-white px-2.5 py-0.5 text-[11px] font-bold">
+                                  Necesidad de compra
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-sky-700">
+                              Cantidad actual: <strong>{eq.cantidad}</strong> ·
+                              Mínimo requerido: <strong>{eq.stockMinimo}</strong>{" "}
+                              · Valor: ${eq.valorAdquisicion.toFixed(2)} · Vida
+                              útil: {eq.vidaUtilAnios} años · Depreciación:{" "}
+                              <strong>${depMensual.toFixed(2)}/mes</strong>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 self-end sm:self-center">
+                            <button
+                              type="button"
+                              onClick={() => ajustarCantidadEquipo(eq.id, -1)}
+                              className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-bold text-sky-900 hover:bg-sky-100"
+                            >
+                              -1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => ajustarCantidadEquipo(eq.id, 1)}
+                              className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-bold text-sky-900 hover:bg-sky-100"
+                            >
+                              +1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => eliminarEquipoInstrumental(eq.id)}
+                              className="text-xs text-red-600 hover:underline ml-1"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {tabInventario === "propiedades" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-3">
+                      <p className="text-xs text-sky-700">
+                        Total acumulado en rubros (uniformes, agasajos, seguros,
+                        propiedad)
+                      </p>
+                      <p className="text-lg font-bold text-sky-950">
+                        ${totalRubrosPropiedadUsd.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3">
+                      <p className="text-xs text-emerald-800">
+                        Prorrateo mensual incluido en costos fijos
+                      </p>
+                      <p className="text-lg font-bold text-emerald-950">
+                        ${totalProrrateoMensualRubrosFijos.toFixed(2)}/mes
+                      </p>
+                    </div>
+                  </div>
+
+                  <form
+                    onSubmit={agregarRubroPropiedad}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
+                  >
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Categoría de rubro
+                      </label>
+                      <select
+                        value={rubCategoria}
+                        onChange={(e) =>
+                          handleCambiarCategoriaRubro(
+                            e.target.value as CategoriaRubroPropiedad
+                          )
+                        }
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      >
+                        {CATEGORIAS_RUBRO_PROPIEDAD.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Descripción / concepto
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={rubTitulo}
+                        onChange={(e) => setRubTitulo(e.target.value)}
+                        placeholder="Ej. 5 uniformes, agasajo navidad, seguro"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Cantidad / unidades
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={rubCantidad}
+                        onChange={(e) => setRubCantidad(e.target.value)}
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Costo unitario o total ($)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        value={rubCostoUnitario}
+                        onChange={(e) => setRubCostoUnitario(e.target.value)}
+                        placeholder="Ej. 25.00"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Prorrateo (meses)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={rubMesesProrrateo}
+                        onChange={(e) => setRubMesesProrrateo(e.target.value)}
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="bg-white border border-sky-200 rounded-lg px-3 py-2 flex items-center">
+                      <label className="flex items-center gap-2 text-xs font-medium text-sky-950 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={rubIncluirFijos}
+                          onChange={(e) => setRubIncluirFijos(e.target.checked)}
+                          className="rounded border-sky-300"
+                        />
+                        <span>Incluir en costos fijos mensuales</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Notas
+                      </label>
+                      <input
+                        type="text"
+                        value={rubNotas}
+                        onChange={(e) => setRubNotas(e.target.value)}
+                        placeholder="Detalle de póliza, tallas o fecha"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="flex items-end">
+                      <button
+                        type="submit"
+                        className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
+                      >
+                        + Agregar rubro
+                      </button>
+                    </div>
+                  </form>
+
+                  <ul className="divide-y divide-sky-100 border border-sky-200 rounded-xl bg-white">
+                    {rubrosPropiedad.map((rub) => {
+                      const totalRub = calcularTotalRubroUsd(rub);
+                      const mensualRub = calcularMensualRubroUsd(rub);
+                      return (
+                        <li
+                          key={rub.id}
+                          className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong className="text-sky-950">
+                                {rub.titulo}
+                              </strong>
+                              <span className="rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold">
+                                {rub.categoria}
+                              </span>
+                            </div>
+                            <p className="text-xs text-sky-700">
+                              Cantidad: {rub.cantidadUnidades} · Costo unit.: $
+                              {rub.costoUnitarioUsd.toFixed(2)} · Total: $
+                              {totalRub.toFixed(2)} · Prorrateo:{" "}
+                              <strong>${mensualRub.toFixed(2)}/mes</strong> (
+                              {rub.mesesProrrateo} meses) ·{" "}
+                              {rub.incluirEnCostosFijos
+                                ? "En costos fijos"
+                                : "Fuera de costos fijos"}
+                            </p>
+                            {rub.notas && (
+                              <p className="text-xs text-sky-600">{rub.notas}</p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => eliminarRubroPropiedad(rub.id)}
+                            className="text-xs text-red-600 hover:underline self-end sm:self-center"
+                          >
+                            Quitar
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {moduloActivo === "proveedores" && (
+            <div className="space-y-5 text-sm">
+              <form
+                onSubmit={agregarProveedor}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
+              >
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Nombre del proveedor / agencia / laboratorio
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={prvNombre}
+                    onChange={(e) => setPrvNombre(e.target.value)}
+                    placeholder="Ej. Laboratorio Dental Sur o Agencia Creativa"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Rubro
+                  </label>
+                  <select
+                    value={prvRubro}
+                    onChange={(e) =>
+                      setPrvRubro(e.target.value as RubroProveedor)
+                    }
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  >
+                    {RUBROS_PROVEEDOR.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Servicio o trabajo realizado
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={prvDetalle}
+                    onChange={(e) => setPrvDetalle(e.target.value)}
+                    placeholder="Ej. Prótesis, coronas, manejo de redes sociales"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Modalidad de pago
+                  </label>
+                  <input
+                    type="text"
+                    value={prvModalidad}
+                    onChange={(e) => setPrvModalidad(e.target.value)}
+                    placeholder="Ej. Mensualidad fija, por orden, quincenal"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Monto referencial ($)
+                  </label>
+                  <input
+                    type="text"
+                    value={prvMonto}
+                    onChange={(e) => setPrvMonto(e.target.value)}
+                    placeholder="Ej. $150/mes o según trabajo"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Contacto / teléfono
+                  </label>
+                  <input
+                    type="text"
+                    value={prvContacto}
+                    onChange={(e) => setPrvContacto(e.target.value)}
+                    placeholder="Teléfono o correo"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Notas / acuerdos
+                  </label>
+                  <input
+                    type="text"
+                    value={prvNotas}
+                    onChange={(e) => setPrvNotas(e.target.value)}
+                    placeholder="Tiempos de entrega, publicaciones semanales, condiciones"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
+                  >
+                    + Registrar proveedor
+                  </button>
+                </div>
+              </form>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {proveedores.map((prv) => (
+                  <div
+                    key={prv.id}
+                    className="border border-sky-200 rounded-xl p-4 bg-white space-y-1.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="inline-block rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold mb-1">
+                          {prv.rubro}
+                        </span>
+                        <h4 className="font-semibold text-sky-950">
+                          {prv.nombre}
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => eliminarProveedor(prv.id)}
+                        className="text-xs text-red-600 hover:underline shrink-0"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                    <p className="text-xs text-sky-800">
+                      <strong>Servicio:</strong> {prv.detalleServicio}
+                    </p>
+                    <p className="text-xs text-sky-800">
+                      <strong>Pago:</strong> {prv.modalidadPago} ·{" "}
+                      <strong>Monto:</strong> {prv.montoReferencial}
+                    </p>
+                    <p className="text-xs text-sky-700">
+                      <strong>Contacto:</strong> {prv.contacto}
+                    </p>
+                    {prv.notas && (
+                      <p className="text-xs text-sky-600">{prv.notas}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {moduloActivo === "pagos" && (
+            <div className="space-y-3 text-sm">
+              <p className="text-sky-800">
+                Control de presupuestos y saldos en dólares (USD $) por
+                paciente.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-3">
+                  <p className="text-xs text-sky-700">Presupuestos activos</p>
+                  <p className="text-lg font-semibold text-sky-950">$0.00</p>
+                </div>
+                <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-3">
+                  <p className="text-xs text-sky-700">Abonos recibidos</p>
+                  <p className="text-lg font-semibold text-emerald-700">
+                    $0.00
+                  </p>
+                </div>
+                <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-3">
+                  <p className="text-xs text-sky-700">Saldo pendiente</p>
+                  <p className="text-lg font-semibold text-amber-700">$0.00</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+    </main>
+  );
+}
