@@ -5021,4 +5021,1749 @@ export default function HomePage() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-sky
+                            <label className="block text-xs font-medium text-sky-900 mb-1">
+                              Código CIE-10
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.codigoCie10}
+                              onChange={(e) =>
+                                actualizarCampoHc("codigoCie10", e.target.value)
+                              }
+                              placeholder="Ej. K02.1 o Z02.1"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-medium text-sky-900 mb-1">
+                              Diagnóstico presuntivo o definitivo (CIE-10)
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.diagnostico}
+                              onChange={(e) =>
+                                actualizarCampoHc("diagnostico", e.target.value)
+                              }
+                              placeholder="Diagnóstico clínico según CIE-10"
+                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        {(pacienteActivo.hc.diagnosticosRegistrados || [])
+                          .length > 0 && (
+                          <div className="space-y-1.5 pt-1">
+                            <p className="text-xs font-semibold text-sky-900">
+                              Diagnósticos registrados:
+                            </p>
+                            <ul className="space-y-1.5">
+                              {pacienteActivo.hc.diagnosticosRegistrados.map(
+                                (d) => (
+                                  <li
+                                    key={d.id}
+                                    className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
+                                  >
+                                    <div>
+                                      <strong className="text-sky-950">
+                                        {d.codigoCie10}
+                                      </strong>{" "}
+                                      — {d.descripcion}{" "}
+                                      <span className="text-sky-700 font-medium">
+                                        (Pieza: {d.pieza})
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        eliminarDiagnosticoRegistrado(d.id)
+                                      }
+                                      className="text-red-600 hover:underline shrink-0"
+                                    >
+                                      Quitar
+                                    </button>
+                                  </li>
+                                )
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
+                          Plan de tratamiento
+                        </label>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <select
+                            value={pacienteActivo.hc.piezaPlanSeleccionada}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "piezaPlanSeleccionada",
+                                e.target.value
+                              )
+                            }
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Pieza dental ({
+                                pacienteActivo.hc.piezasSeleccionadas[0] ||
+                                  "General"
+                              })
+                            </option>
+                            <option value="General">General</option>
+                            {TODAS_LAS_PIEZAS.map((cod) => (
+                              <option key={cod} value={cod}>
+                                Pieza #{cod}
+                              </option>
+                            ))}
+                          </select>
+
+                          <select
+                            value={
+                              servicios.some(
+                                (s) =>
+                                  s.nombre ===
+                                  pacienteActivo.hc.procedimientoPlanSeleccionado
+                              )
+                                ? pacienteActivo.hc
+                                    .procedimientoPlanSeleccionado
+                                : ""
+                            }
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "procedimientoPlanSeleccionado",
+                                e.target.value
+                              )
+                            }
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Seleccionar de Cartera de Servicios...
+                            </option>
+                            {servicios.map((srv) => (
+                              <option key={srv.id} value={srv.nombre}>
+                                {srv.nombre} (${srv.precioNormal})
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={agregarItemPlanTratamiento}
+                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                          >
+                            + Añadir al plan
+                          </button>
+                        </div>
+
+                        <div>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.procedimientoPlanSeleccionado}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "procedimientoPlanSeleccionado",
+                                e.target.value
+                              )
+                            }
+                            placeholder="O escriba el procedimiento a realizar en la pieza..."
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        {(pacienteActivo.hc.itemsPlanTratamiento || []).length >
+                          0 && (
+                          <ul className="space-y-1.5">
+                            {pacienteActivo.hc.itemsPlanTratamiento.map(
+                              (item) => (
+                                <li
+                                  key={item.id}
+                                  className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
+                                >
+                                  <div>
+                                    <strong className="text-sky-950">
+                                      Pieza {item.pieza}
+                                    </strong>{" "}
+                                    — {item.procedimiento}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      eliminarItemPlanTratamiento(item.id)
+                                    }
+                                    className="text-red-600 hover:underline shrink-0"
+                                  >
+                                    Quitar
+                                  </button>
+                                </li>
+                              )
+                            )}
+                          </ul>
+                        )}
+
+                        <div>
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
+                            Observaciones del plan de tratamiento
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={pacienteActivo.hc.planTratamiento}
+                            onChange={(e) =>
+                              actualizarCampoHc("planTratamiento", e.target.value)
+                            }
+                            placeholder="Secuencia general de tratamientos y citas propuestas"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {seccionHc === "examenes" && (
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <label className="block text-xs font-medium text-sky-900 mb-1">
+                          Exámenes complementarios (radiografías, fotografías
+                          clínicas, tomografías, laboratorio)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={pacienteActivo.hc.examenesComplementarios}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "examenesComplementarios",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
+                          className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-sky-50/70 p-3.5 rounded-xl border border-sky-200">
+                        <label className="cursor-pointer rounded-lg bg-sky-600 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-700">
+                          Tomar foto con cámara
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+
+                        <label className="cursor-pointer rounded-lg border border-sky-300 bg-white text-sky-900 px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-100">
+                          Adjuntar foto o imagen
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {pacienteActivo.hc.fotos.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {pacienteActivo.hc.fotos.map((foto) => (
+                            <div
+                              key={foto.id}
+                              className="border border-sky-200 rounded-xl overflow-hidden bg-white"
+                            >
+                              <img
+                                src={foto.dataUrl}
+                                alt={foto.nombreArchivo}
+                                className="w-full h-36 object-cover bg-sky-50"
+                              />
+                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
+                                <div className="truncate">
+                                  <p className="font-medium text-sky-950 truncate">
+                                    {foto.nombreArchivo}
+                                  </p>
+                                  <p className="text-sky-600">{foto.fecha}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarFoto(foto.id)}
+                                  className="text-red-600 hover:underline shrink-0"
+                                >
+                                  Quitar
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {seccionHc === "prescripciones" && (
+                    <div className="space-y-4 text-sm">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                          Lista general de medicamentos
+                        </h4>
+                        <form
+                          onSubmit={agregarMedicamentoCatalogo}
+                          className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+                        >
+                          <input
+                            type="text"
+                            value={nuevoMedNombre}
+                            onChange={(e) => setNuevoMedNombre(e.target.value)}
+                            placeholder="Nombre del medicamento"
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={nuevoMedPresentacion}
+                            onChange={(e) =>
+                              setNuevoMedPresentacion(e.target.value)
+                            }
+                            placeholder="Concentración / presentación"
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                          >
+                            + Agregar a lista general
+                          </button>
+                        </form>
+
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {catalogoMedicamentos.map((med) => {
+                            const activa =
+                              pacienteActivo.hc.medicamentoPrescribirId ===
+                              med.id;
+                            return (
+                              <button
+                                key={med.id}
+                                type="button"
+                                onClick={() =>
+                                  actualizarCampoHc(
+                                    "medicamentoPrescribirId",
+                                    med.id
+                                  )
+                                }
+                                className={`rounded-lg px-2.5 py-1 text-xs border transition ${
+                                  activa
+                                    ? "bg-sky-200 text-sky-950 border-sky-400 font-semibold"
+                                    : "bg-white text-sky-800 border-sky-200 hover:bg-sky-100"
+                                }`}
+                              >
+                                {med.nombre} · {med.presentacion}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            RP (Medicamentos a prescribir)
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.medicamentoPrescribirId}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "medicamentoPrescribirId",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Seleccionar medicamento de la lista...
+                            </option>
+                            {catalogoMedicamentos.map((med) => (
+                              <option key={med.id} value={med.id}>
+                                {med.nombre} ({med.presentacion})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            Indicaciones
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.indicacionesPrescripcion}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "indicacionesPrescripcion",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej. Tomar 1 tableta cada 8 horas por 5 días"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={agregarPrescripcionPaciente}
+                          className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                        >
+                          + Prescribir medicamento
+                        </button>
+                      </div>
+
+                      {(pacienteActivo.hc.prescripciones || []).length > 0 && (
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-white space-y-2">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            RP e Indicaciones del paciente
+                          </h4>
+                          <ul className="divide-y divide-sky-100">
+                            {pacienteActivo.hc.prescripciones.map((presc) => (
+                              <li
+                                key={presc.id}
+                                className="py-2.5 flex items-start justify-between gap-3 text-xs"
+                              >
+                                <div className="space-y-0.5">
+                                  <p className="font-semibold text-sky-950">
+                                    RP: {presc.medicamentoTexto}
+                                  </p>
+                                  <p className="text-sky-800">
+                                    <strong>Indicaciones:</strong>{" "}
+                                    {presc.indicaciones}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    eliminarPrescripcionPaciente(presc.id)
+                                  }
+                                  className="text-red-600 hover:underline shrink-0"
+                                >
+                                  Quitar
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(() => {
+                    const idxActual = pestanasHc.findIndex(
+                      (p) => p.id === seccionHc
+                    );
+                    const mostrarAtras = idxActual > 0;
+                    const esCierreOdontograma = seccionHc === "odontograma";
+                    const mostrarSiguiente =
+                      !esCierreOdontograma && idxActual < pestanasHc.length - 1;
+
+                    return (
+                      <div className="pt-2 flex items-center justify-between gap-2">
+                        {mostrarAtras ? (
+                          <button
+                            type="button"
+                            onClick={retrocederPestana}
+                            className="rounded-lg border border-sky-300 bg-white text-sky-900 px-4 py-2 text-xs font-medium hover:bg-sky-50"
+                          >
+                            Atrás
+                          </button>
+                        ) : (
+                          <div />
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          {mostrarSiguiente && (
+                            <button
+                              type="button"
+                              onClick={guardarYAvanzarPestana}
+                              className="rounded-lg bg-sky-600 text-white px-4 py-2 text-xs font-medium hover:bg-sky-700"
+                            >
+                              Siguiente
+                            </button>
+                          )}
+
+                          {esCierreOdontograma && (
+                            <button
+                              type="button"
+                              onClick={guardarYAvanzarPestana}
+                              className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-xs font-medium hover:bg-emerald-700"
+                            >
+                              Finalizar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+
+          {moduloActivo === "agenda" && (
+            <div className="space-y-4">
+              <form
+                onSubmit={agregarCita}
+                className="grid grid-cols-1 sm:grid-cols-4 gap-2"
+              >
+                <input
+                  type="text"
+                  required
+                  value={pacienteCita}
+                  onChange={(e) => setPacienteCita(e.target.value)}
+                  placeholder="Nombre del paciente"
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                />
+                <input
+                  type="text"
+                  required
+                  value={motivoCita}
+                  onChange={(e) => setMotivoCita(e.target.value)}
+                  placeholder="Motivo de cita"
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                />
+                <input
+                  type="time"
+                  value={horaCita}
+                  onChange={(e) => setHoraCita(e.target.value)}
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-medium hover:bg-sky-700"
+                >
+                  Agregar cita
+                </button>
+              </form>
+
+              <ul className="divide-y divide-sky-100">
+                {citas.map((cita) => (
+                  <li
+                    key={cita.id}
+                    className="py-2.5 flex items-center justify-between gap-2 text-sm"
+                  >
+                    <div>
+                      <strong className="text-sky-950">{cita.hora}</strong> —{" "}
+                      {cita.paciente} ({cita.motivo})
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCitas((prev) =>
+                          prev.map((item) =>
+                            item.id === cita.id
+                              ? { ...item, confirmada: !item.confirmada }
+                              : item
+                          )
+                        )
+                      }
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                        cita.confirmada
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-sky-100 text-sky-900"
+                      }`}
+                    >
+                      {cita.confirmada ? "Confirmada" : "Marcar recordatorio"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {moduloActivo === "profesionales" && (
+            <div className="space-y-5 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-3">
+                  <p className="text-xs text-sky-700">Salarios fijos del mes</p>
+                  <p className="text-lg font-bold text-sky-950">
+                    ${totalSalariosFijosEquipo.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3">
+                  <p className="text-xs text-amber-800">
+                    Aporte patronal IESS total
+                  </p>
+                  <p className="text-lg font-bold text-amber-950">
+                    ${totalAportesIessPatronales.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3">
+                  <p className="text-xs text-emerald-800">
+                    Nómina fija + Aporte patronal
+                  </p>
+                  <p className="text-lg font-bold text-emerald-950">
+                    $
+                    {(
+                      totalSalariosFijosEquipo + totalAportesIessPatronales
+                    ).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <form
+                onSubmit={agregarProfesional}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
+              >
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Nombre del profesional o colaborador
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profNombre}
+                    onChange={(e) => setProfNombre(e.target.value)}
+                    placeholder="Ej. Dra. Sofía Ruiz"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Rol o cargo
+                  </label>
+                  <select
+                    value={profCargo}
+                    onChange={(e) =>
+                      setProfCargo(e.target.value as TipoCargoPersonal)
+                    }
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="Odontólogo">Odontólogo</option>
+                    <option value="Auxiliar / Asistente">
+                      Auxiliar / Asistente
+                    </option>
+                    <option value="Recepcionista">Recepcionista</option>
+                    <option value="Especialista">Especialista</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Especialidad o área
+                  </label>
+                  <input
+                    type="text"
+                    value={profEspecialidad}
+                    onChange={(e) => setProfEspecialidad(e.target.value)}
+                    placeholder="Ej. Ortodoncia, Endodoncia, Asistencia"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Registro ACES
+                  </label>
+                  <input
+                    type="text"
+                    value={profRegistroAces}
+                    onChange={(e) => setProfRegistroAces(e.target.value)}
+                    placeholder="Ej. ACES-12345"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Código MSP / N.º licencia profesional
+                  </label>
+                  <input
+                    type="text"
+                    value={profCodigoMsp}
+                    onChange={(e) => setProfCodigoMsp(e.target.value)}
+                    placeholder="Código Ministerio de Salud / Licencia"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Esquema de pago
+                  </label>
+                  <select
+                    value={profEsquemaPago}
+                    onChange={(e) =>
+                      setProfEsquemaPago(
+                        e.target.value as EsquemaPagoPersonal
+                      )
+                    }
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="salario_fijo">Salario fijo</option>
+                    <option value="porcentaje">Porcentaje (%)</option>
+                    <option value="mixto">Salario fijo + Porcentaje (%)</option>
+                  </select>
+                </div>
+
+                {(profEsquemaPago === "salario_fijo" ||
+                  profEsquemaPago === "mixto") && (
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Salario mensual ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={profSalario}
+                      onChange={(e) => setProfSalario(e.target.value)}
+                      placeholder="Ej. 600"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                {(profEsquemaPago === "porcentaje" ||
+                  profEsquemaPago === "mixto") && (
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Porcentaje asignado (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={profPorcentaje}
+                      onChange={(e) => setProfPorcentaje(e.target.value)}
+                      placeholder="Ej. 35"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                <div className="bg-white border border-sky-200 rounded-lg p-2.5 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-xs font-medium text-sky-950 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={profAplicaIess}
+                        onChange={(e) => setProfAplicaIess(e.target.checked)}
+                        className="rounded border-sky-300"
+                      />
+                      <span>Aporte patronal IESS</span>
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        disabled={!profAplicaIess}
+                        value={profPorcentajeIess}
+                        onChange={(e) => setProfPorcentajeIess(e.target.value)}
+                        className="w-16 rounded border border-sky-200 px-1.5 py-0.5 text-xs text-right disabled:bg-sky-50"
+                      />
+                      <span className="text-xs text-sky-700">%</span>
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold text-amber-900">
+                    Aporte patronal calculado: $
+                    {calcularAportePatronalIess({
+                      id: "preview",
+                      nombre: "",
+                      cargo: profCargo,
+                      especialidad: "",
+                      registroAces: "",
+                      codigoMsp: "",
+                      esquemaPago: profEsquemaPago,
+                      salarioMensual: profSalario,
+                      porcentajePago: profPorcentaje,
+                      aplicaIess: profAplicaIess,
+                      porcentajeIess: profPorcentajeIess,
+                      horarioTrabajo: "",
+                    }).toFixed(2)}
+                    /mes
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Horario de trabajo
+                  </label>
+                  <input
+                    type="text"
+                    value={profHorario}
+                    onChange={(e) => setProfHorario(e.target.value)}
+                    placeholder="Ej. Lun a Vie 09:00 - 17:00 o Sábados 08:00 - 13:00"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
+                  >
+                    + Agregar profesional
+                  </button>
+                </div>
+              </form>
+
+              <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
+                {profesionales.map((prof) => {
+                  const aporteIess = calcularAportePatronalIess(prof);
+                  const salarioNum = parseFloat(prof.salarioMensual || "0") || 0;
+                  return (
+                    <div
+                      key={prof.id}
+                      className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong className="text-sky-950">{prof.nombre}</strong>
+                          <span className="rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold">
+                            {prof.cargo}
+                          </span>
+                          <span className="text-xs text-sky-700">
+                            · {prof.especialidad}
+                          </span>
+                        </div>
+                        <p className="text-xs text-sky-800">
+                          <strong>ACES:</strong> {prof.registroAces} ·{" "}
+                          <strong>MSP / Licencia:</strong> {prof.codigoMsp}
+                        </p>
+                        <p className="text-xs text-sky-800">
+                          <strong>Pago:</strong>{" "}
+                          {prof.esquemaPago === "salario_fijo" &&
+                            `Salario $${salarioNum.toFixed(2)}`}
+                          {prof.esquemaPago === "porcentaje" &&
+                            `Porcentaje ${prof.porcentajePago || "0"}%`}
+                          {prof.esquemaPago === "mixto" &&
+                            `Salario $${salarioNum.toFixed(2)} + ${
+                              prof.porcentajePago || "0"
+                            }%`}
+                          {" · "}
+                          <strong>Aporte IESS patronal:</strong> $
+                          {aporteIess.toFixed(2)} (
+                          {prof.aplicaIess ? `${prof.porcentajeIess}%` : "No aplica"})
+                          {" · "}
+                          <strong>Horario:</strong> {prof.horarioTrabajo}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => eliminarProfesional(prof.id)}
+                        className="text-xs text-red-600 hover:underline self-start sm:self-center shrink-0"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {moduloActivo === "servicios" && (
+            <div className="space-y-5 text-sm">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="border border-sky-200 rounded-xl p-4 bg-sky-50/60 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                      Cuadro de Costos Fijos Mensuales
+                    </h3>
+                    <span className="text-xs font-bold text-sky-950 bg-white border border-sky-200 rounded-lg px-2.5 py-1">
+                      Total fijo operativo: $
+                      {costoFijoTotalMensualOperativo.toFixed(2)}/mes
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-sky-700">
+                    Incluye costos fijos registrados ($
+                    {totalCostosFijosRegistrados.toFixed(2)}), salarios fijos ($
+                    {totalSalariosFijosEquipo.toFixed(2)}), aporte patronal IESS ($
+                    {totalAportesIessPatronales.toFixed(2)}) y depreciación de
+                    equipos/instrumental (${totalDepreciacionMensualEquipos.toFixed(2)}
+                    ).
+                  </p>
+
+                  <div className="flex items-center gap-2 text-xs">
+                    <label className="text-sky-900 font-medium">
+                      Horas de atención al mes:
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={horasAtencionMensual}
+                      onChange={(e) => setHorasAtencionMensual(e.target.value)}
+                      className="w-20 rounded-lg border border-sky-200 bg-white px-2 py-1 text-xs font-semibold"
+                    />
+                    <span className="text-sky-800">
+                      → Costo fijo/min:{" "}
+                      <strong>${costoFijoPorMinuto.toFixed(3)}</strong>
+                    </span>
+                  </div>
+
+                  <form
+                    onSubmit={agregarCostoFijo}
+                    className="flex flex-col sm:flex-row gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={nuevoCfConcepto}
+                      onChange={(e) => setNuevoCfConcepto(e.target.value)}
+                      placeholder="Ej. Alquiler, luz, internet, seguro"
+                      className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={nuevoCfMonto}
+                      onChange={(e) => setNuevoCfMonto(e.target.value)}
+                      placeholder="Monto $"
+                      className="w-28 rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-sky-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-sky-700"
+                    >
+                      + Costo fijo
+                    </button>
+                  </form>
+
+                  <ul className="divide-y divide-sky-100 bg-white border border-sky-200 rounded-lg">
+                    {costosFijos.map((cf) => (
+                      <li
+                        key={cf.id}
+                        className="px-3 py-2 flex items-center justify-between text-xs"
+                      >
+                        <span className="text-sky-950">{cf.concepto}</span>
+                        <div className="flex items-center gap-3">
+                          <strong className="text-sky-900">
+                            ${cf.montoMensual.toFixed(2)}
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={() => eliminarCostoFijo(cf.id)}
+                            className="text-red-600 hover:underline"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="border border-sky-200 rounded-xl p-4 bg-sky-50/60 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                      Cuadro de Costos Variables (Referencia)
+                    </h3>
+                    <span className="text-xs font-semibold text-sky-950 bg-white border border-sky-200 rounded-lg px-2.5 py-1">
+                      {costosVariables.length} rubros
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-sky-700">
+                    Insumos y materiales consumidos por atención o procedimiento.
+                  </p>
+
+                  <form
+                    onSubmit={agregarCostoVariable}
+                    className="flex flex-col sm:flex-row gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={nuevoCvConcepto}
+                      onChange={(e) => setNuevoCvConcepto(e.target.value)}
+                      placeholder="Ej. Resina, anestesia, guantes, aguja"
+                      className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={nuevoCvMonto}
+                      onChange={(e) => setNuevoCvMonto(e.target.value)}
+                      placeholder="Costo $"
+                      className="w-28 rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-sky-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-sky-700"
+                    >
+                      + Costo var.
+                    </button>
+                  </form>
+
+                  <ul className="divide-y divide-sky-100 bg-white border border-sky-200 rounded-lg">
+                    {costosVariables.map((cv) => (
+                      <li
+                        key={cv.id}
+                        className="px-3 py-2 flex items-center justify-between text-xs"
+                      >
+                        <span className="text-sky-950">{cv.concepto}</span>
+                        <div className="flex items-center gap-3">
+                          <strong className="text-sky-900">
+                            ${cv.costoUnitario.toFixed(2)}
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={() => eliminarCostoVariable(cv.id)}
+                            className="text-red-600 hover:underline"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <form
+                onSubmit={agregarServicioCartera}
+                className="border border-sky-200 rounded-xl p-4 bg-sky-50/70 space-y-4"
+              >
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-950">
+                  Nuevo Procedimiento y Cálculo de Precio / Utilidad
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Nombre del procedimiento
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={srvNombre}
+                      onChange={(e) => setSrvNombre(e.target.value)}
+                      placeholder="Ej. Exodoncia simple, Carilla estética, Corona"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Especialidad odontológica
+                    </label>
+                    <select
+                      value={srvEspecialidad}
+                      onChange={(e) =>
+                        setSrvEspecialidad(
+                          e.target.value as EspecialidadOdontologia
+                        )
+                      }
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    >
+                      {ESPECIALIDADES_ODONTOLOGIA.map((esp) => (
+                        <option key={esp} value={esp}>
+                          {esp}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Duración (minutos)
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      step="5"
+                      value={srvDuracion}
+                      onChange={(e) => setSrvDuracion(e.target.value)}
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Precio normal ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={srvPrecioNormal}
+                      onChange={(e) => setSrvPrecioNormal(e.target.value)}
+                      placeholder="Ej. 50"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Precio de convenio ($)
+                    </label>
+                    <div className="space-y-1">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        disabled={!srvAplicaConvenio}
+                        value={srvPrecioConvenio}
+                        onChange={(e) => setSrvPrecioConvenio(e.target.value)}
+                        placeholder="Ej. 40"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm disabled:bg-sky-50"
+                      />
+                      <label className="flex items-center gap-1.5 text-[11px] text-sky-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={srvAplicaConvenio}
+                          onChange={(e) =>
+                            setSrvAplicaConvenio(e.target.checked)
+                          }
+                          className="rounded border-sky-300"
+                        />
+                        <span>Habilitar tarifa por convenio</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Costo variable del procedimiento ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={srvCostoVariable}
+                      onChange={(e) => setSrvCostoVariable(e.target.value)}
+                      placeholder="Ej. 8.50"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Honorarios del profesional
+                    </label>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={srvHonorarioTipo}
+                        onChange={(e) =>
+                          setSrvHonorarioTipo(
+                            e.target.value as "porcentaje" | "fijo"
+                          )
+                        }
+                        className="rounded-lg border border-sky-200 bg-white px-2 py-2 text-xs"
+                      >
+                        <option value="porcentaje">%</option>
+                        <option value="fijo">$ Fijo</option>
+                      </select>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={srvHonorarioValor}
+                        onChange={(e) => setSrvHonorarioValor(e.target.value)}
+                        className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Descripción clínica / condiciones
+                    </label>
+                    <input
+                      type="text"
+                      value={srvDescripcion}
+                      onChange={(e) => setSrvDescripcion(e.target.value)}
+                      placeholder="Detalles del procedimiento o condiciones del convenio"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
+                    >
+                      + Guardar en cartera
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-sky-200 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <p className="text-sky-700">
+                      Costo fijo prorrateado ({srvDuracion || 30} min)
+                    </p>
+                    <p className="font-bold text-sky-950">
+                      ${simulacionEconomica.costoFijoAsignado.toFixed(2)}
+                    </p>
+                    <p className="text-sky-700 mt-1">
+                      Costo variable: $
+                      {simulacionEconomica.costoVariable.toFixed(2)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-sky-950">
+                      Escenario Precio Normal ($
+                      {simulacionEconomica.normal.precioVenta.toFixed(2)})
+                    </p>
+                    <p className="text-sky-800">
+                      Honorario: $
+                      {simulacionEconomica.normal.honorario.toFixed(2)}
+                    </p>
+                    <p
+                      className={`font-bold ${
+                        simulacionEconomica.normal.utilidadNeta >= 0
+                          ? "text-emerald-700"
+                          : "text-red-600"
+                      }`}
+                    >
+                      Utilidad: $
+                      {simulacionEconomica.normal.utilidadNeta.toFixed(2)} (
+                      {simulacionEconomica.normal.margenPorcentaje.toFixed(1)}
+                      %)
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-sky-950">
+                      Escenario Convenio ($
+                      {simulacionEconomica.convenio.precioVenta.toFixed(2)})
+                    </p>
+                    <p className="text-sky-800">
+                      Honorario: $
+                      {simulacionEconomica.convenio.honorario.toFixed(2)}
+                    </p>
+                    <p
+                      className={`font-bold ${
+                        simulacionEconomica.convenio.utilidadNeta >= 0
+                          ? "text-emerald-700"
+                          : "text-red-600"
+                      }`}
+                    >
+                      Utilidad: $
+                      {simulacionEconomica.convenio.utilidadNeta.toFixed(2)} (
+                      {simulacionEconomica.convenio.margenPorcentaje.toFixed(1)}
+                      %)
+                    </p>
+                  </div>
+                </div>
+              </form>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-sky-950">
+                  Procedimientos registrados ({serviciosFiltrados.length})
+                </span>
+                <select
+                  value={filtroEspecialidadSrv}
+                  onChange={(e) => setFiltroEspecialidadSrv(e.target.value)}
+                  className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs text-sky-950"
+                >
+                  <option value="Todas">Todas las especialidades</option>
+                  {ESPECIALIDADES_ODONTOLOGIA.map((esp) => (
+                    <option key={esp} value={esp}>
+                      {esp}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
+                {serviciosFiltrados.map((srv) => {
+                  const econ = calcularEconomiaServicio(srv);
+                  return (
+                    <div
+                      key={srv.id}
+                      className="p-3.5 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong className="text-sky-950">{srv.nombre}</strong>
+                          <span className="rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold">
+                            {srv.especialidad}
+                          </span>
+                          <span className="text-xs font-semibold text-sky-800">
+                            {srv.duracionMin} min
+                          </span>
+                        </div>
+                        <p className="text-xs text-sky-800">
+                          <strong>Precio normal:</strong> $
+                          {srv.precioNormal.toFixed(2)}
+                          {srv.aplicaConvenio && (
+                            <>
+                              {" · "}
+                              <strong>Precio convenio:</strong> $
+                              {srv.precioConvenio.toFixed(2)}
+                            </>
+                          )}
+                          {" · "}
+                          <strong>Costo fijo asig.:</strong> $
+                          {econ.costoFijoAsignado.toFixed(2)} ·{" "}
+                          <strong>Costo var.:</strong> $
+                          {econ.costoVariable.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-sky-800">
+                          <strong>Utilidad normal:</strong>{" "}
+                          <span
+                            className={`font-semibold ${
+                              econ.normal.utilidadNeta >= 0
+                                ? "text-emerald-700"
+                                : "text-red-600"
+                            }`}
+                          >
+                            ${econ.normal.utilidadNeta.toFixed(2)} (
+                            {econ.normal.margenPorcentaje.toFixed(1)}%)
+                          </span>
+                          {srv.aplicaConvenio && (
+                            <>
+                              {" · "}
+                              <strong>Utilidad convenio:</strong>{" "}
+                              <span
+                                className={`font-semibold ${
+                                  econ.convenio.utilidadNeta >= 0
+                                    ? "text-emerald-700"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                ${econ.convenio.utilidadNeta.toFixed(2)} (
+                                {econ.convenio.margenPorcentaje.toFixed(1)}%)
+                              </span>
+                            </>
+                          )}
+                        </p>
+                        <p className="text-xs text-sky-700">{srv.descripcion}</p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => eliminarServicioCartera(srv.id)}
+                        className="text-xs text-red-600 hover:underline self-start md:self-center shrink-0"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {moduloActivo === "inventario" && (
+            <div className="space-y-5 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTabInventario("insumos")}
+                    className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold border transition ${
+                      tabInventario === "insumos"
+                        ? "bg-sky-200 text-sky-950 border-sky-400"
+                        : "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100"
+                    }`}
+                  >
+                    Insumos y materiales ({insumos.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTabInventario("equipos")}
+                    className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold border transition ${
+                      tabInventario === "equipos"
+                        ? "bg-sky-200 text-sky-950 border-sky-400"
+                        : "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100"
+                    }`}
+                  >
+                    Equipos e instrumental ({equipos.length})
+                  </button>
+                </div>
+
+                <span className="text-xs font-semibold text-sky-950 bg-sky-50 border border-sky-200 rounded-lg px-3 py-1.5">
+                  Depreciación mensual total: $
+                  {totalDepreciacionMensualEquipos.toFixed(2)}/mes
+                </span>
+              </div>
+
+              {tabInventario === "insumos" ? (
+                <div className="space-y-4">
+                  <form
+                    onSubmit={agregarInsumo}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
+                  >
+                    <input
+                      type="text"
+                      required
+                      value={insNombre}
+                      onChange={(e) => setInsNombre(e.target.value)}
+                      placeholder="Insumo o material de consumo rápido"
+                      className="sm:col-span-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={insCategoria}
+                      onChange={(e) => setInsCategoria(e.target.value)}
+                      placeholder="Categoría"
+                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      value={insCantidad}
+                      onChange={(e) => setInsCantidad(e.target.value)}
+                      placeholder="Cantidad"
+                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={insCostoUnitario}
+                      onChange={(e) => setInsCostoUnitario(e.target.value)}
+                      placeholder="Costo unit. $"
+                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
+                    >
+                      + Agregar insumo
+                    </button>
+                  </form>
+
+                  <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
+                    {insumos.map((item) => {
+                      const stockBajo = item.cantidad <= item.stockMinimo;
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong className="text-sky-950">
+                                {item.nombre}
+                              </strong>
+                              <span className="rounded-full bg-sky-100 text-sky-900 px-2 py-0.5 text-[11px] font-medium">
+                                {item.categoria}
+                              </span>
+                              {stockBajo && (
+                                <span className="rounded-full bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-[11px] font-semibold">
+                                  Stock bajo (mín. {item.stockMinimo})
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-sky-700">
+                              Costo unitario: ${item.costoUnitario.toFixed(2)}{" "}
+                              · Valor stock: $
+                              {(item.cantidad * item.costoUnitario).toFixed(2)}{" "}
+                              · Caducidad: {item.caducidad}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => ajustarCantidadInsumo(item.id, -1)}
+                              className="w-7 h-7 rounded-lg border border-sky-200 bg-sky-50 text-sky-950 font-bold hover:bg-sky-100"
+                            >
+                              -
+                            </button>
+                            <span className="min-w-8 text-center font-bold text-sky-950">
+                              {item.cantidad}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => ajustarCantidadInsumo(item.id, 1)}
+                              className="w-7 h-7 rounded-lg border border-sky-200 bg-sky-50 text-sky-950 font-bold hover:bg-sky-100"
+                            >
+                              +
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => eliminarInsumo(item.id)}
+                              className="ml-2 text-xs text-red-600 hover:underline"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <form
+                    onSubmit={agregarEquipoInstrumental}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
+                  >
+                    <input
+                      type="text"
+                      required
+                      value={eqNombre}
+                      onChange={(e) => setEqNombre(e.target.value)}
+                      placeholder="Equipo odontológico o instrumental"
+                      className="sm:col-span-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <select
+                      value={eqTipoBien}
+                      onChange={(e) =>
+                        setEqTipoBien(
+                          e.target.value as
+                            | "Equipo odontológico"
+                            | "Instrumental clínico"
+                        )
+                      }
+                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="Equipo odontológico">
+                        Equipo odontológico
+                      </option>
+                      <option value="Instrumental clínico">
+                        Instrumental clínico
+                      </option>
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={eqValorAdquisicion}
+                      onChange={(e) => setEqValorAdquisicion(e.target.value)}
+                      placeholder="Valor compra $"
+                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={eqVidaUtilAnios}
+                      onChange={(e) => setEqVidaUtilAnios(e.target.value)}
+                      placeholder="Vida útil (años)"
+                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
+                    >
+                      + Registrar bien
+                    </button>
+                  </form>
+
+                  <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
+                    {equipos.map((eq) => {
+                      const depMensual = calcularDepreciacionMensualEquipo(eq);
+                      return (
+                        <div
+                          key={eq.id}
+                          className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong className="text-sky-950">
+                                {eq.nombre}
+                              </strong>
+                              <span className="rounded-full bg-sky-100 text-sky-900 px-2 py-0.5 text-[11px] font-medium">
+                                {eq.tipoBien}
+                              </span>
+                              <span className="text-xs text-sky-700">
+                                · Estado: {eq.estado}
+                              </span>
+                            </div>
+                            <p className="text-xs text-sky-800">
+                              <strong>Valor adquisición:</strong> $
+                              {eq.valorAdquisicion.toFixed(2)} ·{" "}
+                              <strong>Vida útil:</strong> {eq.vidaUtilAnios}{" "}
+                              años · <strong>Depreciación mensual:</strong>{" "}
+                              <span className="font-semibold text-sky-950">
+                                ${depMensual.toFixed(2)}/mes
+                              </span>
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => eliminarEquipoInstrumental(eq.id)}
+                            className="text-xs text-red-600 hover:underline self-start sm:self-center"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {moduloActivo === "proveedores" && (
+            <div className="space-y-5 text-sm">
+              <form
+                onSubmit={agregarProveedor}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
+              >
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Nombre del proveedor o agencia
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={prvNombre}
+                    onChange={(e) => setPrvNombre(e.target.value)}
+                    placeholder="Ej. Estudio Creativo Dental / Lab. Protesis"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Rubro / categoría
+                  </label>
+                  <select
+                    value={prvRubro}
+                    onChange={(e) =>
+                      setPrvRubro(e.target.value as RubroProveedor)
+                    }
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  >
+                    {RUBROS_PROVEEDOR.map((rb) => (
+                      <option key={rb} value={rb}>
+                        {rb}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Servicio o suministro principal
+                  </label>
+                  <input
+                    type="text"
+                    value={prvDetalle}
+                    onChange={(e) => setPrvDetalle(e.target.value)}
+                    placeholder="Ej. Reels, campañas, coronas, resinas"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Modalidad de pago
+                  </label>
+                  <input
+                    type="text"
+                    value={prvModalidad}
+                    onChange={(e) => setPrvModalidad(e.target.value)}
+                    placeholder="Ej. Mensualidad fija, Por orden, Contado"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Monto referencial
+                  </label>
+                  <input
+                    type="text"
+                    value={prvMonto}
+                    onChange={(e) => setPrvMonto(e.target.value)}
+                    placeholder="Ej. $150/mes o según presupuesto"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Teléfono / Contacto
+                  </label>
+                  <input
+                    type="text"
+                    value={prvContacto}
+                    onChange={(e) => setPrvContacto(e.target.value)}
+                    placeholder="WhatsApp, correo o asesor"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Notas adicionales
+                  </label>
+                  <input
+                    type="text"
+                    value={prvNotas}
+                    onChange={(e) => setPrvNotas(e.target.value)}
+                    placeholder="Frecuencia de entrega, condiciones o acuerdos"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
+                  >
+                    + Guardar proveedor
+                  </button>
+                </div>
+              </form>
+
+              <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
+                {proveedores.map((prv) => (
+                  <div
+                    key={prv.id}
+                    className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <strong className="text-sky-950">{prv.nombre}</strong>
+                        <span className="rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold">
+                          {prv.rubro}
+                        </span>
+                        <span className="text-xs text-sky-700">
+                          · Contacto: {prv.contacto}
+                        </span>
+                      </div>
+                      <p className="text-xs text-sky-800">
+                        <strong>Servicio:</strong> {prv.detalleServicio} ·{" "}
+                        <strong>Pago:</strong> {prv.modalidadPago} (
+                        {prv.montoReferencial})
+                      </p>
+                      {prv.notas && (
+                        <p className="text-xs text-sky-700">{prv.notas}</p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => eliminarProveedor(prv.id)}
+                      className="text-xs text-red-600 hover:underline self-start sm:self-center shrink-0"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {moduloActivo === "pagos" && (
+            <div className="space-y-3 text-sm">
+              <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-4">
+                <p className="font-medium text-sky-950">
+                  Control de presupuestos, abonos y saldo pendiente
+                </p>
+                <p className="text-xs text-sky-700 mt-1">
+                  Registra el valor total del plan de tratamiento, los pagos
+                  recibidos y el saldo restante por paciente.
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+    </main>
+  );
+}
