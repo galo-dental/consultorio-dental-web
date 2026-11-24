@@ -114,6 +114,8 @@ type EsquemaPagoPersonal = "salario_fijo" | "porcentaje" | "mixto";
 interface ProfesionalEquipo {
   id: string;
   nombre: string;
+  telefono: string;
+  direccion: string;
   cargo: TipoCargoPersonal;
   especialidad: string;
   registroAces: string;
@@ -164,6 +166,16 @@ interface ServicioCartera {
   descripcion: string;
 }
 
+interface CatalogoInsumoItem {
+  nombre: string;
+  categoria: string;
+}
+
+interface CatalogoEquipoItem {
+  nombre: string;
+  tipoBien: "Equipo odontológico" | "Instrumental clínico";
+}
+
 interface InsumoRapido {
   id: string;
   nombre: string;
@@ -178,9 +190,31 @@ interface EquipoInstrumental {
   id: string;
   nombre: string;
   tipoBien: "Equipo odontológico" | "Instrumental clínico";
+  cantidad: number;
+  stockMinimo: number;
   valorAdquisicion: number;
   vidaUtilAnios: number;
   estado: "Operativo" | "Mantenimiento" | "Por renovar";
+}
+
+type CategoriaRubroPropiedad =
+  | "Uniformes (dotación 5 uniformes)"
+  | "Agasajos - Cumpleaños personal"
+  | "Agasajos - Fiestas navideñas"
+  | "Agasajos - Aniversario clínica"
+  | "Seguro privado - Salud"
+  | "Seguro privado - Contra demandas"
+  | "Propiedad o equipo del consultorio";
+
+interface RubroPropiedadSeguro {
+  id: string;
+  titulo: string;
+  categoria: CategoriaRubroPropiedad;
+  cantidadUnidades: number;
+  costoUnitarioUsd: number;
+  mesesProrrateo: number;
+  incluirEnCostosFijos: boolean;
+  notas: string;
 }
 
 type RubroProveedor =
@@ -301,6 +335,60 @@ interface Cita {
   confirmada: boolean;
 }
 
+const CATALOGO_INSUMOS_ODONTOLOGIA: CatalogoInsumoItem[] = [
+  { nombre: "Guantes de nitrilo (caja x100)", categoria: "Bioseguridad" },
+  { nombre: "Guantes de látex (caja x100)", categoria: "Bioseguridad" },
+  { nombre: "Mascarillas quirúrgicas / KN95 (caja x50)", categoria: "Bioseguridad" },
+  { nombre: "Gorros descartables (paquete x100)", categoria: "Bioseguridad" },
+  { nombre: "Eyectores de saliva descartables (bolsa x100)", categoria: "Bioseguridad" },
+  { nombre: "Campos quirúrgicos / baberos descartables", categoria: "Bioseguridad" },
+  { nombre: "Bolsas para esterilización en autoclave", categoria: "Esterilización" },
+  { nombre: "Hipoclorito de sodio / desinfectante clínico", categoria: "Bioseguridad" },
+  { nombre: "Anestesia lidocaína 2% con epinefrina (caja x50)", categoria: "Anestesia" },
+  { nombre: "Anestesia mepivacaína / articaína (caja x50)", categoria: "Anestesia" },
+  { nombre: "Agujas cortas / largas para cárpule (caja x100)", categoria: "Anestesia" },
+  { nombre: "Anestésico tópico en gel", categoria: "Anestesia" },
+  { nombre: "Resina compuesta nanohíbrida (jeringa)", categoria: "Operatoria" },
+  { nombre: "Resina fluida / flow (jeringa)", categoria: "Operatoria" },
+  { nombre: "Ácido grabador fosfórico al 37%", categoria: "Operatoria" },
+  { nombre: "Sistema adhesivo universal / bonding", categoria: "Operatoria" },
+  { nombre: "Microbrush / aplicadores descartables", categoria: "Operatoria" },
+  { nombre: "Discos y gomas para pulido de resina", categoria: "Operatoria" },
+  { nombre: "Ionómero de vidrio restaurador / cementación", categoria: "Operatoria" },
+  { nombre: "Hidróxido de calcio fraguable", categoria: "Endodoncia" },
+  { nombre: "Conos de gutapercha / conos de papel", categoria: "Endodoncia" },
+  { nombre: "Pasta profiláctica (envase / tubos)", categoria: "Profilaxis" },
+  { nombre: "Rollos de algodón odontológicos (paquete)", categoria: "Profilaxis" },
+  { nombre: "Gasas estériles (paquete)", categoria: "Cirugía" },
+  { nombre: "Hojas de bisturí N° 15 / sutura", categoria: "Cirugía" },
+  { nombre: "Alginato para impresión dental", categoria: "Rehabilitación" },
+  { nombre: "Yeso tipo III / IV para modelos", categoria: "Rehabilitación" },
+  { nombre: "Silicona de impresión (masilla y fluida)", categoria: "Rehabilitación" },
+];
+
+const CATALOGO_EQUIPOS_INSTRUMENTAL: CatalogoEquipoItem[] = [
+  { nombre: "Unidad / sillón dental completo", tipoBien: "Equipo odontológico" },
+  { nombre: "Autoclave de vapor clase B", tipoBien: "Equipo odontológico" },
+  { nombre: "Lámpara de fotocurado LED inalámbrica", tipoBien: "Equipo odontológico" },
+  { nombre: "Ultrasonido / scaler periodontal", tipoBien: "Equipo odontológico" },
+  { nombre: "Compresor odontológico silencioso libre de aceite", tipoBien: "Equipo odontológico" },
+  { nombre: "Pieza de mano de alta velocidad (turbina)", tipoBien: "Equipo odontológico" },
+  { nombre: "Pieza de mano de baja velocidad (micromotor + contraángulo + pieza recta)", tipoBien: "Equipo odontológico" },
+  { nombre: "Localizador apical electrónico", tipoBien: "Equipo odontológico" },
+  { nombre: "Motor de endodoncia rotatoria", tipoBien: "Equipo odontológico" },
+  { nombre: "Equipo de rayos X dental / sensor RVG", tipoBien: "Equipo odontológico" },
+  { nombre: "Selladora de bolsas para esterilización", tipoBien: "Equipo odontológico" },
+  { nombre: "Juego básico de exploración (espejo, sonda, pinza, cucharilla)", tipoBien: "Instrumental clínico" },
+  { nombre: "Jeringa cárpule metálica", tipoBien: "Instrumental clínico" },
+  { nombre: "Espátulas y condensadores para resina", tipoBien: "Instrumental clínico" },
+  { nombre: "Loseta de vidrio y espátula para cemento", tipoBien: "Instrumental clínico" },
+  { nombre: "Juego de fórceps y elevadores para exodoncia", tipoBien: "Instrumental clínico" },
+  { nombre: "Curetas periodontales / raspadores (Gracey / universal)", tipoBien: "Instrumental clínico" },
+  { nombre: "Kit de limas de endodoncia y regla calibradora", tipoBien: "Instrumental clínico" },
+  { nombre: "Arco, perforadora y pinza portagrapas para dique de goma", tipoBien: "Instrumental clínico" },
+  { nombre: "Cubetas para impresión (metálicas / plásticas)", tipoBien: "Instrumental clínico" },
+];
+
 const PAISES = [
   "Ecuador", "Colombia", "Perú", "Venezuela", "Argentina", "Bolivia",
   "Brasil", "Chile", "Costa Rica", "Cuba", "El Salvador", "España",
@@ -371,6 +459,16 @@ const ESPECIALIDADES_ODONTOLOGIA: EspecialidadOdontologia[] = [
   "Odontopediatría",
   "Implantología",
   "Diagnóstico y Radiología",
+];
+
+const CATEGORIAS_RUBRO_PROPIEDAD: CategoriaRubroPropiedad[] = [
+  "Uniformes (dotación 5 uniformes)",
+  "Agasajos - Cumpleaños personal",
+  "Agasajos - Fiestas navideñas",
+  "Agasajos - Aniversario clínica",
+  "Seguro privado - Salud",
+  "Seguro privado - Contra demandas",
+  "Propiedad o equipo del consultorio",
 ];
 
 const RUBROS_PROVEEDOR: RubroProveedor[] = [
@@ -499,6 +597,8 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
   {
     id: "prof-1",
     nombre: "Dra. Valeria Paredes",
+    telefono: "0994123456",
+    direccion: "Av. Mariana de Jesús y Alemania, Quito",
     cargo: "Odontólogo",
     especialidad: "Odontología general y estética",
     registroAces: "ACES-OD-10482",
@@ -513,10 +613,12 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
   {
     id: "prof-2",
     nombre: "Camila Herrera",
+    telefono: "0987321987",
+    direccion: "Sector La Carolina, Quito",
     cargo: "Auxiliar / Asistente",
     especialidad: "Asistencia clínica y esterilización",
     registroAces: "ACES-AX-20911",
-    codigoMsp: "MSP-1729384756",
+    codigoMsp: "",
     esquemaPago: "salario_fijo",
     salarioMensual: "520",
     porcentajePago: "0",
@@ -527,10 +629,12 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
   {
     id: "prof-3",
     nombre: "Andrea López",
+    telefono: "0991122334",
+    direccion: "Sector Iñaquito, Quito",
     cargo: "Recepcionista",
     especialidad: "Agenda, caja y atención al paciente",
     registroAces: "N/A",
-    codigoMsp: "N/A",
+    codigoMsp: "",
     esquemaPago: "salario_fijo",
     salarioMensual: "500",
     porcentajePago: "0",
@@ -541,6 +645,8 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
   {
     id: "prof-4",
     nombre: "Dr. Esteban Molina",
+    telefono: "0996554433",
+    direccion: "González Suárez, Quito",
     cargo: "Especialista",
     especialidad: "Endodoncia",
     registroAces: "ACES-ES-30554",
@@ -551,6 +657,49 @@ const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
     aplicaIess: false,
     porcentajeIess: "11.15",
     horarioTrabajo: "Mié y Vie 14:00 - 19:00",
+  },
+];
+
+const RUBROS_PROPIEDAD_INICIALES: RubroPropiedadSeguro[] = [
+  {
+    id: "rub-1",
+    titulo: "Dotación de 5 uniformes clínicos",
+    categoria: "Uniformes (dotación 5 uniformes)",
+    cantidadUnidades: 5,
+    costoUnitarioUsd: 24,
+    mesesProrrateo: 12,
+    incluirEnCostosFijos: true,
+    notas: "5 uniformes completos para el equipo.",
+  },
+  {
+    id: "rub-2",
+    titulo: "Agasajos cumpleaños del personal",
+    categoria: "Agasajos - Cumpleaños personal",
+    cantidadUnidades: 1,
+    costoUnitarioUsd: 180,
+    mesesProrrateo: 12,
+    incluirEnCostosFijos: true,
+    notas: "Presupuesto anual prorrateado mensualmente.",
+  },
+  {
+    id: "rub-3",
+    titulo: "Agasajos fiestas navideñas y aniversario clínica",
+    categoria: "Agasajos - Fiestas navideñas",
+    cantidadUnidades: 1,
+    costoUnitarioUsd: 360,
+    mesesProrrateo: 12,
+    incluirEnCostosFijos: true,
+    notas: "Incluye celebración de fin de año y aniversario.",
+  },
+  {
+    id: "rub-4",
+    titulo: "Seguro privado (salud y contra demandas)",
+    categoria: "Seguro privado - Contra demandas",
+    cantidadUnidades: 1,
+    costoUnitarioUsd: 600,
+    mesesProrrateo: 12,
+    incluirEnCostosFijos: true,
+    notas: "Cobertura de responsabilidad profesional / salud.",
   },
 ];
 
@@ -612,9 +761,9 @@ const SERVICIOS_INICIALES: ServicioCartera[] = [
 const INSUMOS_INICIALES: InsumoRapido[] = [
   {
     id: "ins-1",
-    nombre: "Resina nanohíbrida A2",
+    nombre: "Resina compuesta nanohíbrida (jeringa)",
     categoria: "Operatoria",
-    cantidad: 8,
+    cantidad: 2,
     stockMinimo: 3,
     costoUnitario: 28,
     caducidad: "2027-08",
@@ -644,6 +793,8 @@ const EQUIPOS_INICIALES: EquipoInstrumental[] = [
     id: "eq-1",
     nombre: "Lámpara de fotocurado LED inalámbrica",
     tipoBien: "Equipo odontológico",
+    cantidad: 1,
+    stockMinimo: 1,
     valorAdquisicion: 420,
     vidaUtilAnios: 5,
     estado: "Operativo",
@@ -652,14 +803,18 @@ const EQUIPOS_INICIALES: EquipoInstrumental[] = [
     id: "eq-2",
     nombre: "Autoclave de vapor clase B",
     tipoBien: "Equipo odontológico",
+    cantidad: 1,
+    stockMinimo: 1,
     valorAdquisicion: 2400,
     vidaUtilAnios: 8,
     estado: "Operativo",
   },
   {
     id: "eq-3",
-    nombre: "Set básico instrumental (espejo, sonda, pinza, curetas)",
+    nombre: "Juego básico de exploración (espejo, sonda, pinza, cucharilla)",
     tipoBien: "Instrumental clínico",
+    cantidad: 4,
+    stockMinimo: 3,
     valorAdquisicion: 240,
     vidaUtilAnios: 4,
     estado: "Operativo",
@@ -691,6 +846,14 @@ const PROVEEDORES_INICIALES: ProveedorRegistro[] = [
 
 const LINEA_DIAGRAMA_TENUE = "#94a3b8";
 
+function requiereNecesidadCompra(cantidad: number, stockMinimo: number): boolean {
+  return (cantidad || 0) <= Math.max(0, stockMinimo || 0);
+}
+
+function requiereLicenciaMsp(cargo: TipoCargoPersonal): boolean {
+  return cargo === "Odontólogo" || cargo === "Especialista";
+}
+
 function calcularAportePatronalIess(prof: ProfesionalEquipo): number {
   if (!prof.aplicaIess) return 0;
   const salario = parseFloat(prof.salarioMensual || "0") || 0;
@@ -701,6 +864,27 @@ function calcularAportePatronalIess(prof: ProfesionalEquipo): number {
 function calcularDepreciacionMensualEquipo(eq: EquipoInstrumental): number {
   const vidaMeses = Math.max(1, (eq.vidaUtilAnios || 1) * 12);
   return Number(((eq.valorAdquisicion || 0) / vidaMeses).toFixed(2));
+}
+
+function calcularTotalRubroUsd(rub: {
+  cantidadUnidades: number;
+  costoUnitarioUsd: number;
+}): number {
+  return Number(
+    (
+      Math.max(1, rub.cantidadUnidades || 1) * Math.max(0, rub.costoUnitarioUsd || 0)
+    ).toFixed(2)
+  );
+}
+
+function calcularMensualRubroUsd(rub: {
+  cantidadUnidades: number;
+  costoUnitarioUsd: number;
+  mesesProrrateo: number;
+}): number {
+  const total = calcularTotalRubroUsd(rub);
+  const meses = Math.max(1, rub.mesesProrrateo || 12);
+  return Number((total / meses).toFixed(2));
 }
 
 function colorFijoPorTipo(tipo: "caries" | "restauracion"): ColorMsp {
@@ -1245,6 +1429,8 @@ export default function HomePage() {
     PROFESIONALES_INICIALES
   );
   const [profNombre, setProfNombre] = useState("");
+  const [profTelefono, setProfTelefono] = useState("");
+  const [profDireccion, setProfDireccion] = useState("");
   const [profCargo, setProfCargo] = useState<TipoCargoPersonal>("Odontólogo");
   const [profEspecialidad, setProfEspecialidad] = useState("");
   const [profRegistroAces, setProfRegistroAces] = useState("");
@@ -1290,13 +1476,19 @@ export default function HomePage() {
   const [filtroEspecialidadSrv, setFiltroEspecialidadSrv] =
     useState<string>("Todas");
 
-  // Inventario dividido en Insumos y Equipos/Instrumental
-  const [tabInventario, setTabInventario] = useState<"insumos" | "equipos">(
-    "insumos"
-  );
+  // Inventario dividido en Insumos, Equipos/Instrumental y Propiedades/Rubros
+  const [tabInventario, setTabInventario] = useState<
+    "insumos" | "equipos" | "propiedades"
+  >("insumos");
+
   const [insumos, setInsumos] = useState<InsumoRapido[]>(INSUMOS_INICIALES);
-  const [insNombre, setInsNombre] = useState("");
-  const [insCategoria, setInsCategoria] = useState("Bioseguridad");
+  const [insSeleccionCatalogo, setInsSeleccionCatalogo] = useState<string>(
+    CATALOGO_INSUMOS_ODONTOLOGIA[0].nombre
+  );
+  const [insNombreExtra, setInsNombreExtra] = useState("");
+  const [insCategoria, setInsCategoria] = useState<string>(
+    CATALOGO_INSUMOS_ODONTOLOGIA[0].categoria
+  );
   const [insCantidad, setInsCantidad] = useState("1");
   const [insStockMinimo, setInsStockMinimo] = useState("2");
   const [insCostoUnitario, setInsCostoUnitario] = useState("");
@@ -1305,15 +1497,33 @@ export default function HomePage() {
   const [equipos, setEquipos] = useState<EquipoInstrumental[]>(
     EQUIPOS_INICIALES
   );
-  const [eqNombre, setEqNombre] = useState("");
+  const [eqSeleccionCatalogo, setEqSeleccionCatalogo] = useState<string>(
+    CATALOGO_EQUIPOS_INSTRUMENTAL[0].nombre
+  );
+  const [eqNombreExtra, setEqNombreExtra] = useState("");
   const [eqTipoBien, setEqTipoBien] = useState<
     "Equipo odontológico" | "Instrumental clínico"
-  >("Equipo odontológico");
+  >(CATALOGO_EQUIPOS_INSTRUMENTAL[0].tipoBien);
+  const [eqCantidad, setEqCantidad] = useState("1");
+  const [eqStockMinimo, setEqStockMinimo] = useState("1");
   const [eqValorAdquisicion, setEqValorAdquisicion] = useState("");
   const [eqVidaUtilAnios, setEqVidaUtilAnios] = useState("5");
   const [eqEstado, setEqEstado] = useState<
     "Operativo" | "Mantenimiento" | "Por renovar"
   >("Operativo");
+
+  const [rubrosPropiedad, setRubrosPropiedad] = useState<
+    RubroPropiedadSeguro[]
+  >(RUBROS_PROPIEDAD_INICIALES);
+  const [rubTitulo, setRubTitulo] = useState("");
+  const [rubCategoria, setRubCategoria] = useState<CategoriaRubroPropiedad>(
+    "Uniformes (dotación 5 uniformes)"
+  );
+  const [rubCantidad, setRubCantidad] = useState("5");
+  const [rubCostoUnitario, setRubCostoUnitario] = useState("");
+  const [rubMesesProrrateo, setRubMesesProrrateo] = useState("12");
+  const [rubIncluirFijos, setRubIncluirFijos] = useState(true);
+  const [rubNotas, setRubNotas] = useState("");
 
   // Proveedores
   const [proveedores, setProveedores] = useState<ProveedorRegistro[]>(
@@ -1434,17 +1644,30 @@ export default function HomePage() {
     setPassword("");
   }
 
+  function handleCambiarCargoProfesional(nuevoCargo: TipoCargoPersonal) {
+    setProfCargo(nuevoCargo);
+    if (!requiereLicenciaMsp(nuevoCargo)) {
+      setProfCodigoMsp("");
+    }
+  }
+
   function agregarProfesional(e: React.FormEvent) {
     e.preventDefault();
     if (!profNombre.trim()) return;
 
+    const aplicaLicencia = requiereLicenciaMsp(profCargo);
+
     const nuevo: ProfesionalEquipo = {
       id: `prof-${Date.now()}`,
       nombre: profNombre.trim(),
+      telefono: profTelefono.trim() || "Sin teléfono",
+      direccion: profDireccion.trim() || "Sin dirección",
       cargo: profCargo,
       especialidad: profEspecialidad.trim() || "Práctica general",
       registroAces: profRegistroAces.trim() || "Pendiente",
-      codigoMsp: profCodigoMsp.trim() || "Pendiente",
+      codigoMsp: aplicaLicencia
+        ? profCodigoMsp.trim() || "Pendiente"
+        : "No aplica",
       esquemaPago: profEsquemaPago,
       salarioMensual: profSalario.trim() || "0",
       porcentajePago: profPorcentaje.trim() || "0",
@@ -1455,6 +1678,8 @@ export default function HomePage() {
 
     setProfesionales((prev) => [nuevo, ...prev]);
     setProfNombre("");
+    setProfTelefono("");
+    setProfDireccion("");
     setProfEspecialidad("");
     setProfRegistroAces("");
     setProfCodigoMsp("");
@@ -1467,7 +1692,7 @@ export default function HomePage() {
     setProfesionales((prev) => prev.filter((p) => p.id !== id));
   }
 
-  // Cálculos de costos fijos, depreciación y servicios
+  // Cálculos de costos fijos, depreciación, rubros (uniformes, agasajos, seguros) y servicios
   const totalSalariosFijosEquipo = profesionales.reduce(
     (acc, p) => acc + (parseFloat(p.salarioMensual || "0") || 0),
     0
@@ -1480,6 +1705,15 @@ export default function HomePage() {
     (acc, eq) => acc + calcularDepreciacionMensualEquipo(eq),
     0
   );
+  const totalProrrateoMensualRubrosFijos = rubrosPropiedad.reduce(
+    (acc, rub) =>
+      rub.incluirEnCostosFijos ? acc + calcularMensualRubroUsd(rub) : acc,
+    0
+  );
+  const totalRubrosPropiedadUsd = rubrosPropiedad.reduce(
+    (acc, rub) => acc + calcularTotalRubroUsd(rub),
+    0
+  );
   const totalCostosFijosRegistrados = costosFijos.reduce(
     (acc, cf) => acc + (cf.montoMensual || 0),
     0
@@ -1489,13 +1723,22 @@ export default function HomePage() {
       totalCostosFijosRegistrados +
       totalSalariosFijosEquipo +
       totalAportesIessPatronales +
-      totalDepreciacionMensualEquipos
+      totalDepreciacionMensualEquipos +
+      totalProrrateoMensualRubrosFijos
     ).toFixed(2)
   );
 
   const horasMes = Math.max(1, parseFloat(horasAtencionMensual || "160") || 160);
   const minutosMes = horasMes * 60;
   const costoFijoPorMinuto = costoFijoTotalMensualOperativo / minutosMes;
+
+  const alarmasInsumos = insumos.filter((i) =>
+    requiereNecesidadCompra(i.cantidad, i.stockMinimo)
+  ).length;
+  const alarmasEquipos = equipos.filter((eq) =>
+    requiereNecesidadCompra(eq.cantidad, eq.stockMinimo)
+  ).length;
+  const totalAlarmasCompra = alarmasInsumos + alarmasEquipos;
 
   function calcularEconomiaServicio(srv: {
     duracionMin: number;
@@ -1613,12 +1856,29 @@ export default function HomePage() {
     setServicios((prev) => prev.filter((s) => s.id !== id));
   }
 
+  function handleSeleccionarInsumoCatalogo(nombreSeleccionado: string) {
+    setInsSeleccionCatalogo(nombreSeleccionado);
+    const encontrado = CATALOGO_INSUMOS_ODONTOLOGIA.find(
+      (i) => i.nombre === nombreSeleccionado
+    );
+    if (encontrado) {
+      setInsCategoria(encontrado.categoria);
+    } else if (nombreSeleccionado === "__OTRO__") {
+      setInsCategoria("General");
+    }
+  }
+
   function agregarInsumo(e: React.FormEvent) {
     e.preventDefault();
-    if (!insNombre.trim()) return;
+    const nombreFinal =
+      insSeleccionCatalogo === "__OTRO__"
+        ? insNombreExtra.trim()
+        : insSeleccionCatalogo.trim();
+    if (!nombreFinal) return;
+
     const nuevo: InsumoRapido = {
       id: `ins-${Date.now()}`,
-      nombre: insNombre.trim(),
+      nombre: nombreFinal,
       categoria: insCategoria.trim() || "General",
       cantidad: Math.max(0, parseInt(insCantidad || "0", 10) || 0),
       stockMinimo: Math.max(0, parseInt(insStockMinimo || "0", 10) || 0),
@@ -1626,7 +1886,7 @@ export default function HomePage() {
       caducidad: insCaducidad.trim() || "Sin fecha",
     };
     setInsumos((prev) => [nuevo, ...prev]);
-    setInsNombre("");
+    setInsNombreExtra("");
     setInsCantidad("1");
     setInsCostoUnitario("");
     setInsCaducidad("");
@@ -1646,25 +1906,85 @@ export default function HomePage() {
     setInsumos((prev) => prev.filter((i) => i.id !== id));
   }
 
+  function handleSeleccionarEquipoCatalogo(nombreSeleccionado: string) {
+    setEqSeleccionCatalogo(nombreSeleccionado);
+    const encontrado = CATALOGO_EQUIPOS_INSTRUMENTAL.find(
+      (eq) => eq.nombre === nombreSeleccionado
+    );
+    if (encontrado) {
+      setEqTipoBien(encontrado.tipoBien);
+    }
+  }
+
   function agregarEquipoInstrumental(e: React.FormEvent) {
     e.preventDefault();
-    if (!eqNombre.trim()) return;
+    const nombreFinal =
+      eqSeleccionCatalogo === "__OTRO__"
+        ? eqNombreExtra.trim()
+        : eqSeleccionCatalogo.trim();
+    if (!nombreFinal) return;
+
     const nuevo: EquipoInstrumental = {
       id: `eq-${Date.now()}`,
-      nombre: eqNombre.trim(),
+      nombre: nombreFinal,
       tipoBien: eqTipoBien,
+      cantidad: Math.max(0, parseInt(eqCantidad || "0", 10) || 0),
+      stockMinimo: Math.max(0, parseInt(eqStockMinimo || "0", 10) || 0),
       valorAdquisicion: parseFloat(eqValorAdquisicion || "0") || 0,
       vidaUtilAnios: Math.max(1, parseFloat(eqVidaUtilAnios || "5") || 5),
       estado: eqEstado,
     };
     setEquipos((prev) => [nuevo, ...prev]);
-    setEqNombre("");
+    setEqNombreExtra("");
+    setEqCantidad("1");
     setEqValorAdquisicion("");
     setEqVidaUtilAnios("5");
   }
 
+  function ajustarCantidadEquipo(id: string, delta: number) {
+    setEquipos((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, cantidad: Math.max(0, item.cantidad + delta) }
+          : item
+      )
+    );
+  }
+
   function eliminarEquipoInstrumental(id: string) {
     setEquipos((prev) => prev.filter((eq) => eq.id !== id));
+  }
+
+  function handleCambiarCategoriaRubro(cat: CategoriaRubroPropiedad) {
+    setRubCategoria(cat);
+    if (cat === "Uniformes (dotación 5 uniformes)") {
+      setRubCantidad("5");
+    }
+  }
+
+  function agregarRubroPropiedad(e: React.FormEvent) {
+    e.preventDefault();
+    if (!rubTitulo.trim()) return;
+
+    const nuevo: RubroPropiedadSeguro = {
+      id: `rub-${Date.now()}`,
+      titulo: rubTitulo.trim(),
+      categoria: rubCategoria,
+      cantidadUnidades: Math.max(1, parseInt(rubCantidad || "1", 10) || 1),
+      costoUnitarioUsd: parseFloat(rubCostoUnitario || "0") || 0,
+      mesesProrrateo: Math.max(1, parseInt(rubMesesProrrateo || "12", 10) || 12),
+      incluirEnCostosFijos: rubIncluirFijos,
+      notas: rubNotas.trim() || "",
+    };
+
+    setRubrosPropiedad((prev) => [nuevo, ...prev]);
+    setRubTitulo("");
+    setRubCostoUnitario("");
+    setRubNotas("");
+  }
+
+  function eliminarRubroPropiedad(id: string) {
+    setRubrosPropiedad((prev) => prev.filter((r) => r.id !== id));
   }
 
   function agregarProveedor(e: React.FormEvent) {
@@ -3450,13 +3770,16 @@ export default function HomePage() {
     honorarioValor: parseFloat(srvHonorarioValor || "0") || 0,
   });
 
+  const muestraLicenciaMspEnForm = requiereLicenciaMsp(profCargo);
+
   return (
     <main className="min-h-screen p-4 max-w-5xl mx-auto space-y-6 bg-sky-50/30">
       <header className="flex items-center justify-between bg-white border border-sky-200 rounded-2xl p-4 shadow-sm">
         <div>
           <p className="text-xs uppercase tracking-wide text-sky-700">
             Rol activo:{" "}
-            <strong className="text-sky-950">{perfil.rol}</strong>
+            <strong className="text-sky-950">{perfil.rol}</strong> · Moneda:
+            USD ($)
           </p>
           <h1 className="text-lg font-semibold text-sky-950">
             {perfil.nombre_completo || "Panel del Consultorio"}
@@ -3505,7 +3828,7 @@ export default function HomePage() {
           >
             <h2 className="font-medium text-sky-950">Presupuestos y Pagos</h2>
             <p className="text-xs text-sky-700 mt-1">
-              Planes de tratamiento, abonos y saldos.
+              Planes de tratamiento, abonos y saldos en $.
             </p>
           </button>
 
@@ -3514,12 +3837,19 @@ export default function HomePage() {
             onClick={() => setModuloActivo("inventario")}
             className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
           >
-            <h2 className="font-medium text-sky-950">
-              Inventario (Insumos y Equipos)
-            </h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-medium text-sky-950">
+                Inventario, Equipos y Rubros ($)
+              </h2>
+              {totalAlarmasCompra > 0 && (
+                <span className="rounded-full bg-red-100 border border-red-300 px-2 py-0.5 text-[10px] font-bold text-red-700 shrink-0">
+                  Necesidad de compra ({totalAlarmasCompra})
+                </span>
+              )}
+            </div>
             <p className="text-xs text-sky-700 mt-1">
-              Insumos ({insumos.length}) y equipos/instrumental ({equipos.length}
-              ) con depreciación.
+              Insumos ({insumos.length}), equipos ({equipos.length}) y
+              uniformes/agasajos/seguros ({rubrosPropiedad.length}).
             </p>
           </button>
 
@@ -3530,7 +3860,8 @@ export default function HomePage() {
           >
             <h2 className="font-medium text-sky-950">Profesionales y Equipo</h2>
             <p className="text-xs text-sky-700 mt-1">
-              Equipo ({profesionales.length}): ACES/MSP, pago, horarios e IESS.
+              Equipo ({profesionales.length}): teléfono, dirección, ACES/MSP e
+              IESS ($).
             </p>
           </button>
 
@@ -3541,8 +3872,7 @@ export default function HomePage() {
           >
             <h2 className="font-medium text-sky-950">Cartera de Servicios</h2>
             <p className="text-xs text-sky-700 mt-1">
-              Especialidades, precios/convenio, costos fijos/variables y
-              utilidad.
+              Especialidades, precios/convenio, costos y utilidad ($).
             </p>
           </button>
 
@@ -3564,12 +3894,12 @@ export default function HomePage() {
               {moduloActivo === "historias" &&
                 "Historias Clínicas y Odontograma"}
               {moduloActivo === "agenda" && "Agenda y Recordatorios"}
-              {moduloActivo === "pagos" && "Presupuestos y Pagos"}
+              {moduloActivo === "pagos" && "Presupuestos y Pagos (USD $)"}
               {moduloActivo === "inventario" &&
-                "Inventario: Insumos y Equipos / Instrumental"}
+                "Inventario, Equipos / Instrumental y Rubros (USD $)"}
               {moduloActivo === "profesionales" && "Profesionales y Equipo"}
               {moduloActivo === "servicios" &&
-                "Cartera de Servicios, Costos y Utilidad"}
+                "Cartera de Servicios, Costos y Utilidad (USD $)"}
               {moduloActivo === "proveedores" && "Proveedores del Consultorio"}
             </h2>
             <button
@@ -5144,7 +5474,7 @@ export default function HomePage() {
                             </option>
                             {servicios.map((srv) => (
                               <option key={srv.id} value={srv.nombre}>
-                                {srv.nombre} (${srv.precioNormal})
+                                {srv.nombre} (${srv.precioNormal.toFixed(2)})
                               </option>
                             ))}
                           </select>
@@ -5626,21 +5956,49 @@ export default function HomePage() {
 
                 <div>
                   <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Número telefónico
+                  </label>
+                  <input
+                    type="text"
+                    value={profTelefono}
+                    onChange={(e) => setProfTelefono(e.target.value)}
+                    placeholder="Ej. 0991234567"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
+                    Dirección
+                  </label>
+                  <input
+                    type="text"
+                    value={profDireccion}
+                    onChange={(e) => setProfDireccion(e.target.value)}
+                    placeholder="Sector, calle principal y secundaria"
+                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-sky-900 mb-1">
                     Rol o cargo
                   </label>
                   <select
                     value={profCargo}
                     onChange={(e) =>
-                      setProfCargo(e.target.value as TipoCargoPersonal)
+                      handleCambiarCargoProfesional(
+                        e.target.value as TipoCargoPersonal
+                      )
                     }
                     className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                   >
                     <option value="Odontólogo">Odontólogo</option>
+                    <option value="Especialista">Especialista</option>
                     <option value="Auxiliar / Asistente">
                       Auxiliar / Asistente
                     </option>
                     <option value="Recepcionista">Recepcionista</option>
-                    <option value="Especialista">Especialista</option>
                   </select>
                 </div>
 
@@ -5672,15 +6030,22 @@ export default function HomePage() {
 
                 <div>
                   <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Código MSP / N.º licencia profesional
+                    Licencia / Código MSP (solo odontólogos y especialistas)
                   </label>
-                  <input
-                    type="text"
-                    value={profCodigoMsp}
-                    onChange={(e) => setProfCodigoMsp(e.target.value)}
-                    placeholder="Código Ministerio de Salud / Licencia"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
+                  {muestraLicenciaMspEnForm ? (
+                    <input
+                      type="text"
+                      value={profCodigoMsp}
+                      onChange={(e) => setProfCodigoMsp(e.target.value)}
+                      placeholder="Código Ministerio de Salud / Licencia"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  ) : (
+                    <div className="rounded-lg border border-sky-200 bg-sky-100/60 px-3 py-2 text-xs text-sky-800">
+                      No aplica para {profCargo.toLowerCase()} (aplica solo a
+                      odontólogos y especialistas).
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -5696,9 +6061,9 @@ export default function HomePage() {
                     }
                     className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                   >
-                    <option value="salario_fijo">Salario fijo</option>
+                    <option value="salario_fijo">Salario fijo ($)</option>
                     <option value="porcentaje">Porcentaje (%)</option>
-                    <option value="mixto">Salario fijo + Porcentaje (%)</option>
+                    <option value="mixto">Salario fijo ($) + Porcentaje (%)</option>
                   </select>
                 </div>
 
@@ -5769,6 +6134,8 @@ export default function HomePage() {
                     {calcularAportePatronalIess({
                       id: "preview",
                       nombre: "",
+                      telefono: "",
+                      direccion: "",
                       cargo: profCargo,
                       especialidad: "",
                       registroAces: "",
@@ -5784,7 +6151,7 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
                   <label className="block text-xs font-medium text-sky-900 mb-1">
                     Horario de trabajo
                   </label>
@@ -5792,7 +6159,7 @@ export default function HomePage() {
                     type="text"
                     value={profHorario}
                     onChange={(e) => setProfHorario(e.target.value)}
-                    placeholder="Ej. Lun a Vie 09:00 - 17:00 o Sábados 08:00 - 13:00"
+                    placeholder="Ej. Lun a Vie 09:00 - 17:00"
                     className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                   />
                 </div>
@@ -5811,6 +6178,7 @@ export default function HomePage() {
                 {profesionales.map((prof) => {
                   const aporteIess = calcularAportePatronalIess(prof);
                   const salarioNum = parseFloat(prof.salarioMensual || "0") || 0;
+                  const aplicaMsp = requiereLicenciaMsp(prof.cargo);
                   return (
                     <div
                       key={prof.id}
@@ -5827,8 +6195,23 @@ export default function HomePage() {
                           </span>
                         </div>
                         <p className="text-xs text-sky-800">
-                          <strong>ACES:</strong> {prof.registroAces} ·{" "}
-                          <strong>MSP / Licencia:</strong> {prof.codigoMsp}
+                          <strong>Tel.:</strong> {prof.telefono} ·{" "}
+                          <strong>Dirección:</strong> {prof.direccion}
+                        </p>
+                        <p className="text-xs text-sky-800">
+                          <strong>ACES:</strong> {prof.registroAces}
+                          {aplicaMsp ? (
+                            <>
+                              {" · "}
+                              <strong>Licencia / MSP:</strong>{" "}
+                              {prof.codigoMsp || "Pendiente"}
+                            </>
+                          ) : (
+                            <>
+                              {" · "}
+                              <strong>Licencia / MSP:</strong> No aplica
+                            </>
+                          )}
                         </p>
                         <p className="text-xs text-sky-800">
                           <strong>Pago:</strong>{" "}
@@ -5869,7 +6252,7 @@ export default function HomePage() {
                 <div className="border border-sky-200 rounded-xl p-4 bg-sky-50/60 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
-                      Cuadro de Costos Fijos Mensuales
+                      Cuadro de Costos Fijos Mensuales ($)
                     </h3>
                     <span className="text-xs font-bold text-sky-950 bg-white border border-sky-200 rounded-lg px-2.5 py-1">
                       Total fijo operativo: $
@@ -5878,12 +6261,13 @@ export default function HomePage() {
                   </div>
 
                   <p className="text-xs text-sky-700">
-                    Incluye costos fijos registrados ($
-                    {totalCostosFijosRegistrados.toFixed(2)}), salarios fijos ($
-                    {totalSalariosFijosEquipo.toFixed(2)}), aporte patronal IESS ($
-                    {totalAportesIessPatronales.toFixed(2)}) y depreciación de
-                    equipos/instrumental (${totalDepreciacionMensualEquipos.toFixed(2)}
-                    ).
+                    Incluye costos fijos ($
+                    {totalCostosFijosRegistrados.toFixed(2)}), salarios ($
+                    {totalSalariosFijosEquipo.toFixed(2)}), aporte IESS ($
+                    {totalAportesIessPatronales.toFixed(2)}), depreciación ($
+                    {totalDepreciacionMensualEquipos.toFixed(2)}) y prorrateo de
+                    uniformes/agasajos/seguros ($
+                    {totalProrrateoMensualRubrosFijos.toFixed(2)}).
                   </p>
 
                   <div className="flex items-center gap-2 text-xs">
@@ -5958,15 +6342,17 @@ export default function HomePage() {
                 <div className="border border-sky-200 rounded-xl p-4 bg-sky-50/60 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
-                      Cuadro de Costos Variables (Referencia)
+                      Cuadro de Costos Variables Unitarios ($)
                     </h3>
-                    <span className="text-xs font-semibold text-sky-950 bg-white border border-sky-200 rounded-lg px-2.5 py-1">
-                      {costosVariables.length} rubros
+                    <span className="text-xs font-bold text-sky-950 bg-white border border-sky-200 rounded-lg px-2.5 py-1">
+                      Referencia insumos
                     </span>
                   </div>
 
                   <p className="text-xs text-sky-700">
-                    Insumos y materiales consumidos por atención o procedimiento.
+                    Materiales directos que se consumen por paciente o
+                    procedimiento (resinas, anestesia, guantes, endodoncia,
+                    laboratorio).
                   </p>
 
                   <form
@@ -5977,7 +6363,7 @@ export default function HomePage() {
                       type="text"
                       value={nuevoCvConcepto}
                       onChange={(e) => setNuevoCvConcepto(e.target.value)}
-                      placeholder="Ej. Resina, anestesia, guantes, aguja"
+                      placeholder="Ej. Kit bioseguridad, resina, anestesia"
                       className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs"
                     />
                     <input
@@ -6024,23 +6410,24 @@ export default function HomePage() {
 
               <form
                 onSubmit={agregarServicioCartera}
-                className="border border-sky-200 rounded-xl p-4 bg-sky-50/70 space-y-4"
+                className="border border-sky-200 rounded-xl p-4 bg-sky-50/60 space-y-3"
               >
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-950">
-                  Nuevo Procedimiento y Cálculo de Precio / Utilidad
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                  Registrar servicio en cartera (con o sin convenio, costos y
+                  utilidad)
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Nombre del procedimiento
+                      Nombre del servicio
                     </label>
                     <input
                       type="text"
                       required
                       value={srvNombre}
                       onChange={(e) => setSrvNombre(e.target.value)}
-                      placeholder="Ej. Exodoncia simple, Carilla estética, Corona"
+                      placeholder="Ej. Profilaxis y fluorización"
                       className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                     />
                   </div>
@@ -6068,12 +6455,11 @@ export default function HomePage() {
 
                   <div>
                     <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Duración (minutos)
+                      Duración estimada (min)
                     </label>
                     <input
                       type="number"
                       min="5"
-                      step="5"
                       value={srvDuracion}
                       onChange={(e) => setSrvDuracion(e.target.value)}
                       className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
@@ -6082,51 +6468,49 @@ export default function HomePage() {
 
                   <div>
                     <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Precio normal ($)
+                      Precio normal particular ($)
                     </label>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
+                      required
                       value={srvPrecioNormal}
                       onChange={(e) => setSrvPrecioNormal(e.target.value)}
-                      placeholder="Ej. 50"
+                      placeholder="Ej. 35.00"
                       className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="bg-white border border-sky-200 rounded-lg p-2.5 space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-medium text-sky-950 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={srvAplicaConvenio}
+                        onChange={(e) => setSrvAplicaConvenio(e.target.checked)}
+                        className="rounded border-sky-300"
+                      />
+                      <span>Aplica precio por convenio</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      disabled={!srvAplicaConvenio}
+                      value={srvPrecioConvenio}
+                      onChange={(e) => setSrvPrecioConvenio(e.target.value)}
+                      placeholder={
+                        srvAplicaConvenio
+                          ? "Precio convenio $"
+                          : "No aplica convenio"
+                      }
+                      className="w-full rounded border border-sky-200 px-2.5 py-1.5 text-sm disabled:bg-sky-50"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Precio de convenio ($)
-                    </label>
-                    <div className="space-y-1">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        disabled={!srvAplicaConvenio}
-                        value={srvPrecioConvenio}
-                        onChange={(e) => setSrvPrecioConvenio(e.target.value)}
-                        placeholder="Ej. 40"
-                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm disabled:bg-sky-50"
-                      />
-                      <label className="flex items-center gap-1.5 text-[11px] text-sky-800 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={srvAplicaConvenio}
-                          onChange={(e) =>
-                            setSrvAplicaConvenio(e.target.checked)
-                          }
-                          className="rounded border-sky-300"
-                        />
-                        <span>Habilitar tarifa por convenio</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Costo variable del procedimiento ($)
+                      Costo variable del servicio ($)
                     </label>
                     <input
                       type="number"
@@ -6134,636 +6518,11 @@ export default function HomePage() {
                       step="0.01"
                       value={srvCostoVariable}
                       onChange={(e) => setSrvCostoVariable(e.target.value)}
-                      placeholder="Ej. 8.50"
+                      placeholder="Ej. 5.00"
                       className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Honorarios del profesional
-                    </label>
-                    <div className="flex gap-1.5">
-                      <select
-                        value={srvHonorarioTipo}
-                        onChange={(e) =>
-                          setSrvHonorarioTipo(
-                            e.target.value as "porcentaje" | "fijo"
-                          )
-                        }
-                        className="rounded-lg border border-sky-200 bg-white px-2 py-2 text-xs"
-                      >
-                        <option value="porcentaje">%</option>
-                        <option value="fijo">$ Fijo</option>
-                      </select>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={srvHonorarioValor}
-                        onChange={(e) => setSrvHonorarioValor(e.target.value)}
-                        className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="sm:col-span-3">
-                    <label className="block text-xs font-medium text-sky-900 mb-1">
-                      Descripción clínica / condiciones
-                    </label>
-                    <input
-                      type="text"
-                      value={srvDescripcion}
-                      onChange={(e) => setSrvDescripcion(e.target.value)}
-                      placeholder="Detalles del procedimiento o condiciones del convenio"
-                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                  </div>
-
-                  <div className="flex items-end">
-                    <button
-                      type="submit"
-                      className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
-                    >
-                      + Guardar en cartera
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-sky-200 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div>
-                    <p className="text-sky-700">
-                      Costo fijo prorrateado ({srvDuracion || 30} min)
-                    </p>
-                    <p className="font-bold text-sky-950">
-                      ${simulacionEconomica.costoFijoAsignado.toFixed(2)}
-                    </p>
-                    <p className="text-sky-700 mt-1">
-                      Costo variable: $
-                      {simulacionEconomica.costoVariable.toFixed(2)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="font-semibold text-sky-950">
-                      Escenario Precio Normal ($
-                      {simulacionEconomica.normal.precioVenta.toFixed(2)})
-                    </p>
-                    <p className="text-sky-800">
-                      Honorario: $
-                      {simulacionEconomica.normal.honorario.toFixed(2)}
-                    </p>
-                    <p
-                      className={`font-bold ${
-                        simulacionEconomica.normal.utilidadNeta >= 0
-                          ? "text-emerald-700"
-                          : "text-red-600"
-                      }`}
-                    >
-                      Utilidad: $
-                      {simulacionEconomica.normal.utilidadNeta.toFixed(2)} (
-                      {simulacionEconomica.normal.margenPorcentaje.toFixed(1)}
-                      %)
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="font-semibold text-sky-950">
-                      Escenario Convenio ($
-                      {simulacionEconomica.convenio.precioVenta.toFixed(2)})
-                    </p>
-                    <p className="text-sky-800">
-                      Honorario: $
-                      {simulacionEconomica.convenio.honorario.toFixed(2)}
-                    </p>
-                    <p
-                      className={`font-bold ${
-                        simulacionEconomica.convenio.utilidadNeta >= 0
-                          ? "text-emerald-700"
-                          : "text-red-600"
-                      }`}
-                    >
-                      Utilidad: $
-                      {simulacionEconomica.convenio.utilidadNeta.toFixed(2)} (
-                      {simulacionEconomica.convenio.margenPorcentaje.toFixed(1)}
-                      %)
-                    </p>
-                  </div>
-                </div>
-              </form>
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-sky-950">
-                  Procedimientos registrados ({serviciosFiltrados.length})
-                </span>
-                <select
-                  value={filtroEspecialidadSrv}
-                  onChange={(e) => setFiltroEspecialidadSrv(e.target.value)}
-                  className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs text-sky-950"
-                >
-                  <option value="Todas">Todas las especialidades</option>
-                  {ESPECIALIDADES_ODONTOLOGIA.map((esp) => (
-                    <option key={esp} value={esp}>
-                      {esp}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
-                {serviciosFiltrados.map((srv) => {
-                  const econ = calcularEconomiaServicio(srv);
-                  return (
-                    <div
-                      key={srv.id}
-                      className="p-3.5 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <strong className="text-sky-950">{srv.nombre}</strong>
-                          <span className="rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold">
-                            {srv.especialidad}
-                          </span>
-                          <span className="text-xs font-semibold text-sky-800">
-                            {srv.duracionMin} min
-                          </span>
-                        </div>
-                        <p className="text-xs text-sky-800">
-                          <strong>Precio normal:</strong> $
-                          {srv.precioNormal.toFixed(2)}
-                          {srv.aplicaConvenio && (
-                            <>
-                              {" · "}
-                              <strong>Precio convenio:</strong> $
-                              {srv.precioConvenio.toFixed(2)}
-                            </>
-                          )}
-                          {" · "}
-                          <strong>Costo fijo asig.:</strong> $
-                          {econ.costoFijoAsignado.toFixed(2)} ·{" "}
-                          <strong>Costo var.:</strong> $
-                          {econ.costoVariable.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-sky-800">
-                          <strong>Utilidad normal:</strong>{" "}
-                          <span
-                            className={`font-semibold ${
-                              econ.normal.utilidadNeta >= 0
-                                ? "text-emerald-700"
-                                : "text-red-600"
-                            }`}
-                          >
-                            ${econ.normal.utilidadNeta.toFixed(2)} (
-                            {econ.normal.margenPorcentaje.toFixed(1)}%)
-                          </span>
-                          {srv.aplicaConvenio && (
-                            <>
-                              {" · "}
-                              <strong>Utilidad convenio:</strong>{" "}
-                              <span
-                                className={`font-semibold ${
-                                  econ.convenio.utilidadNeta >= 0
-                                    ? "text-emerald-700"
-                                    : "text-red-600"
-                                }`}
-                              >
-                                ${econ.convenio.utilidadNeta.toFixed(2)} (
-                                {econ.convenio.margenPorcentaje.toFixed(1)}%)
-                              </span>
-                            </>
-                          )}
-                        </p>
-                        <p className="text-xs text-sky-700">{srv.descripcion}</p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => eliminarServicioCartera(srv.id)}
-                        className="text-xs text-red-600 hover:underline self-start md:self-center shrink-0"
-                      >
-                        Quitar
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {moduloActivo === "inventario" && (
-            <div className="space-y-5 text-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTabInventario("insumos")}
-                    className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold border transition ${
-                      tabInventario === "insumos"
-                        ? "bg-sky-200 text-sky-950 border-sky-400"
-                        : "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100"
-                    }`}
-                  >
-                    Insumos y materiales ({insumos.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTabInventario("equipos")}
-                    className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold border transition ${
-                      tabInventario === "equipos"
-                        ? "bg-sky-200 text-sky-950 border-sky-400"
-                        : "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100"
-                    }`}
-                  >
-                    Equipos e instrumental ({equipos.length})
-                  </button>
-                </div>
-
-                <span className="text-xs font-semibold text-sky-950 bg-sky-50 border border-sky-200 rounded-lg px-3 py-1.5">
-                  Depreciación mensual total: $
-                  {totalDepreciacionMensualEquipos.toFixed(2)}/mes
-                </span>
-              </div>
-
-              {tabInventario === "insumos" ? (
-                <div className="space-y-4">
-                  <form
-                    onSubmit={agregarInsumo}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
-                  >
-                    <input
-                      type="text"
-                      required
-                      value={insNombre}
-                      onChange={(e) => setInsNombre(e.target.value)}
-                      placeholder="Insumo o material de consumo rápido"
-                      className="sm:col-span-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={insCategoria}
-                      onChange={(e) => setInsCategoria(e.target.value)}
-                      placeholder="Categoría"
-                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      value={insCantidad}
-                      onChange={(e) => setInsCantidad(e.target.value)}
-                      placeholder="Cantidad"
-                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={insCostoUnitario}
-                      onChange={(e) => setInsCostoUnitario(e.target.value)}
-                      placeholder="Costo unit. $"
-                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
-                    >
-                      + Agregar insumo
-                    </button>
-                  </form>
-
-                  <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
-                    {insumos.map((item) => {
-                      const stockBajo = item.cantidad <= item.stockMinimo;
-                      return (
-                        <div
-                          key={item.id}
-                          className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                        >
-                          <div className="space-y-0.5">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <strong className="text-sky-950">
-                                {item.nombre}
-                              </strong>
-                              <span className="rounded-full bg-sky-100 text-sky-900 px-2 py-0.5 text-[11px] font-medium">
-                                {item.categoria}
-                              </span>
-                              {stockBajo && (
-                                <span className="rounded-full bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-[11px] font-semibold">
-                                  Stock bajo (mín. {item.stockMinimo})
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-sky-700">
-                              Costo unitario: ${item.costoUnitario.toFixed(2)}{" "}
-                              · Valor stock: $
-                              {(item.cantidad * item.costoUnitario).toFixed(2)}{" "}
-                              · Caducidad: {item.caducidad}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => ajustarCantidadInsumo(item.id, -1)}
-                              className="w-7 h-7 rounded-lg border border-sky-200 bg-sky-50 text-sky-950 font-bold hover:bg-sky-100"
-                            >
-                              -
-                            </button>
-                            <span className="min-w-8 text-center font-bold text-sky-950">
-                              {item.cantidad}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => ajustarCantidadInsumo(item.id, 1)}
-                              className="w-7 h-7 rounded-lg border border-sky-200 bg-sky-50 text-sky-950 font-bold hover:bg-sky-100"
-                            >
-                              +
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => eliminarInsumo(item.id)}
-                              className="ml-2 text-xs text-red-600 hover:underline"
-                            >
-                              Quitar
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <form
-                    onSubmit={agregarEquipoInstrumental}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
-                  >
-                    <input
-                      type="text"
-                      required
-                      value={eqNombre}
-                      onChange={(e) => setEqNombre(e.target.value)}
-                      placeholder="Equipo odontológico o instrumental"
-                      className="sm:col-span-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <select
-                      value={eqTipoBien}
-                      onChange={(e) =>
-                        setEqTipoBien(
-                          e.target.value as
-                            | "Equipo odontológico"
-                            | "Instrumental clínico"
-                        )
-                      }
-                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    >
-                      <option value="Equipo odontológico">
-                        Equipo odontológico
-                      </option>
-                      <option value="Instrumental clínico">
-                        Instrumental clínico
-                      </option>
-                    </select>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={eqValorAdquisicion}
-                      onChange={(e) => setEqValorAdquisicion(e.target.value)}
-                      placeholder="Valor compra $"
-                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={eqVidaUtilAnios}
-                      onChange={(e) => setEqVidaUtilAnios(e.target.value)}
-                      placeholder="Vida útil (años)"
-                      className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                    />
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
-                    >
-                      + Registrar bien
-                    </button>
-                  </form>
-
-                  <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
-                    {equipos.map((eq) => {
-                      const depMensual = calcularDepreciacionMensualEquipo(eq);
-                      return (
-                        <div
-                          key={eq.id}
-                          className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                        >
-                          <div className="space-y-0.5">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <strong className="text-sky-950">
-                                {eq.nombre}
-                              </strong>
-                              <span className="rounded-full bg-sky-100 text-sky-900 px-2 py-0.5 text-[11px] font-medium">
-                                {eq.tipoBien}
-                              </span>
-                              <span className="text-xs text-sky-700">
-                                · Estado: {eq.estado}
-                              </span>
-                            </div>
-                            <p className="text-xs text-sky-800">
-                              <strong>Valor adquisición:</strong> $
-                              {eq.valorAdquisicion.toFixed(2)} ·{" "}
-                              <strong>Vida útil:</strong> {eq.vidaUtilAnios}{" "}
-                              años · <strong>Depreciación mensual:</strong>{" "}
-                              <span className="font-semibold text-sky-950">
-                                ${depMensual.toFixed(2)}/mes
-                              </span>
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => eliminarEquipoInstrumental(eq.id)}
-                            className="text-xs text-red-600 hover:underline self-start sm:self-center"
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {moduloActivo === "proveedores" && (
-            <div className="space-y-5 text-sm">
-              <form
-                onSubmit={agregarProveedor}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-sky-50/70 p-4 rounded-xl border border-sky-200"
-              >
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Nombre del proveedor o agencia
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={prvNombre}
-                    onChange={(e) => setPrvNombre(e.target.value)}
-                    placeholder="Ej. Estudio Creativo Dental / Lab. Protesis"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Rubro / categoría
-                  </label>
-                  <select
-                    value={prvRubro}
-                    onChange={(e) =>
-                      setPrvRubro(e.target.value as RubroProveedor)
-                    }
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  >
-                    {RUBROS_PROVEEDOR.map((rb) => (
-                      <option key={rb} value={rb}>
-                        {rb}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Servicio o suministro principal
-                  </label>
-                  <input
-                    type="text"
-                    value={prvDetalle}
-                    onChange={(e) => setPrvDetalle(e.target.value)}
-                    placeholder="Ej. Reels, campañas, coronas, resinas"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Modalidad de pago
-                  </label>
-                  <input
-                    type="text"
-                    value={prvModalidad}
-                    onChange={(e) => setPrvModalidad(e.target.value)}
-                    placeholder="Ej. Mensualidad fija, Por orden, Contado"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Monto referencial
-                  </label>
-                  <input
-                    type="text"
-                    value={prvMonto}
-                    onChange={(e) => setPrvMonto(e.target.value)}
-                    placeholder="Ej. $150/mes o según presupuesto"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Teléfono / Contacto
-                  </label>
-                  <input
-                    type="text"
-                    value={prvContacto}
-                    onChange={(e) => setPrvContacto(e.target.value)}
-                    placeholder="WhatsApp, correo o asesor"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-sky-900 mb-1">
-                    Notas adicionales
-                  </label>
-                  <input
-                    type="text"
-                    value={prvNotas}
-                    onChange={(e) => setPrvNotas(e.target.value)}
-                    placeholder="Frecuencia de entrega, condiciones o acuerdos"
-                    className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    className="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700"
-                  >
-                    + Guardar proveedor
-                  </button>
-                </div>
-              </form>
-
-              <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl overflow-hidden">
-                {proveedores.map((prv) => (
-                  <div
-                    key={prv.id}
-                    className="p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <strong className="text-sky-950">{prv.nombre}</strong>
-                        <span className="rounded-full bg-sky-100 text-sky-900 px-2.5 py-0.5 text-[11px] font-semibold">
-                          {prv.rubro}
-                        </span>
-                        <span className="text-xs text-sky-700">
-                          · Contacto: {prv.contacto}
-                        </span>
-                      </div>
-                      <p className="text-xs text-sky-800">
-                        <strong>Servicio:</strong> {prv.detalleServicio} ·{" "}
-                        <strong>Pago:</strong> {prv.modalidadPago} (
-                        {prv.montoReferencial})
-                      </p>
-                      {prv.notas && (
-                        <p className="text-xs text-sky-700">{prv.notas}</p>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => eliminarProveedor(prv.id)}
-                      className="text-xs text-red-600 hover:underline self-start sm:self-center shrink-0"
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {moduloActivo === "pagos" && (
-            <div className="space-y-3 text-sm">
-              <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-4">
-                <p className="font-medium text-sky-950">
-                  Control de presupuestos, abonos y saldo pendiente
-                </p>
-                <p className="text-xs text-sky-700 mt-1">
-                  Registra el valor total del plan de tratamiento, los pagos
-                  recibidos y el saldo restante por paciente.
-                </p>
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-    </main>
-  );
-}
+                      Honorario /
