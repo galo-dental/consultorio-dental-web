@@ -14,7 +14,39 @@ type ModuloActivo =
   | "historias"
   | "agenda"
   | "pagos"
-  | "inventario";
+  | "inventario"
+  | "profesionales"
+  | "servicios";
+
+type TipoCargoEquipo =
+  | "Odontólogo"
+  | "Auxiliar / Asistente"
+  | "Recepcionista"
+  | "Especialista";
+
+type ModalidadPagoEquipo = "salario" | "porcentaje" | "mixto";
+
+interface ProfesionalEquipo {
+  id: string;
+  nombre: string;
+  cargo: TipoCargoEquipo;
+  especialidad: string;
+  modalidadPago: ModalidadPagoEquipo;
+  salarioMensual: string;
+  porcentajeComision: string;
+  horarioTrabajo: string;
+  activo: boolean;
+}
+
+interface ServicioCartera {
+  id: string;
+  nombre: string;
+  categoria: string;
+  precioReferencial: string;
+  duracionMinutos: string;
+  porcentajeEspecialista: string;
+  descripcion: string;
+}
 
 type SeccionHC =
   | "identificacion"
@@ -260,6 +292,79 @@ const OPCIONES_OCLUSION_ANGLE = [
   "Clase I",
   "Clase II",
   "Clase III",
+];
+
+const CARGOS_EQUIPO: TipoCargoEquipo[] = [
+  "Odontólogo",
+  "Auxiliar / Asistente",
+  "Recepcionista",
+  "Especialista",
+];
+
+const SERVICIOS_INICIALES: ServicioCartera[] = [
+  {
+    id: "srv-1",
+    nombre: "Profilaxis dental y pulido",
+    categoria: "Odontología preventiva",
+    precioReferencial: "35.00",
+    duracionMinutos: "40",
+    porcentajeEspecialista: "0",
+    descripcion: "Limpieza supragingival, remoción de placa y profilaxis.",
+  },
+  {
+    id: "srv-2",
+    nombre: "Resina estética directa",
+    categoria: "Operatoria dental",
+    precioReferencial: "45.00",
+    duracionMinutos: "45",
+    porcentajeEspecialista: "0",
+    descripcion: "Restauración adhesiva con resina compuesta.",
+  },
+  {
+    id: "srv-3",
+    nombre: "Endodoncia unirradicular",
+    categoria: "Endodoncia",
+    precioReferencial: "140.00",
+    duracionMinutos: "75",
+    porcentajeEspecialista: "40",
+    descripcion: "Tratamiento de conductos radiculares en pieza unirradicular.",
+  },
+];
+
+const PROFESIONALES_INICIALES: ProfesionalEquipo[] = [
+  {
+    id: "prof-1",
+    nombre: "Dr. / Dra. Principal",
+    cargo: "Odontólogo",
+    especialidad: "Odontología General",
+    modalidadPago: "mixto",
+    salarioMensual: "800.00",
+    porcentajeComision: "30",
+    horarioTrabajo: "Lun a Vie 08:00 - 13:00 / Sáb 09:00 - 14:00",
+    activo: true,
+  },
+  {
+    id: "prof-2",
+    nombre: "Asistente de Consultorio",
+    cargo: "Auxiliar / Asistente",
+    especialidad: "Asistencia clínica y esterilización",
+    modalidadPago: "salario",
+    salarioMensual: "475.00",
+    porcentajeComision: "0",
+    horarioTrabajo: "Lun a Vie 08:00 - 13:00",
+    activo: true,
+  },
+  {
+    id: "prof-3",
+    nombre: "Recepción y Agenda",
+    cargo: "Recepcionista",
+    especialidad: "Atención al paciente y turnos",
+    modalidadPago: "salario",
+    salarioMensual: "475.00",
+    porcentajeComision: "0",
+    horarioTrabajo: "Lun a Vie 08:00 - 13:00",
+    activo: true,
+  },
 ];
 
 const CODIGOS_CIE10_ODONTO: { codigo: string; descripcion: string }[] = [
@@ -644,6 +749,7 @@ function crearHcVacia(
     prescripciones: [],
   };
 }
+
 function calcularEdad(fechaNacimiento: string): string {
   if (!fechaNacimiento) return "—";
   const nac = new Date(fechaNacimiento);
@@ -909,6 +1015,27 @@ export default function HomePage() {
   const [moduloActivo, setModuloActivo] = useState<ModuloActivo>(null);
   const [mostrarVista3D, setMostrarVista3D] = useState(false);
 
+  const [profesionales, setProfesionales] = useState<ProfesionalEquipo[]>(
+    PROFESIONALES_INICIALES
+  );
+  const [profNombre, setProfNombre] = useState("");
+  const [profCargo, setProfCargo] = useState<TipoCargoEquipo>("Especialista");
+  const [profEspecialidad, setProfEspecialidad] = useState("");
+  const [profModalidadPago, setProfModalidadPago] =
+    useState<ModalidadPagoEquipo>("porcentaje");
+  const [profSalario, setProfSalario] = useState("");
+  const [profPorcentaje, setProfPorcentaje] = useState("40");
+  const [profHorario, setProfHorario] = useState("");
+
+  const [servicios, setServicios] =
+    useState<ServicioCartera[]>(SERVICIOS_INICIALES);
+  const [srvNombre, setSrvNombre] = useState("");
+  const [srvCategoria, setSrvCategoria] = useState("Odontología general");
+  const [srvPrecio, setSrvPrecio] = useState("");
+  const [srvDuracion, setSrvDuracion] = useState("45");
+  const [srvPorcentajeEsp, setSrvPorcentajeEsp] = useState("");
+  const [srvDescripcion, setSrvDescripcion] = useState("");
+
   const [catalogoMedicamentos, setCatalogoMedicamentos] = useState<
     MedicamentoCatalogo[]
   >(CATALOGO_MEDICAMENTOS_INICIAL);
@@ -1017,6 +1144,64 @@ export default function HomePage() {
     setPerfil(null);
     setModuloActivo(null);
     setPassword("");
+  }
+
+  function agregarProfesional(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profNombre.trim()) return;
+
+    const nuevo: ProfesionalEquipo = {
+      id: `prof-${Date.now()}`,
+      nombre: profNombre.trim(),
+      cargo: profCargo,
+      especialidad: profEspecialidad.trim() || profCargo,
+      modalidadPago: profModalidadPago,
+      salarioMensual: profSalario.trim() || "0.00",
+      porcentajeComision: profPorcentaje.trim() || "0",
+      horarioTrabajo: profHorario.trim() || "Por definir",
+      activo: true,
+    };
+
+    setProfesionales((prev) => [nuevo, ...prev]);
+    setProfNombre("");
+    setProfEspecialidad("");
+    setProfSalario("");
+    setProfHorario("");
+  }
+
+  function alternarEstadoProfesional(id: string) {
+    setProfesionales((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, activo: !p.activo } : p))
+    );
+  }
+
+  function eliminarProfesional(id: string) {
+    setProfesionales((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  function agregarServicioCartera(e: React.FormEvent) {
+    e.preventDefault();
+    if (!srvNombre.trim()) return;
+
+    const nuevo: ServicioCartera = {
+      id: `srv-${Date.now()}`,
+      nombre: srvNombre.trim(),
+      categoria: srvCategoria.trim() || "Odontología general",
+      precioReferencial: srvPrecio.trim() || "0.00",
+      duracionMinutos: srvDuracion.trim() || "30",
+      porcentajeEspecialista: srvPorcentajeEsp.trim() || "0",
+      descripcion: srvDescripcion.trim(),
+    };
+
+    setServicios((prev) => [nuevo, ...prev]);
+    setSrvNombre("");
+    setSrvPrecio("");
+    setSrvPorcentajeEsp("");
+    setSrvDescripcion("");
+  }
+
+  function eliminarServicioCartera(id: string) {
+    setServicios((prev) => prev.filter((s) => s.id !== id));
   }
 
   function crearPaciente(e: React.FormEvent) {
@@ -1305,6 +1490,7 @@ export default function HomePage() {
       )
     );
   }
+
   function handleSubirFotoCarne(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
     if (!archivo || !pacienteSeleccionadoId) return;
@@ -1662,6 +1848,7 @@ export default function HomePage() {
       })
     );
   }
+
   function cargarInformacionSeleccionada(
     procedimientoForzado?: "caries" | "restauracion"
   ) {
@@ -2263,6 +2450,7 @@ export default function HomePage() {
       </div>
     );
   }
+
   function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
     const piezasSel = hc.piezasSeleccionadas || [];
     const procActualObj = PROCEDIMIENTOS_MSP.find(
@@ -2629,6 +2817,7 @@ export default function HomePage() {
       </div>
     );
   }
+
   const pacienteActivo =
     pacientes.find((p) => p.id === pacienteSeleccionadoId) || null;
 
@@ -2777,7 +2966,7 @@ export default function HomePage() {
       </header>
 
       {!moduloActivo ? (
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <button
             type="button"
             onClick={() => setModuloActivo("historias")}
@@ -2824,6 +3013,29 @@ export default function HomePage() {
               Existencias y materiales del consultorio.
             </p>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setModuloActivo("profesionales")}
+            className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
+          >
+            <h2 className="font-medium text-sky-950">Profesionales y Equipo</h2>
+            <p className="text-xs text-sky-700 mt-1">
+              Equipo ({profesionales.length}), salarios, porcentajes y
+              horarios.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setModuloActivo("servicios")}
+            className="text-left bg-sky-50/70 border border-sky-200 hover:border-sky-400 hover:bg-sky-100/70 rounded-xl p-4 shadow-sm transition"
+          >
+            <h2 className="font-medium text-sky-950">Cartera de Servicios</h2>
+            <p className="text-xs text-sky-700 mt-1">
+              Procedimientos ({servicios.length}) y valores referenciales.
+            </p>
+          </button>
         </section>
       ) : (
         <section className="bg-white border border-sky-200 rounded-2xl p-5 shadow-sm space-y-5">
@@ -2834,6 +3046,8 @@ export default function HomePage() {
               {moduloActivo === "agenda" && "Agenda y Recordatorios"}
               {moduloActivo === "pagos" && "Presupuestos y Pagos"}
               {moduloActivo === "inventario" && "Inventario de Insumos"}
+              {moduloActivo === "profesionales" && "Profesionales y Equipo"}
+              {moduloActivo === "servicios" && "Cartera de Servicios"}
             </h2>
             <button
               type="button"
@@ -2843,6 +3057,390 @@ export default function HomePage() {
               Volver al menú
             </button>
           </div>
+
+          {moduloActivo === "profesionales" && (
+            <div className="space-y-5 text-sm">
+              <form
+                onSubmit={agregarProfesional}
+                className="border border-sky-200 rounded-xl p-4 bg-sky-50/60 space-y-3"
+              >
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                  Registrar integrante o especialista
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Nombre completo
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profNombre}
+                      onChange={(e) => setProfNombre(e.target.value)}
+                      placeholder="Ej. Dra. Sofía Paredes"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Cargo / Rol
+                    </label>
+                    <select
+                      value={profCargo}
+                      onChange={(e) =>
+                        setProfCargo(e.target.value as TipoCargoEquipo)
+                      }
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    >
+                      {CARGOS_EQUIPO.map((cargo) => (
+                        <option key={cargo} value={cargo}>
+                          {cargo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Especialidad o función
+                    </label>
+                    <input
+                      type="text"
+                      value={profEspecialidad}
+                      onChange={(e) => setProfEspecialidad(e.target.value)}
+                      placeholder="Ej. Endodoncia, Ortodoncia, Recepción"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Esquema de pago
+                    </label>
+                    <select
+                      value={profModalidadPago}
+                      onChange={(e) =>
+                        setProfModalidadPago(
+                          e.target.value as ModalidadPagoEquipo
+                        )
+                      }
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="salario">Salario fijo</option>
+                      <option value="porcentaje">Porcentaje (%)</option>
+                      <option value="mixto">Salario fijo + Porcentaje (%)</option>
+                    </select>
+                  </div>
+
+                  {(profModalidadPago === "salario" ||
+                    profModalidadPago === "mixto") && (
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Salario mensual ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={profSalario}
+                        onChange={(e) => setProfSalario(e.target.value)}
+                        placeholder="Ej. 500.00"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {(profModalidadPago === "porcentaje" ||
+                    profModalidadPago === "mixto") && (
+                    <div>
+                      <label className="block text-xs font-medium text-sky-900 mb-1">
+                        Porcentaje de pago (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="100"
+                        value={profPorcentaje}
+                        onChange={(e) => setProfPorcentaje(e.target.value)}
+                        placeholder="Ej. 40"
+                        className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Horario de trabajo
+                    </label>
+                    <input
+                      type="text"
+                      value={profHorario}
+                      onChange={(e) => setProfHorario(e.target.value)}
+                      placeholder="Ej. Mar y Jue 14:00 - 19:00 / Dom previa cita"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-sky-600 text-white px-4 py-2 text-xs font-semibold hover:bg-sky-700 shrink-0"
+                  >
+                    + Agregar al equipo
+                  </button>
+                </div>
+              </form>
+
+              <div className="space-y-2.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                  Listado de profesionales y colaboradores ({profesionales.length})
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {profesionales.map((prof) => {
+                    const partesPago: string[] = [];
+                    if (
+                      prof.modalidadPago === "salario" ||
+                      prof.modalidadPago === "mixto"
+                    ) {
+                      partesPago.push(`Salario: $${prof.salarioMensual}`);
+                    }
+                    if (
+                      prof.modalidadPago === "porcentaje" ||
+                      prof.modalidadPago === "mixto"
+                    ) {
+                      partesPago.push(`Porcentaje: ${prof.porcentajeComision}%`);
+                    }
+
+                    return (
+                      <div
+                        key={prof.id}
+                        className={`border rounded-xl p-3.5 space-y-2 transition ${
+                          prof.activo
+                            ? "border-sky-200 bg-white"
+                            : "border-slate-200 bg-slate-50 opacity-75"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-semibold text-sky-950">
+                                {prof.nombre}
+                              </span>
+                              <span className="rounded-full bg-sky-100 text-sky-900 border border-sky-200 px-2 py-0.5 text-[11px] font-medium">
+                                {prof.cargo}
+                              </span>
+                            </div>
+                            <p className="text-xs text-sky-700 mt-0.5">
+                              {prof.especialidad}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`rounded px-2 py-0.5 text-[11px] font-medium ${
+                              prof.activo
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {prof.activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-sky-900 space-y-1 border-t border-sky-100 pt-2">
+                          <p>
+                            <strong>Pago:</strong> {partesPago.join(" · ")}
+                          </p>
+                          <p>
+                            <strong>Horario:</strong> {prof.horarioTrabajo}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => alternarEstadoProfesional(prof.id)}
+                            className="rounded-lg border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-900 px-2.5 py-1 font-medium"
+                          >
+                            {prof.activo ? "Desactivar" : "Activar"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => eliminarProfesional(prof.id)}
+                            className="text-red-600 hover:underline px-1.5 py-1"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {moduloActivo === "servicios" && (
+            <div className="space-y-5 text-sm">
+              <form
+                onSubmit={agregarServicioCartera}
+                className="border border-sky-200 rounded-xl p-4 bg-sky-50/60 space-y-3"
+              >
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                  Agregar procedimiento a la cartera de servicios
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Nombre del procedimiento
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={srvNombre}
+                      onChange={(e) => setSrvNombre(e.target.value)}
+                      placeholder="Ej. Exodoncia simple, Blanqueamiento"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Categoría o especialidad
+                    </label>
+                    <input
+                      type="text"
+                      value={srvCategoria}
+                      onChange={(e) => setSrvCategoria(e.target.value)}
+                      placeholder="Ej. Cirugía oral, Ortodoncia"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Valor referencial ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={srvPrecio}
+                      onChange={(e) => setSrvPrecio(e.target.value)}
+                      placeholder="Ej. 50.00"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Duración estimada (min)
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      step="5"
+                      value={srvDuracion}
+                      onChange={(e) => setSrvDuracion(e.target.value)}
+                      placeholder="Ej. 30"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      % especialista (opcional)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max="100"
+                      value={srvPorcentajeEsp}
+                      onChange={(e) => setSrvPorcentajeEsp(e.target.value)}
+                      placeholder="Ej. 35"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-sky-900 mb-1">
+                      Nota / detalle clínico
+                    </label>
+                    <input
+                      type="text"
+                      value={srvDescripcion}
+                      onChange={(e) => setSrvDescripcion(e.target.value)}
+                      placeholder="Breve referencia del servicio"
+                      className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-sky-600 text-white px-4 py-2 text-xs font-semibold hover:bg-sky-700"
+                  >
+                    + Guardar en cartera
+                  </button>
+                </div>
+              </form>
+
+              <div className="space-y-2.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                  Procedimientos registrados ({servicios.length})
+                </h3>
+
+                <div className="divide-y divide-sky-100 border border-sky-200 rounded-xl bg-white overflow-hidden">
+                  {servicios.map((srv) => (
+                    <div
+                      key={srv.id}
+                      className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-sky-950">
+                            {srv.nombre}
+                          </span>
+                          <span className="rounded bg-sky-50 border border-sky-200 px-2 py-0.5 text-[11px] text-sky-800">
+                            {srv.categoria}
+                          </span>
+                          <span className="text-xs font-semibold text-emerald-700">
+                            ${srv.precioReferencial}
+                          </span>
+                        </div>
+                        <p className="text-xs text-sky-700">
+                          Duración: {srv.duracionMinutos} min
+                          {Number(srv.porcentajeEspecialista) > 0
+                            ? ` · Pago especialista: ${srv.porcentajeEspecialista}%`
+                            : ""}
+                          {srv.descripcion ? ` · ${srv.descripcion}` : ""}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => eliminarServicioCartera(srv.id)}
+                        className="text-xs text-red-600 hover:underline self-end sm:self-center shrink-0"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {moduloActivo === "historias" && (
             <div className="space-y-5">
@@ -2994,6 +3592,7 @@ export default function HomePage() {
                       </button>
                     ))}
                   </div>
+
                   {seccionHc === "identificacion" && (
                     <div className="space-y-4 text-sm">
                       <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 flex flex-col sm:flex-row items-center gap-4">
@@ -3662,1194 +4261,3 @@ export default function HomePage() {
                               }
                               className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm disabled:bg-sky-50 disabled:text-sky-400"
                             />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="border border-sky-200 rounded-xl p-4 space-y-4 bg-white">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
-                          Antecedentes odontológicos
-                        </h4>
-
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                            Tratamientos odontológicos previos
-                          </label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {OPCIONES_TRATAMIENTOS_PREVIOS.map((trat) => {
-                              const marcado =
-                                pacienteActivo.hc.tratamientosPrevios.includes(
-                                  trat
-                                );
-                              return (
-                                <label
-                                  key={trat}
-                                  className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={marcado}
-                                    onChange={() =>
-                                      toggleTratamientoPrevio(trat)
-                                    }
-                                    className="rounded border-sky-300"
-                                  />
-                                  <span>{trat}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-
-                          {pacienteActivo.hc.tratamientosPrevios.includes(
-                            "Otros"
-                          ) && (
-                            <div className="pt-1">
-                              <label className="block text-xs font-medium text-sky-800 mb-1">
-                                Especificar otros tratamientos previos
-                              </label>
-                              <input
-                                type="text"
-                                value={
-                                  pacienteActivo.hc.otrosTratamientosPrevios
-                                }
-                                onChange={(e) =>
-                                  actualizarCampoHc(
-                                    "otrosTratamientosPrevios",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Escriba a qué tratamientos se refiere..."
-                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
-                            <label className="block text-xs font-medium text-sky-900">
-                              Frecuencia de visitas al odontólogo
-                            </label>
-                            <select
-                              value={pacienteActivo.hc.frecuenciaVisitas}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "frecuenciaVisitas",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            >
-                              <option value="">Seleccionar opción</option>
-                              {OPCIONES_FRECUENCIA_VISITAS.map((op) => (
-                                <option key={op} value={op}>
-                                  {op}
-                                </option>
-                              ))}
-                            </select>
-                            {pacienteActivo.hc.frecuenciaVisitas ===
-                              "Otros" && (
-                              <input
-                                type="text"
-                                value={pacienteActivo.hc.otraFrecuenciaVisitas}
-                                onChange={(e) =>
-                                  actualizarCampoHc(
-                                    "otraFrecuenciaVisitas",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Escriba a qué se refiere..."
-                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                              />
-                            )}
-                          </div>
-
-                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
-                            <label className="block text-xs font-medium text-sky-900">
-                              Experiencias anteriores
-                            </label>
-                            <select
-                              value={pacienteActivo.hc.experienciasAnteriores}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "experienciasAnteriores",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            >
-                              <option value="">Seleccionar opción</option>
-                              {OPCIONES_EXPERIENCIAS_ANTERIORES.map((op) => (
-                                <option key={op} value={op}>
-                                  {op}
-                                </option>
-                              ))}
-                            </select>
-                            {pacienteActivo.hc.experienciasAnteriores ===
-                              "Otros" && (
-                              <input
-                                type="text"
-                                value={
-                                  pacienteActivo.hc.otraExperienciaAnterior
-                                }
-                                onChange={(e) =>
-                                  actualizarCampoHc(
-                                    "otraExperienciaAnterior",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Escriba a qué se refiere..."
-                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                              />
-                            )}
-                          </div>
-
-                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
-                            <label className="block text-xs font-medium text-sky-900">
-                              Nivel de ansiedad dental
-                            </label>
-                            <select
-                              value={pacienteActivo.hc.ansiedadDental}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "ansiedadDental",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            >
-                              <option value="">Seleccionar opción</option>
-                              {OPCIONES_ANSIEDAD_DENTAL.map((op) => (
-                                <option key={op} value={op}>
-                                  {op}
-                                </option>
-                              ))}
-                            </select>
-                            {pacienteActivo.hc.ansiedadDental === "Otros" && (
-                              <input
-                                type="text"
-                                value={pacienteActivo.hc.otraAnsiedadDental}
-                                onChange={(e) =>
-                                  actualizarCampoHc(
-                                    "otraAnsiedadDental",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Escriba a qué se refiere..."
-                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                              />
-                            )}
-                          </div>
-
-                          <div className="border border-sky-200 rounded-xl p-3 bg-sky-50/60 space-y-2">
-                            <label className="block text-xs font-medium text-sky-900">
-                              Higiene oral habitual
-                            </label>
-                            <select
-                              value={pacienteActivo.hc.higieneOral}
-                              onChange={(e) =>
-                                actualizarCampoHc("higieneOral", e.target.value)
-                              }
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            >
-                              <option value="">Seleccionar opción</option>
-                              {OPCIONES_HIGIENE_ORAL.map((op) => (
-                                <option key={op} value={op}>
-                                  {op}
-                                </option>
-                              ))}
-                            </select>
-                            {pacienteActivo.hc.higieneOral === "Otros" && (
-                              <input
-                                type="text"
-                                value={pacienteActivo.hc.otraHigieneOral}
-                                onChange={(e) =>
-                                  actualizarCampoHc(
-                                    "otraHigieneOral",
-                                    e.target.value
-                                  )
-                                }
-                                placeholder="Escriba a qué se refiere..."
-                                className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                              />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {seccionHc === "clinico" && (
-                    <div className="space-y-4 text-sm">
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-sky-900 mb-1">
-                            Presión arterial
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.presionArterial}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "presionArterial",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ej. 120/80 mmHg"
-                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-sky-900 mb-1">
-                            Pulso
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.pulso}
-                            onChange={(e) =>
-                              actualizarCampoHc("pulso", e.target.value)
-                            }
-                            placeholder="Ej. 72 lpm"
-                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-sky-900 mb-1">
-                            Temperatura
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.temperatura}
-                            onChange={(e) =>
-                              actualizarCampoHc("temperatura", e.target.value)
-                            }
-                            placeholder="Ej. 36.6 °C"
-                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-sky-900 mb-1">
-                            Frecuencia respiratoria
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.frecuenciaRespiratoria}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "frecuenciaRespiratoria",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ej. 16 rpm"
-                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          Examen extraoral
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {OPCIONES_EXAMEN_EXTRAORAL.map((op) => {
-                            const marcada =
-                              pacienteActivo.hc.examenExtraoral.includes(op);
-                            return (
-                              <label
-                                key={op}
-                                className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={marcada}
-                                  onChange={() =>
-                                    toggleChecklistClinico(
-                                      "examenExtraoral",
-                                      "detalleExamenExtraoral",
-                                      op
-                                    )
-                                  }
-                                  className="rounded border-sky-300"
-                                />
-                                <span>{op}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                        {pacienteActivo.hc.examenExtraoral.includes(
-                          "Otros"
-                        ) && (
-                          <div className="pt-1">
-                            <label className="block text-xs font-medium text-sky-800 mb-1">
-                              Detallar examen extraoral (Otros)
-                            </label>
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.detalleExamenExtraoral}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "detalleExamenExtraoral",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Escriba los hallazgos extraorales..."
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          Examen intraoral
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {OPCIONES_EXAMEN_INTRAORAL.map((op) => {
-                            const marcada =
-                              pacienteActivo.hc.examenIntraoral.includes(op);
-                            return (
-                              <label
-                                key={op}
-                                className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={marcada}
-                                  onChange={() =>
-                                    toggleChecklistClinico(
-                                      "examenIntraoral",
-                                      "detalleExamenIntraoral",
-                                      op
-                                    )
-                                  }
-                                  className="rounded border-sky-300"
-                                />
-                                <span>{op}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                        {pacienteActivo.hc.examenIntraoral.includes(
-                          "Otros"
-                        ) && (
-                          <div className="pt-1">
-                            <label className="block text-xs font-medium text-sky-800 mb-1">
-                              Detallar examen intraoral (Otros)
-                            </label>
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.detalleExamenIntraoral}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "detalleExamenIntraoral",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Escriba los hallazgos intraorales..."
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          Tejidos blandos
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {OPCIONES_TEJIDOS_BLANDOS.map((op) => {
-                            const marcada =
-                              pacienteActivo.hc.tejidosBlandos.includes(op);
-                            return (
-                              <label
-                                key={op}
-                                className="flex items-center gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs font-medium text-sky-900 cursor-pointer"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={marcada}
-                                  onChange={() =>
-                                    toggleChecklistClinico(
-                                      "tejidosBlandos",
-                                      "detalleTejidosBlandos",
-                                      op
-                                    )
-                                  }
-                                  className="rounded border-sky-300"
-                                />
-                                <span>{op}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                        {pacienteActivo.hc.tejidosBlandos.includes("Otros") && (
-                          <div className="pt-1">
-                            <label className="block text-xs font-medium text-sky-800 mb-1">
-                              Detallar tejidos blandos (Otros)
-                            </label>
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.detalleTejidosBlandos}
-                              onChange={(e) =>
-                                actualizarCampoHc(
-                                  "detalleTejidosBlandos",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Escriba los hallazgos en tejidos blandos..."
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {seccionHc === "odontograma" && (() => {
-                    const cpod = obtenerValoresCpod(pacienteActivo.hc);
-                    return (
-                      <div className="space-y-4 text-sm">
-                        {renderOdontogramaMsp(pacienteActivo.hc)}
-
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                            Resumen general del odontograma
-                          </label>
-                          <textarea
-                            rows={3}
-                            value={pacienteActivo.hc.notasOdontograma}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "notasOdontograma",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Notas generales de piezas, restauraciones o patologías..."
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2.5">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                              Índice CPOD (sincronizado con odontograma)
-                            </label>
-                            <span className="text-xs font-semibold text-sky-950 bg-white border border-sky-200 rounded-lg px-2.5 py-1">
-                              Total CPOD: {cpod.total}
-                            </span>
-                          </div>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs border-collapse bg-white rounded-lg overflow-hidden">
-                              <thead>
-                                <tr className="bg-sky-100 text-sky-950">
-                                  <th className="border border-sky-200 px-3 py-2 text-center">
-                                    C (Cariados)
-                                  </th>
-                                  <th className="border border-sky-200 px-3 py-2 text-center">
-                                    P (Perdidos)
-                                  </th>
-                                  <th className="border border-sky-200 px-3 py-2 text-center">
-                                    O (Obturados)
-                                  </th>
-                                  <th className="border border-sky-200 px-3 py-2 text-center">
-                                    Total CPOD
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td className="border border-sky-200 p-2 text-center">
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={cpod.cariados}
-                                      onChange={(e) =>
-                                        actualizarCpodManual(
-                                          "cariados",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="w-20 text-center rounded border border-sky-200 px-2 py-1 text-sm font-semibold text-red-700"
-                                    />
-                                  </td>
-                                  <td className="border border-sky-200 p-2 text-center">
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={cpod.perdidos}
-                                      onChange={(e) =>
-                                        actualizarCpodManual(
-                                          "perdidos",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="w-20 text-center rounded border border-sky-200 px-2 py-1 text-sm font-semibold text-sky-900"
-                                    />
-                                  </td>
-                                  <td className="border border-sky-200 p-2 text-center">
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={cpod.obturados}
-                                      onChange={(e) =>
-                                        actualizarCpodManual(
-                                          "obturados",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="w-20 text-center rounded border border-sky-200 px-2 py-1 text-sm font-semibold text-sky-700"
-                                    />
-                                  </td>
-                                  <td className="border border-sky-200 p-2 text-center font-semibold text-sky-950">
-                                    {cpod.total}
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
-                          <label className="block text-xs font-medium text-sky-900">
-                            Oclusión / Llave de Angle
-                          </label>
-                          <select
-                            value={pacienteActivo.hc.oclusionLlaveAngle}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "oclusionLlaveAngle",
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          >
-                            <option value="">Seleccionar clasificación</option>
-                            {OPCIONES_OCLUSION_ANGLE.map((op) => (
-                              <option key={op} value={op}>
-                                {op}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {seccionHc === "diagnostico" && (
-                    <div className="space-y-4 text-sm">
-                      {renderOdontogramaMsp(pacienteActivo.hc)}
-
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          Diagnóstico CIE-10 (Códigos K y Z02.1)
-                        </label>
-
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                          <select
-                            value={
-                              CODIGOS_CIE10_ODONTO.some(
-                                (c) =>
-                                  c.codigo === pacienteActivo.hc.codigoCie10
-                              )
-                                ? pacienteActivo.hc.codigoCie10
-                                : ""
-                            }
-                            onChange={(e) =>
-                              seleccionarCie10DesdeLista(e.target.value)
-                            }
-                            className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
-                          >
-                            <option value="">
-                              Seleccionar código CIE-10 (K / Z02.1)...
-                            </option>
-                            {CODIGOS_CIE10_ODONTO.map((item) => (
-                              <option key={item.codigo} value={item.codigo}>
-                                {item.codigo} — {item.descripcion}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button
-                            type="button"
-                            onClick={registrarDiagnosticoSeleccionado}
-                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold shrink-0"
-                          >
-                            Registrar
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-sky-900 mb-1">
-                              Código CIE-10
-                            </label>
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.codigoCie10}
-                              onChange={(e) =>
-                                actualizarCampoHc("codigoCie10", e.target.value)
-                              }
-                              placeholder="Ej. K02.1 o Z02.1"
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-
-                          <div className="sm:col-span-2">
-                            <label className="block text-xs font-medium text-sky-900 mb-1">
-                              Diagnóstico presuntivo o definitivo (CIE-10)
-                            </label>
-                            <input
-                              type="text"
-                              value={pacienteActivo.hc.diagnostico}
-                              onChange={(e) =>
-                                actualizarCampoHc("diagnostico", e.target.value)
-                              }
-                              placeholder="Diagnóstico clínico según CIE-10"
-                              className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-                        </div>
-
-                        {(pacienteActivo.hc.diagnosticosRegistrados || [])
-                          .length > 0 && (
-                          <div className="space-y-1.5 pt-1">
-                            <p className="text-xs font-semibold text-sky-900">
-                              Diagnósticos registrados:
-                            </p>
-                            <ul className="space-y-1.5">
-                              {pacienteActivo.hc.diagnosticosRegistrados.map(
-                                (d) => (
-                                  <li
-                                    key={d.id}
-                                    className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
-                                  >
-                                    <div>
-                                      <strong className="text-sky-950">
-                                        {d.codigoCie10}
-                                      </strong>{" "}
-                                      — {d.descripcion}{" "}
-                                      <span className="text-sky-700 font-medium">
-                                        (Pieza: {d.pieza})
-                                      </span>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        eliminarDiagnosticoRegistrado(d.id)
-                                      }
-                                      className="text-red-600 hover:underline shrink-0"
-                                    >
-                                      Quitar
-                                    </button>
-                                  </li>
-                                )
-                              )}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
-                        <label className="block text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          Plan de tratamiento
-                        </label>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <select
-                            value={pacienteActivo.hc.piezaPlanSeleccionada}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "piezaPlanSeleccionada",
-                                e.target.value
-                              )
-                            }
-                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
-                          >
-                            <option value="">
-                              Pieza dental ({
-                                pacienteActivo.hc.piezasSeleccionadas[0] ||
-                                  "General"
-                              })
-                            </option>
-                            <option value="General">General</option>
-                            {TODAS_LAS_PIEZAS.map((cod) => (
-                              <option key={cod} value={cod}>
-                                Pieza #{cod}
-                              </option>
-                            ))}
-                          </select>
-
-                          <select
-                            value={
-                              PROCEDIMIENTOS_MSP.some(
-                                (p) =>
-                                  p.titulo ===
-                                  pacienteActivo.hc.procedimientoPlanSeleccionado
-                              )
-                                ? pacienteActivo.hc
-                                    .procedimientoPlanSeleccionado
-                                : ""
-                            }
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "procedimientoPlanSeleccionado",
-                                e.target.value
-                              )
-                            }
-                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
-                          >
-                            <option value="">
-                              Seleccionar procedimiento...
-                            </option>
-                            {PROCEDIMIENTOS_MSP.map((p) => (
-                              <option key={p.id} value={p.titulo}>
-                                {p.titulo}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button
-                            type="button"
-                            onClick={agregarItemPlanTratamiento}
-                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
-                          >
-                            + Añadir al plan
-                          </button>
-                        </div>
-
-                        <div>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.procedimientoPlanSeleccionado}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "procedimientoPlanSeleccionado",
-                                e.target.value
-                              )
-                            }
-                            placeholder="O escriba el procedimiento a realizar en la pieza..."
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-
-                        {(pacienteActivo.hc.itemsPlanTratamiento || []).length >
-                          0 && (
-                          <ul className="space-y-1.5">
-                            {pacienteActivo.hc.itemsPlanTratamiento.map(
-                              (item) => (
-                                <li
-                                  key={item.id}
-                                  className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
-                                >
-                                  <div>
-                                    <strong className="text-sky-950">
-                                      Pieza {item.pieza}
-                                    </strong>{" "}
-                                    — {item.procedimiento}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      eliminarItemPlanTratamiento(item.id)
-                                    }
-                                    className="text-red-600 hover:underline shrink-0"
-                                  >
-                                    Quitar
-                                  </button>
-                                </li>
-                              )
-                            )}
-                          </ul>
-                        )}
-
-                        <div>
-                          <label className="block text-xs font-medium text-sky-900 mb-1">
-                            Observaciones del plan de tratamiento
-                          </label>
-                          <textarea
-                            rows={2}
-                            value={pacienteActivo.hc.planTratamiento}
-                            onChange={(e) =>
-                              actualizarCampoHc("planTratamiento", e.target.value)
-                            }
-                            placeholder="Secuencia general de tratamientos y citas propuestas"
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {seccionHc === "examenes" && (
-                    <div className="space-y-4 text-sm">
-                      <div>
-                        <label className="block text-xs font-medium text-sky-900 mb-1">
-                          Exámenes complementarios (radiografías, fotografías
-                          clínicas, tomografías, laboratorio)
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={pacienteActivo.hc.examenesComplementarios}
-                          onChange={(e) =>
-                            actualizarCampoHc(
-                              "examenesComplementarios",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
-                          className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-sky-50/70 p-3.5 rounded-xl border border-sky-200">
-                        <label className="cursor-pointer rounded-lg bg-sky-600 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-700">
-                          Tomar foto con cámara
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-
-                        <label className="cursor-pointer rounded-lg border border-sky-300 bg-white text-sky-900 px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-100">
-                          Adjuntar foto o imagen
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleSubirFoto}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-
-                      {pacienteActivo.hc.fotos.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {pacienteActivo.hc.fotos.map((foto) => (
-                            <div
-                              key={foto.id}
-                              className="border border-sky-200 rounded-xl overflow-hidden bg-white"
-                            >
-                              <img
-                                src={foto.dataUrl}
-                                alt={foto.nombreArchivo}
-                                className="w-full h-36 object-cover bg-sky-50"
-                              />
-                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
-                                <div className="truncate">
-                                  <p className="font-medium text-sky-950 truncate">
-                                    {foto.nombreArchivo}
-                                  </p>
-                                  <p className="text-sky-600">{foto.fecha}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarFoto(foto.id)}
-                                  className="text-red-600 hover:underline shrink-0"
-                                >
-                                  Quitar
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {seccionHc === "prescripciones" && (
-                    <div className="space-y-4 text-sm">
-                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
-                          Lista general de medicamentos
-                        </h4>
-                        <form
-                          onSubmit={agregarMedicamentoCatalogo}
-                          className="grid grid-cols-1 sm:grid-cols-3 gap-2"
-                        >
-                          <input
-                            type="text"
-                            value={nuevoMedNombre}
-                            onChange={(e) => setNuevoMedNombre(e.target.value)}
-                            placeholder="Nombre del medicamento"
-                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                          <input
-                            type="text"
-                            value={nuevoMedPresentacion}
-                            onChange={(e) =>
-                              setNuevoMedPresentacion(e.target.value)
-                            }
-                            placeholder="Concentración / presentación"
-                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                          <button
-                            type="submit"
-                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
-                          >
-                            + Agregar a lista general
-                          </button>
-                        </form>
-
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {catalogoMedicamentos.map((med) => {
-                            const activa =
-                              pacienteActivo.hc.medicamentoPrescribirId ===
-                              med.id;
-                            return (
-                              <button
-                                key={med.id}
-                                type="button"
-                                onClick={() =>
-                                  actualizarCampoHc(
-                                    "medicamentoPrescribirId",
-                                    med.id
-                                  )
-                                }
-                                className={`rounded-lg px-2.5 py-1 text-xs border transition ${
-                                  activa
-                                    ? "bg-sky-200 text-sky-950 border-sky-400 font-semibold"
-                                    : "bg-white text-sky-800 border-sky-200 hover:bg-sky-100"
-                                }`}
-                              >
-                                {med.nombre} · {med.presentacion}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
-                            RP (Medicamentos a prescribir)
-                          </label>
-                          <select
-                            value={pacienteActivo.hc.medicamentoPrescribirId}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "medicamentoPrescribirId",
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
-                          >
-                            <option value="">
-                              Seleccionar medicamento de la lista...
-                            </option>
-                            {catalogoMedicamentos.map((med) => (
-                              <option key={med.id} value={med.id}>
-                                {med.nombre} ({med.presentacion})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
-                            Indicaciones
-                          </label>
-                          <input
-                            type="text"
-                            value={pacienteActivo.hc.indicacionesPrescripcion}
-                            onChange={(e) =>
-                              actualizarCampoHc(
-                                "indicacionesPrescripcion",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ej. Tomar 1 tableta cada 8 horas por 5 días"
-                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={agregarPrescripcionPaciente}
-                          className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
-                        >
-                          + Prescribir medicamento
-                        </button>
-                      </div>
-
-                      {(pacienteActivo.hc.prescripciones || []).length > 0 && (
-                        <div className="border border-sky-200 rounded-xl p-3.5 bg-white space-y-2">
-                          <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
-                            RP e Indicaciones del paciente
-                          </h4>
-                          <ul className="divide-y divide-sky-100">
-                            {pacienteActivo.hc.prescripciones.map((presc) => (
-                              <li
-                                key={presc.id}
-                                className="py-2.5 flex items-start justify-between gap-3 text-xs"
-                              >
-                                <div className="space-y-0.5">
-                                  <p className="font-semibold text-sky-950">
-                                    RP: {presc.medicamentoTexto}
-                                  </p>
-                                  <p className="text-sky-800">
-                                    <strong>Indicaciones:</strong>{" "}
-                                    {presc.indicaciones}
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    eliminarPrescripcionPaciente(presc.id)
-                                  }
-                                  className="text-red-600 hover:underline shrink-0"
-                                >
-                                  Quitar
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {(() => {
-                    const idxActual = pestanasHc.findIndex(
-                      (p) => p.id === seccionHc
-                    );
-                    const mostrarAtras = idxActual > 0;
-                    const esCierreOdontograma = seccionHc === "odontograma";
-                    const mostrarSiguiente =
-                      !esCierreOdontograma && idxActual < pestanasHc.length - 1;
-
-                    return (
-                      <div className="pt-2 flex items-center justify-between gap-2">
-                        {mostrarAtras ? (
-                          <button
-                            type="button"
-                            onClick={retrocederPestana}
-                            className="rounded-lg border border-sky-300 bg-white text-sky-900 px-4 py-2 text-xs font-medium hover:bg-sky-50"
-                          >
-                            Atrás
-                          </button>
-                        ) : (
-                          <div />
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          {mostrarSiguiente && (
-                            <button
-                              type="button"
-                              onClick={guardarYAvanzarPestana}
-                              className="rounded-lg bg-sky-600 text-white px-4 py-2 text-xs font-medium hover:bg-sky-700"
-                            >
-                              Siguiente
-                            </button>
-                          )}
-
-                          {esCierreOdontograma && (
-                            <button
-                              type="button"
-                              onClick={guardarYAvanzarPestana}
-                              className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-xs font-medium hover:bg-emerald-700"
-                            >
-                              Finalizar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-
-          {moduloActivo === "agenda" && (
-            <div className="space-y-4">
-              <form
-                onSubmit={agregarCita}
-                className="grid grid-cols-1 sm:grid-cols-4 gap-2"
-              >
-                <input
-                  type="text"
-                  required
-                  value={pacienteCita}
-                  onChange={(e) => setPacienteCita(e.target.value)}
-                  placeholder="Nombre del paciente"
-                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                />
-                <input
-                  type="text"
-                  required
-                  value={motivoCita}
-                  onChange={(e) => setMotivoCita(e.target.value)}
-                  placeholder="Motivo de cita"
-                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                />
-                <input
-                  type="time"
-                  value={horaCita}
-                  onChange={(e) => setHoraCita(e.target.value)}
-                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-medium hover:bg-sky-700"
-                >
-                  Agregar cita
-                </button>
-              </form>
-
-              <ul className="divide-y divide-sky-100">
-                {citas.map((cita) => (
-                  <li
-                    key={cita.id}
-                    className="py-2.5 flex items-center justify-between gap-2 text-sm"
-                  >
-                    <div>
-                      <strong className="text-sky-950">{cita.hora}</strong> —{" "}
-                      {cita.paciente} ({cita.motivo})
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCitas((prev) =>
-                          prev.map((item) =>
-                            item.id === cita.id
-                              ? { ...item, confirmada: !item.confirmada }
-                              : item
-                          )
-                        )
-                      }
-                      className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
-                        cita.confirmada
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-sky-100 text-sky-900"
-                      }`}
-                    >
-                      {cita.confirmada ? "Confirmada" : "Marcar recordatorio"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {(moduloActivo === "pagos" || moduloActivo === "inventario") && (
-            <p className="text-sm text-sky-800">
-              Este módulo ya tiene su vista abierta y lista para añadirle
-              campos. Dime si quieres que armemos primero{" "}
-              {moduloActivo === "pagos"
-                ? "el registro de presupuestos y abonos"
-                : "el control de insumos y cantidades"}
-              .
-            </p>
-          )}
-        </section>
-      )}
-    </main>
-  );
-}
