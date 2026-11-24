@@ -3271,4 +3271,4489 @@ export default function HomePage() {
           <select
             value={valorMov}
             onClick={(e) => e.stopPropagation()}
-            on
+            onChange={(e) =>
+              actualizarDatoPieza(codigoPieza, "movilidad", e.target.value)
+            }
+            title={`Movilidad (Miller) pieza ${codigoPieza}`}
+            className="w-12 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-700 px-0.5 py-0.5"
+          >
+            <option value="">M</option>
+            {MOVILIDAD_MILLER.map((m) => (
+              <option key={m.codigo} value={m.codigo}>
+                {m.codigo}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={valorRec}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) =>
+              actualizarDatoPieza(codigoPieza, "recesion", e.target.value)
+            }
+            title={`Retracción / Recesión (Miller) pieza ${codigoPieza}`}
+            className="w-12 text-center text-[10px] border border-slate-200 rounded bg-white text-slate-700 px-0.5 py-0.5"
+          >
+            <option value="">R</option>
+            {RETRACCION_MILLER.map((r) => (
+              <option key={r.codigo} value={r.codigo}>
+                {r.codigo}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  function renderOdontogramaMsp(hc: HistoriaClinicaCompleta) {
+    const piezasSel = hc.piezasSeleccionadas || [];
+    const procActualObj = PROCEDIMIENTOS_MSP.find(
+      (p) => p.id === hc.procedimientoActivo
+    );
+    const modoCarasActivo = esProcedimientoConCaras(hc.procedimientoActivo);
+
+    const superiorCompleta = ARCADA_SUPERIOR_COMPLETA.every((cod) =>
+      piezasSel.includes(cod)
+    );
+    const inferiorCompleta = ARCADA_INFERIOR_COMPLETA.every((cod) =>
+      piezasSel.includes(cod)
+    );
+
+    const procParaCargarCaras: "caries" | "restauracion" | undefined =
+      hc.procedimientoActivo === "caries" ||
+      hc.procedimientoActivo === "restauracion"
+        ? hc.procedimientoActivo
+        : undefined;
+
+    return (
+      <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/70 space-y-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-slate-800">
+            Odontograma clínico interactivo
+          </span>
+          <button
+            type="button"
+            onClick={() => setMostrarVista3D((prev) => !prev)}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-teal-600 text-white hover:bg-teal-700 shadow-xs transition"
+          >
+            {mostrarVista3D ? "Ocultar vista 3D" : "Ver en 3D para el paciente"}
+          </button>
+        </div>
+
+        {mostrarVista3D && (
+          <div className="mb-2">
+            <Odontograma3D
+              odontogramaMsp={hc.odontogramaMsp || {}}
+              piezaSeleccionada={hc.piezaSeleccionada || piezasSel[0] || ""}
+              onSeleccionarPieza={(codigo) => alternarSeleccionPieza(codigo)}
+            />
+          </div>
+        )}
+
+        <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-800">
+              Caries / por realizar (Rojo) y Restauración (Azul) — se marcan al
+              tocar las caras
+            </span>
+            {modoCarasActivo && (
+              <span className="text-[11px] font-medium text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                Modo caras activo:{" "}
+                <strong>
+                  {hc.procedimientoActivo === "caries"
+                    ? "Caries / por realizar (Rojo)"
+                    : "Restauración (Azul)"}
+                </strong>
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+              <button
+                type="button"
+                onClick={() => activarModoCarieORestauracion("caries")}
+                className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-semibold text-left transition ${
+                  hc.procedimientoActivo === "caries"
+                    ? "bg-rose-50 text-rose-950 border-rose-400 ring-1 ring-rose-300"
+                    : "bg-slate-50/70 text-slate-800 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-rose-500 inline-block" />
+                  <span>Caries / por realizar</span>
+                </span>
+                <span className="rounded px-2 py-0.5 text-[11px] font-semibold border bg-rose-50 text-rose-700 border-rose-200">
+                  Rojo
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => activarModoCarieORestauracion("restauracion")}
+                className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-semibold text-left transition ${
+                  hc.procedimientoActivo === "restauracion"
+                    ? "bg-sky-50 text-sky-950 border-sky-400 ring-1 ring-sky-300"
+                    : "bg-slate-50/70 text-slate-800 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-sky-600 inline-block" />
+                  <span>Restauración</span>
+                </span>
+                <span className="rounded px-2 py-0.5 text-[11px] font-semibold border bg-sky-50 text-sky-700 border-sky-200">
+                  Azul
+                </span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={borrarCariesYRestauraciones}
+                className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-2 text-xs font-semibold transition"
+              >
+                Borrar
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  cargarInformacionSeleccionada(procParaCargarCaras)
+                }
+                className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-semibold transition"
+              >
+                Cargar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-800">
+              Piezas seleccionadas (
+              {piezasSel.length > 0 ? `#${piezasSel.join(", #")}` : "ninguna"})
+            </span>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => alternarArcadaCompleta("superior")}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border transition ${
+                  superiorCompleta
+                    ? "bg-teal-600 text-white border-teal-600"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                {superiorCompleta
+                  ? "✓ Arcada superior completa"
+                  : "Seleccionar arcada superior"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => alternarArcadaCompleta("inferior")}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border transition ${
+                  inferiorCompleta
+                    ? "bg-teal-600 text-white border-teal-600"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                {inferiorCompleta
+                  ? "✓ Arcada inferior completa"
+                  : "Seleccionar arcada inferior"}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600 bg-slate-50 border border-slate-200/80 rounded-lg px-3 py-1.5">
+            <span><strong className="text-slate-800">V</strong> = Vestibular</span>
+            <span><strong className="text-slate-800">P</strong> = Palatino / <strong className="text-slate-800">L</strong> = Lingual</span>
+            <span><strong className="text-slate-800">M</strong> = Mesial</span>
+            <span><strong className="text-slate-800">D</strong> = Distal</span>
+            <span><strong className="text-slate-800">O</strong> = Oclusal</span>
+            <span>
+              <strong className="text-slate-800">M</strong> = Movilidad (M0–M3) · <strong className="text-slate-800">R</strong> = Retracción (R-I..R-IV)
+            </span>
+          </div>
+
+          <div className="overflow-x-auto pb-1">
+            <div className="relative min-w-[780px] py-1">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 border-l border-dashed border-slate-200 z-0"
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-dashed border-slate-200 z-0"
+              />
+
+              <div className="relative z-10 space-y-2">
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <div className="flex items-center justify-end gap-0.5 pr-2">
+                    <span className="text-[10px] font-medium text-slate-400 mr-1">V</span>
+                    {SUP_DER_PERM.map((p) => renderDienteMsp(p, hc))}
+                  </div>
+                  <div className="flex items-center justify-start gap-0.5 pl-2">
+                    {SUP_IZQ_PERM.map((p) => renderDienteMsp(p, hc))}
+                    <span className="text-[10px] font-medium text-slate-400 ml-1">V</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1 py-0.5">
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <div className="flex items-center justify-end gap-1 pr-2">
+                      {SUP_DER_TEMP.map((p) => renderDienteMsp(p, hc))}
+                    </div>
+                    <div className="flex items-center justify-start gap-1 pl-2">
+                      {SUP_IZQ_TEMP.map((p) => renderDienteMsp(p, hc))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 items-center">
+                    <div className="flex items-center justify-end gap-1 pr-2">
+                      {INF_DER_TEMP.map((p) => renderDienteMsp(p, hc))}
+                    </div>
+                    <div className="flex items-center justify-start gap-1 pl-2">
+                      {INF_IZQ_TEMP.map((p) => renderDienteMsp(p, hc))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <div className="flex items-center justify-end gap-0.5 pr-2">
+                    <span className="text-[10px] font-medium text-slate-400 mr-1">V</span>
+                    {INF_DER_PERM.map((p) => renderDienteMsp(p, hc))}
+                  </div>
+                  <div className="flex items-center justify-start gap-0.5 pl-2">
+                    {INF_IZQ_PERM.map((p) => renderDienteMsp(p, hc))}
+                    <span className="text-[10px] font-medium text-slate-400 ml-1">V</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-50 border border-slate-200/80 rounded-lg p-2.5 text-[11px] text-slate-700">
+            <div className="space-y-0.5">
+              <p className="font-semibold text-slate-900">
+                Leyenda Movilidad (Miller)
+              </p>
+              {MOVILIDAD_MILLER.map((m) => (
+                <p key={m.codigo}>
+                  <strong>{m.codigo}:</strong>{" "}
+                  {m.etiqueta.replace(/^Grado \d:\s*/, "")}
+                </p>
+              ))}
+            </div>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-slate-900">
+                Leyenda Retracción / Recesión (Miller)
+              </p>
+              {RETRACCION_MILLER.map((r) => (
+                <p key={r.codigo}>
+                  <strong>{r.codigo}:</strong>{" "}
+                  {r.etiqueta.replace(/^Clase [I]+V?:\s*/, "")}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-slate-800">
+              Simbología clínica
+              {procActualObj
+                ? ` · Activo: ${procActualObj.titulo} (${
+                    hc.colorMspActivo === "rojo" ? "Rojo" : "Azul"
+                  })`
+                : ""}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+            {SIMBOLOS_SECUNDARIOS_MSP.map((proc) => {
+              const seleccionado = hc.procedimientoActivo === proc.id;
+
+              return (
+                <button
+                  key={proc.id}
+                  type="button"
+                  onClick={() => seleccionarProcedimiento(proc.id)}
+                  className={`flex items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition ${
+                    seleccionado
+                      ? "bg-teal-50 text-teal-950 border-teal-500 font-semibold"
+                      : "bg-slate-50/70 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="truncate">{proc.titulo}</span>
+                  <span
+                    className={`font-bold shrink-0 ${
+                      seleccionado ? "text-teal-700" : "text-slate-500"
+                    }`}
+                  >
+                    {proc.muestra}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-800 mr-1">
+              Estado:
+            </span>
+
+            <button
+              type="button"
+              onClick={() => seleccionarColorMsp("rojo")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border transition ${
+                hc.colorMspActivo === "rojo"
+                  ? "bg-rose-600 text-white border-rose-600"
+                  : "bg-rose-50/70 text-rose-700 border-rose-200 hover:bg-rose-50"
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white inline-block" />
+              Rojo (Por realizar)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => seleccionarColorMsp("azul")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold border transition ${
+                hc.colorMspActivo === "azul"
+                  ? "bg-sky-600 text-white border-sky-600"
+                  : "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100/70"
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 border border-white inline-block" />
+              Azul (Realizado)
+            </button>
+
+            <div
+              className={`ml-auto flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                hc.colorMspActivo === "rojo"
+                  ? "bg-rose-50/80 border-rose-200 text-rose-800"
+                  : "bg-sky-50/80 border-sky-200 text-sky-900"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  hc.colorMspActivo === "rojo" ? "bg-rose-500" : "bg-sky-600"
+                }`}
+              />
+              <span>
+                {hc.colorMspActivo === "rojo"
+                  ? "Rojo (Por realizar)"
+                  : "Azul (Realizado)"}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-2.5 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={borrarInformacionSeleccionada}
+              className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 px-3.5 py-2 text-xs font-semibold transition"
+            >
+              Borrar
+            </button>
+            <button
+              type="button"
+              onClick={() => cargarInformacionSeleccionada()}
+              className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-semibold transition"
+            >
+              Cargar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const pacienteActivo =
+    pacientes.find((p) => p.id === pacienteSeleccionadoId) || null;
+
+  if (loading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+        <div className="flex items-center gap-3 text-sm font-medium text-slate-600">
+          <span className="w-2.5 h-2.5 rounded-full bg-teal-600 animate-pulse" />
+          <span>Cargando sistema clínico...</span>
+        </div>
+      </main>
+    );
+  }
+
+  if (!perfil) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+        <div className="w-full max-w-sm bg-white border border-slate-200/90 rounded-2xl p-7 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200/80 text-teal-700 flex items-center justify-center mb-4">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+            Consultorio Dental
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Inicia sesión con tu cuenta asignada para acceder al panel clínico.
+          </p>
+
+          <form onSubmit={handleLogin} className="mt-6 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                Correo electrónico
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="usuario@consultorio.com"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                Contraseña
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition"
+              />
+            </div>
+
+            {errorMsg && (
+              <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-3">
+                {errorMsg}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full rounded-xl bg-teal-600 text-white py-2.5 text-sm font-semibold hover:bg-teal-700 disabled:opacity-50 shadow-xs transition"
+            >
+              {submitting ? "Ingresando..." : "Iniciar sesión"}
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  const pestanasHc: { id: SeccionHC; titulo: string }[] = [
+    { id: "identificacion", titulo: "1. Identificación" },
+    { id: "motivo_antecedentes", titulo: "2. Motivo y antecedentes" },
+    { id: "clinico", titulo: "3. Signos y examen" },
+    { id: "odontograma", titulo: "4. Odontograma" },
+    { id: "diagnostico", titulo: "5. Diagnóstico y plan" },
+    { id: "examenes", titulo: "6. Exámenes y fotos" },
+    { id: "prescripciones", titulo: "7. Prescripciones" },
+  ];
+
+  function retrocederPestana() {
+    const idxActual = pestanasHc.findIndex((p) => p.id === seccionHc);
+    if (idxActual > 0) {
+      const anterior = pestanasHc[idxActual - 1];
+      setSeccionHc(anterior.id);
+      setMensajeGuardado(
+        `Cambios guardados. Volviste a "${anterior.titulo}".`
+      );
+    }
+  }
+
+  function guardarYAvanzarPestana() {
+    const idxActual = pestanasHc.findIndex((p) => p.id === seccionHc);
+    if (idxActual === -1) return;
+
+    if (seccionHc === "odontograma") {
+      setMensajeGuardado(
+        "Primera fase finalizada (datos generales y odontograma guardados). Ya puedes continuar con el plan de tratamiento u otras secciones cuando lo requieras."
+      );
+      return;
+    }
+
+    if (idxActual < pestanasHc.length - 1) {
+      const siguiente = pestanasHc[idxActual + 1];
+      setSeccionHc(siguiente.id);
+      setMensajeGuardado(
+        `Sección guardada. Avanzaste a "${siguiente.titulo}".`
+      );
+    }
+  }
+
+  const tieneAlergiaActiva = pacienteActivo
+    ? pacienteTieneAlergias(pacienteActivo.hc)
+    : false;
+  const leyendaAlergiaActiva = pacienteActivo
+    ? obtenerLeyendaAlergia(pacienteActivo.hc)
+    : "";
+  const tieneEnfermedadSisActiva = pacienteActivo
+    ? pacienteTieneEnfermedadSistemica(pacienteActivo.hc)
+    : false;
+  const detalleEnfermedadSisActiva = pacienteActivo
+    ? obtenerDetalleEnfermedadesSistemicas(pacienteActivo.hc)
+    : "";
+
+  const serviciosFiltrados =
+    filtroEspecialidadSrv === "Todas"
+      ? servicios
+      : servicios.filter((s) => s.especialidad === filtroEspecialidadSrv);
+
+  const simulacionEconomica = calcularEconomiaServicio({
+    duracionMin: Math.max(5, parseInt(srvDuracion || "30", 10) || 30),
+    precioNormal: parseFloat(srvPrecioNormal || "0") || 0,
+    precioConvenio: srvAplicaConvenio
+      ? parseFloat(srvPrecioConvenio || "0") ||
+        (parseFloat(srvPrecioNormal || "0") || 0)
+      : parseFloat(srvPrecioNormal || "0") || 0,
+    aplicaConvenio: srvAplicaConvenio,
+    costoVariableDirecto: parseFloat(srvCostoVariable || "0") || 0,
+    honorarioTipo: srvHonorarioTipo,
+    honorarioValor: parseFloat(srvHonorarioValor || "0") || 0,
+  });
+
+  const muestraLicenciaMspEnForm = requiereLicenciaMsp(profCargo);
+
+  const tarjetasMenu: {
+    id: Exclude<ModuloActivo, null>;
+    titulo: string;
+    descripcion: string;
+    meta: string;
+    alerta?: string;
+  }[] = [
+    {
+      id: "historias",
+      titulo: "Historias Clínicas y Odontograma",
+      descripcion: "Expedientes, odontograma 2D/3D, fotografías clínicas y CIE-10.",
+      meta: `${pacientes.length} paciente(s)`,
+    },
+    {
+      id: "agenda",
+      titulo: "Agenda y Recordatorios",
+      descripcion: "Programación de citas, horarios y confirmación de asistencia.",
+      meta: `${citas.length} cita(s)`,
+    },
+    {
+      id: "pagos",
+      titulo: "Presupuestos y Pagos",
+      descripcion: "Planes financieros, abonos parciales y control de saldos.",
+      meta: "USD ($)",
+    },
+    {
+      id: "inventario",
+      titulo: "Inventario, Equipos y Rubros",
+      descripcion: "Insumos clínicos, instrumental, depreciación y alertas de stock.",
+      meta: `${insumos.length} insumos · ${equipos.length} equipos`,
+      alerta:
+        totalAlarmasCompra > 0
+          ? `Necesidad de compra (${totalAlarmasCompra})`
+          : undefined,
+    },
+    {
+      id: "profesionales",
+      titulo: "Profesionales y Equipo",
+      descripcion: "Nómina, porcentajes, registros ACES/MSP y cálculo patronal IESS.",
+      meta: `${profesionales.length} integrante(s)`,
+    },
+    {
+      id: "servicios",
+      titulo: "Cartera de Servicios",
+      descripcion: "Tarifario particular y convenios, costos fijos/variables y utilidad.",
+      meta: `${servicios.length} servicio(s)`,
+    },
+    {
+      id: "proveedores",
+      titulo: "Proveedores",
+      descripcion: "Laboratorios dentales, marketing digital y servicios externos.",
+      meta: `${proveedores.length} proveedor(es)`,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setModuloActivo(null)}
+              className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs hover:bg-teal-700 transition"
+              title="Inicio del consultorio"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900 truncate">
+                  {perfil.nombre_completo || "Panel del Consultorio"}
+                </h1>
+                <span className="hidden sm:inline-flex items-center rounded-full bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 text-[11px] font-semibold capitalize text-teal-800">
+                  {perfil.rol}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Gestión Odontológica · Moneda USD ($)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {moduloActivo && (
+              <button
+                type="button"
+                onClick={() => setModuloActivo(null)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
+              >
+                Inicio
+              </button>
+            )}
+            <button
+              onClick={handleLogout}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 transition"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {!moduloActivo ? (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
+                  Espacio de trabajo clínico
+                </h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Selecciona un módulo para gestionar pacientes, operaciones o finanzas del consultorio.
+                </p>
+              </div>
+              {totalAlarmasCompra > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setModuloActivo("inventario")}
+                  className="inline-flex items-center gap-2 self-start sm:self-auto rounded-xl bg-rose-50 border border-rose-200 px-3.5 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100/70 transition"
+                >
+                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                  <span>Necesidad de compra: {totalAlarmasCompra} ítem(s)</span>
+                </button>
+              )}
+            </div>
+
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tarjetasMenu.map((card) => (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => setModuloActivo(card.id)}
+                  className="group text-left bg-white border border-slate-200/90 hover:border-teal-500/60 rounded-2xl p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between gap-4"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-teal-50 border border-slate-200/80 group-hover:border-teal-200 text-slate-700 group-hover:text-teal-700 flex items-center justify-center transition-colors">
+                        <IconoModulo modulo={card.id} />
+                      </div>
+                      {card.alerta ? (
+                        <span className="rounded-full bg-rose-50 border border-rose-200 px-2.5 py-0.5 text-[10px] font-semibold text-rose-700">
+                          {card.alerta}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-medium text-slate-400 group-hover:text-teal-600 transition-colors">
+                          Abrir →
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-slate-900 group-hover:text-teal-900 transition-colors">
+                        {card.titulo}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                        {card.descripcion}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-medium text-slate-500">
+                    <span>{card.meta}</span>
+                    <span className="text-teal-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Ingresar
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </section>
+          </div>
+        ) : (
+          <section className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200/80 text-teal-700 flex items-center justify-center">
+                  <IconoModulo modulo={moduloActivo} />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900">
+                    {moduloActivo === "historias" &&
+                      "Historias Clínicas y Odontograma"}
+                    {moduloActivo === "agenda" && "Agenda y Recordatorios"}
+                    {moduloActivo === "pagos" && "Presupuestos y Pagos (USD $)"}
+                    {moduloActivo === "inventario" &&
+                      "Inventario, Equipos / Instrumental y Rubros (USD $)"}
+                    {moduloActivo === "profesionales" && "Profesionales y Equipo"}
+                    {moduloActivo === "servicios" &&
+                      "Cartera de Servicios, Costos y Utilidad (USD $)"}
+                    {moduloActivo === "proveedores" && "Proveedores del Consultorio"}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Módulo activo del consultorio
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModuloActivo(null)}
+                className="rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 px-3.5 py-2 text-xs font-semibold transition"
+              >
+                ← Volver al menú
+              </button>
+            </div>
+
+            {moduloActivo === "historias" && (
+              <div className="space-y-5">
+                <form
+                  onSubmit={crearPaciente}
+                  className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                >
+                  <input
+                    type="text"
+                    required
+                    value={nombresNuevo}
+                    onChange={(e) => setNombresNuevo(e.target.value)}
+                    placeholder="Nombres"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={apellidosNuevo}
+                    onChange={(e) => setApellidosNuevo(e.target.value)}
+                    placeholder="Apellidos"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+                  />
+                  <input
+                    type="text"
+                    value={telefonoNuevo}
+                    onChange={(e) => setTelefonoNuevo(e.target.value)}
+                    placeholder="Teléfono / WhatsApp"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-teal-600 text-white px-4 py-2 text-sm font-medium hover:bg-teal-700 transition"
+                  >
+                    + Crear paciente
+                  </button>
+                </form>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Paciente activo:
+                  </span>
+                  {pacientes.map((pac) => {
+                    const alertaPac = pacienteTieneAlergias(pac.hc);
+                    const detalleAlergiaPac = obtenerLeyendaAlergia(pac.hc);
+                    const enfSisPac = pacienteTieneEnfermedadSistemica(pac.hc);
+                    const detalleEnfPac =
+                      obtenerDetalleEnfermedadesSistemicas(pac.hc);
+                    return (
+                      <button
+                        key={pac.id}
+                        type="button"
+                        onClick={() => {
+                          setPacienteSeleccionadoId(pac.id);
+                          setMensajeGuardado(null);
+                        }}
+                        className={`inline-flex flex-wrap items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-medium border transition ${
+                          pac.id === pacienteActivo?.id
+                            ? "bg-teal-50 text-teal-950 border-teal-500 font-semibold"
+                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span>{nombreCompletoPaciente(pac.hc)}</span>
+                        {alertaPac && (
+                          <span className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-900 border border-amber-300">
+                            {detalleAlergiaPac || "Alergia"}
+                          </span>
+                        )}
+                        {enfSisPac && (
+                          <span className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-rose-50 text-rose-900 border border-rose-300">
+                            {detalleEnfPac
+                              ? `Enf. sistémica: ${detalleEnfPac}`
+                              : "Paciente con enfermedad sistémica"}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {pacienteActivo && (
+                  <div className="space-y-4 border border-slate-200 rounded-2xl p-4 sm:p-5 bg-white">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-semibold text-slate-900">
+                            {nombreCompletoPaciente(pacienteActivo.hc)}
+                          </h3>
+                          {tieneAlergiaActiva && (
+                            <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-300 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+                              {leyendaAlergiaActiva || "Padece alergias"}
+                            </span>
+                          )}
+                          {tieneEnfermedadSisActiva && (
+                            <span className="inline-flex items-center rounded-full bg-rose-50 border border-rose-300 px-2.5 py-0.5 text-xs font-semibold text-rose-900">
+                              Paciente con enfermedad sistémica
+                              {detalleEnfermedadSisActiva
+                                ? `: ${detalleEnfermedadSisActiva}`
+                                : ""}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Edad calculada:{" "}
+                          <strong className="text-slate-700">
+                            {calcularEdad(pacienteActivo.hc.fechaNacimiento)}
+                          </strong>{" "}
+                          · Doc: {pacienteActivo.hc.documento || "Sin registro"} ·
+                          Fotos: {pacienteActivo.hc.fotos.length}
+                        </p>
+                      </div>
+                      {mensajeGuardado && (
+                        <span className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 font-medium">
+                          {mensajeGuardado}
+                        </span>
+                      )}
+                    </div>
+
+                    {tieneAlergiaActiva && (
+                      <div className="rounded-xl bg-amber-50/80 border border-amber-300 px-3.5 py-2.5 text-xs font-medium text-amber-950">
+                        <strong>Alerta de alergia:</strong> {leyendaAlergiaActiva}.
+                      </div>
+                    )}
+
+                    {tieneEnfermedadSisActiva && (
+                      <div className="rounded-xl bg-rose-50/80 border border-rose-300 px-3.5 py-2.5 text-xs font-medium text-rose-950">
+                        <strong>Alarma clínica:</strong> Paciente con enfermedad
+                        sistémica
+                        {detalleEnfermedadSisActiva
+                          ? ` (${detalleEnfermedadSisActiva})`
+                          : ""}
+                        .
+                      </div>
+                    )}
+
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 border-b border-slate-100">
+                      {pestanasHc.map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setSeccionHc(tab.id)}
+                          className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium border transition ${
+                            seccionHc === tab.id
+                              ? "bg-teal-600 text-white border-teal-600 font-semibold"
+                              : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {tab.titulo}
+                        </button>
+                      ))}
+                    </div>
+
+                    {seccionHc === "identificacion" && (
+                      <div className="space-y-4 text-sm">
+                        <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 flex flex-col sm:flex-row items-center gap-4">
+                          <div className="w-28 h-32 rounded-xl border border-slate-200 bg-white overflow-hidden flex items-center justify-center shrink-0">
+                            {pacienteActivo.hc.fotoCarne ? (
+                              <img
+                                src={pacienteActivo.hc.fotoCarne}
+                                alt={`Foto carné de ${nombreCompletoPaciente(
+                                  pacienteActivo.hc
+                                )}`}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <SiluetaPersonaNeutral />
+                            )}
+                          </div>
+
+                          <div className="flex-1 space-y-2 text-center sm:text-left">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-800">
+                              Fotografía de identificación
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Si no se agrega fotografía, se muestra una silueta
+                              neutral sin género.
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                              <label className="cursor-pointer rounded-lg bg-teal-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-teal-700 transition">
+                                Tomar foto pasaporte
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="user"
+                                  onChange={handleSubirFotoCarne}
+                                  className="hidden"
+                                />
+                              </label>
+
+                              <label className="cursor-pointer rounded-lg border border-slate-200 bg-white text-slate-800 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 transition">
+                                Subir imagen carné
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleSubirFotoCarne}
+                                  className="hidden"
+                                />
+                              </label>
+
+                              {pacienteActivo.hc.fotoCarne && (
+                                <button
+                                  type="button"
+                                  onClick={quitarFotoCarne}
+                                  className="rounded-lg border border-rose-200 bg-rose-50 text-rose-700 px-3 py-1.5 text-xs font-medium hover:bg-rose-100 transition"
+                                >
+                                  Quitar foto
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Nombres
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.nombres}
+                              onChange={(e) =>
+                                actualizarCampoHc("nombres", e.target.value)
+                              }
+                              placeholder="Nombres del paciente"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Apellidos
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.apellidos}
+                              onChange={(e) =>
+                                actualizarCampoHc("apellidos", e.target.value)
+                              }
+                              placeholder="Apellidos del paciente"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Documento de identidad
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.documento}
+                              onChange={(e) =>
+                                actualizarCampoHc("documento", e.target.value)
+                              }
+                              placeholder="Cédula / DNI / Pasaporte"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Fecha de nacimiento (Edad:{" "}
+                              {calcularEdad(pacienteActivo.hc.fechaNacimiento)})
+                            </label>
+                            <input
+                              type="date"
+                              value={pacienteActivo.hc.fechaNacimiento}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "fechaNacimiento",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Género
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.genero}
+                              onChange={(e) =>
+                                actualizarCampoHc("genero", e.target.value)
+                              }
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Seleccionar género</option>
+                              <option value="Masculino">Masculino</option>
+                              <option value="Femenino">Femenino</option>
+                              <option value="Otro">Otro</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Nacionalidad
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.nacionalidad}
+                              onChange={(e) =>
+                                actualizarCampoHc("nacionalidad", e.target.value)
+                              }
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Seleccionar país</option>
+                              {PAISES.map((pais) => (
+                                <option key={pais} value={pais}>
+                                  {pais}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Teléfono
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.telefono}
+                              onChange={(e) =>
+                                actualizarCampoHc("telefono", e.target.value)
+                              }
+                              placeholder="Teléfono / WhatsApp"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Correo electrónico
+                            </label>
+                            <input
+                              type="email"
+                              value={pacienteActivo.hc.correo}
+                              onChange={(e) =>
+                                actualizarCampoHc("correo", e.target.value)
+                              }
+                              placeholder="correo@ejemplo.com"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Ocupación
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.ocupacion}
+                              onChange={(e) =>
+                                actualizarCampoHc("ocupacion", e.target.value)
+                              }
+                              placeholder="Ocupación actual"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Ciudad
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.ciudad}
+                              onChange={(e) =>
+                                actualizarCampoHc("ciudad", e.target.value)
+                              }
+                              placeholder="Ciudad de residencia"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Dirección o sector
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.direccion}
+                              onChange={(e) =>
+                                actualizarCampoHc("direccion", e.target.value)
+                              }
+                              placeholder="Calle, sector, referencia"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Contacto adicional
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.contactoAdicional}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "contactoAdicional",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Nombre y teléfono de contacto adicional"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Seguro o convenio médico
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.seguroConvenio}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "seguroConvenio",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Seleccionar opción</option>
+                              <option value="Particular">Particular</option>
+                              <option value="Seguro">Seguro</option>
+                              <option value="Convenio">Convenio</option>
+                            </select>
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Representante legal (si es menor de edad)
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.representanteLegal}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "representanteLegal",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Nombre, documento y parentesco del representante"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {seccionHc === "motivo_antecedentes" && (
+                      <div className="space-y-5 text-sm">
+                        <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-white">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Motivo de consulta y enfermedad actual
+                          </h4>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Motivo de consulta (en palabras del paciente)
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={pacienteActivo.hc.motivoConsulta}
+                              onChange={(e) =>
+                                actualizarCampoHc("motivoConsulta", e.target.value)
+                              }
+                              placeholder="Ej. 'Me duele una muela al tomar algo frío'"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">
+                              Enfermedad actual (síntomas, inicio y evolución)
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={pacienteActivo.hc.enfermedadActual}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "enfermedadActual",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Cuándo inició, cómo ha evolucionado y qué lo agrava o alivia"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <label className="block text-xs font-medium text-slate-800">
+                                Intensidad del dolor / molestia (1 al 10)
+                              </label>
+                              <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={pacienteActivo.hc.noPresentaDolor}
+                                  onChange={toggleNoPresentaDolor}
+                                  className="rounded border-slate-300"
+                                />
+                                <span>No presenta dolor</span>
+                              </label>
+                            </div>
+
+                            <select
+                              disabled={pacienteActivo.hc.noPresentaDolor}
+                              value={
+                                pacienteActivo.hc.noPresentaDolor
+                                  ? ""
+                                  : pacienteActivo.hc.intensidadDolor
+                              }
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "intensidadDolor",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                              <option value="">
+                                {pacienteActivo.hc.noPresentaDolor
+                                  ? "No presenta dolor"
+                                  : "Seleccionar nivel (1 a 10)"}
+                              </option>
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((nivel) => (
+                                <option key={nivel} value={String(nivel)}>
+                                  {nivel}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                              Antecedentes médicos
+                            </h4>
+                            {tieneEnfermedadSisActiva && (
+                              <span className="inline-flex items-center rounded-full bg-rose-50 border border-rose-300 px-2.5 py-0.5 text-xs font-semibold text-rose-900">
+                                Paciente con enfermedad sistémica
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                              Enfermedades sistémicas (seleccione una o varias)
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {OPCIONES_ENFERMEDADES.map((enf) => {
+                                const marcada =
+                                  pacienteActivo.hc.enfermedadesSistemicas.includes(
+                                    enf
+                                  );
+                                return (
+                                  <label
+                                    key={enf}
+                                    className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={marcada}
+                                      onChange={() =>
+                                        toggleEnfermedadSistemica(enf)
+                                      }
+                                      className="rounded border-slate-300"
+                                    />
+                                    <span>{enf}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+
+                            {pacienteActivo.hc.enfermedadesSistemicas.includes(
+                              "Otros"
+                            ) && (
+                              <div className="pt-1">
+                                <label className="block text-xs font-medium text-slate-700 mb-1">
+                                  Especificar otras enfermedades sistémicas
+                                </label>
+                                <input
+                                  type="text"
+                                  value={
+                                    pacienteActivo.hc.otrasEnfermedadesSistemicas
+                                  }
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "otrasEnfermedadesSistemicas",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Escriba cuál es la enfermedad..."
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                                Alergia a medicamentos
+                              </label>
+                              <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={
+                                    pacienteActivo.hc.alergicoMedicamentos
+                                  }
+                                  onChange={toggleAlergicoMedicamentos}
+                                  className="rounded border-slate-300"
+                                />
+                                <span>Alérgico a medicamentos</span>
+                              </label>
+                            </div>
+
+                            {pacienteActivo.hc.alergicoMedicamentos && (
+                              <div className="pt-1 space-y-1.5">
+                                <label className="block text-xs font-medium text-amber-900">
+                                  Medicamento al cual es alérgico
+                                </label>
+                                <input
+                                  type="text"
+                                  value={pacienteActivo.hc.medicamentoAlergia}
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "medicamentoAlergia",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Escriba el medicamento al cual es alérgico..."
+                                  className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2">
+                              <label className="block text-xs font-medium text-slate-800">
+                                ¿Tiene problemas de hemorragias?
+                              </label>
+                              <select
+                                value={pacienteActivo.hc.problemasHemorragias}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "problemasHemorragias",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              >
+                                <option value="">Seleccionar opción</option>
+                                <option value="No">No</option>
+                                <option value="Sí">Sí</option>
+                                <option value="No sabe / no refiere">
+                                  No sabe / no refiere
+                                </option>
+                              </select>
+                              {pacienteActivo.hc.problemasHemorragias ===
+                                "Sí" && (
+                                <input
+                                  type="text"
+                                  value={pacienteActivo.hc.detalleHemorragias}
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "detalleHemorragias",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Detalle el problema de hemorragias..."
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                />
+                              )}
+                            </div>
+
+                            <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2">
+                              <label className="block text-xs font-medium text-slate-800">
+                                ¿Tiene problemas con la anestesia dental?
+                              </label>
+                              <select
+                                value={pacienteActivo.hc.problemasAnestesiaDental}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "problemasAnestesiaDental",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              >
+                                <option value="">Seleccionar opción</option>
+                                <option value="No">No</option>
+                                <option value="Sí">Sí</option>
+                                <option value="Primera vez / no refiere">
+                                  Primera vez / no refiere
+                                </option>
+                              </select>
+                              {pacienteActivo.hc.problemasAnestesiaDental ===
+                                "Sí" && (
+                                <input
+                                  type="text"
+                                  value={
+                                    pacienteActivo.hc.detalleAnestesiaDental
+                                  }
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "detalleAnestesiaDental",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Detalle la reacción o problema con anestesia..."
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                />
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Otras alergias (materiales, alimentos, etc.)
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.alergias}
+                                onChange={(e) =>
+                                  actualizarCampoHc("alergias", e.target.value)
+                                }
+                                placeholder="Látex, acrílicos, yodo, alimentos..."
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Medicación actual
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.medicacionActual}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "medicacionActual",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Fármacos y dosis actuales"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Cirugías previas
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.cirugiasPrevias}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "cirugiasPrevias",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Intervenciones quirúrgicas anteriores"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Antecedentes familiares
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.antecedentesFamiliares}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "antecedentesFamiliares",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Patologías relevantes en familiares"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-2 border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <label className="block text-xs font-medium text-slate-800">
+                                  Hábitos del paciente
+                                </label>
+                                <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={pacienteActivo.hc.tieneHabitos}
+                                    onChange={toggleTieneHabitos}
+                                    className="rounded border-slate-300"
+                                  />
+                                  <span>Presenta hábitos</span>
+                                </label>
+                              </div>
+
+                              <input
+                                type="text"
+                                disabled={!pacienteActivo.hc.tieneHabitos}
+                                value={pacienteActivo.hc.habitosGenerales}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "habitosGenerales",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder={
+                                  pacienteActivo.hc.tieneHabitos
+                                    ? "Escriba el hábito que presenta el paciente..."
+                                    : "Marque la casilla para habilitar y escribir el hábito"
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-4 space-y-4 bg-white">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Antecedentes odontológicos
+                          </h4>
+
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                              Tratamientos odontológicos previos
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {OPCIONES_TRATAMIENTOS_PREVIOS.map((trat) => {
+                                const marcado =
+                                  pacienteActivo.hc.tratamientosPrevios.includes(
+                                    trat
+                                  );
+                                return (
+                                  <label
+                                    key={trat}
+                                    className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={marcado}
+                                      onChange={() =>
+                                        toggleTratamientoPrevio(trat)
+                                      }
+                                      className="rounded border-slate-300"
+                                    />
+                                    <span>{trat}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+
+                            {pacienteActivo.hc.tratamientosPrevios.includes(
+                              "Otros"
+                            ) && (
+                              <div className="pt-1">
+                                <label className="block text-xs font-medium text-slate-700 mb-1">
+                                  Especificar otros tratamientos previos
+                                </label>
+                                <input
+                                  type="text"
+                                  value={
+                                    pacienteActivo.hc.otrosTratamientosPrevios
+                                  }
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "otrosTratamientosPrevios",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Escriba a qué tratamientos se refiere..."
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2">
+                              <label className="block text-xs font-medium text-slate-800">
+                                Frecuencia de visitas al odontólogo
+                              </label>
+                              <select
+                                value={pacienteActivo.hc.frecuenciaVisitas}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "frecuenciaVisitas",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              >
+                                <option value="">Seleccionar opción</option>
+                                {OPCIONES_FRECUENCIA_VISITAS.map((op) => (
+                                  <option key={op} value={op}>
+                                    {op}
+                                  </option>
+                                ))}
+                              </select>
+                              {pacienteActivo.hc.frecuenciaVisitas ===
+                                "Otros" && (
+                                <input
+                                  type="text"
+                                  value={pacienteActivo.hc.otraFrecuenciaVisitas}
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "otraFrecuenciaVisitas",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Escriba a qué se refiere..."
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                />
+                              )}
+                            </div>
+
+                            <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2">
+                              <label className="block text-xs font-medium text-slate-800">
+                                Experiencias anteriores
+                              </label>
+                              <select
+                                value={pacienteActivo.hc.experienciasAnteriores}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "experienciasAnteriores",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              >
+                                <option value="">Seleccionar opción</option>
+                                {OPCIONES_EXPERIENCIAS_ANTERIORES.map((op) => (
+                                  <option key={op} value={op}>
+                                    {op}
+                                  </option>
+                                ))}
+                              </select>
+                              {pacienteActivo.hc.experienciasAnteriores ===
+                                "Otros" && (
+                                <input
+                                  type="text"
+                                  value={
+                                    pacienteActivo.hc.otraExperienciaAnterior
+                                  }
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "otraExperienciaAnterior",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Escriba a qué se refiere..."
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                />
+                              )}
+                            </div>
+
+                            <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2">
+                              <label className="block text-xs font-medium text-slate-800">
+                                Nivel de ansiedad dental
+                              </label>
+                              <select
+                                value={pacienteActivo.hc.ansiedadDental}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "ansiedadDental",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              >
+                                <option value="">Seleccionar opción</option>
+                                {OPCIONES_ANSIEDAD_DENTAL.map((op) => (
+                                  <option key={op} value={op}>
+                                    {op}
+                                  </option>
+                                ))}
+                              </select>
+                              {pacienteActivo.hc.ansiedadDental === "Otros" && (
+                                <input
+                                  type="text"
+                                  value={pacienteActivo.hc.otraAnsiedadDental}
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "otraAnsiedadDental",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Escriba a qué se refiere..."
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                />
+                              )}
+                            </div>
+
+                            <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 space-y-2">
+                              <label className="block text-xs font-medium text-slate-800">
+                                Higiene oral habitual
+                              </label>
+                              <select
+                                value={pacienteActivo.hc.higieneOral}
+                                onChange={(e) =>
+                                  actualizarCampoHc("higieneOral", e.target.value)
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              >
+                                <option value="">Seleccionar opción</option>
+                                {OPCIONES_HIGIENE_ORAL.map((op) => (
+                                  <option key={op} value={op}>
+                                    {op}
+                                  </option>
+                                ))}
+                              </select>
+                              {pacienteActivo.hc.higieneOral === "Otros" && (
+                                <input
+                                  type="text"
+                                  value={pacienteActivo.hc.otraHigieneOral}
+                                  onChange={(e) =>
+                                    actualizarCampoHc(
+                                      "otraHigieneOral",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Escriba a qué se refiere..."
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {seccionHc === "clinico" && (
+                      <div className="space-y-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Presión arterial
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.presionArterial}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "presionArterial",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Ej. 120/80 mmHg"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Pulso
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.pulso}
+                              onChange={(e) =>
+                                actualizarCampoHc("pulso", e.target.value)
+                              }
+                              placeholder="Ej. 72 lpm"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Temperatura
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.temperatura}
+                              onChange={(e) =>
+                                actualizarCampoHc("temperatura", e.target.value)
+                              }
+                              placeholder="Ej. 36.6 °C"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Frecuencia respiratoria
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.frecuenciaRespiratoria}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "frecuenciaRespiratoria",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Ej. 16 rpm"
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Examen extraoral
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {OPCIONES_EXAMEN_EXTRAORAL.map((op) => {
+                              const marcada =
+                                pacienteActivo.hc.examenExtraoral.includes(op);
+                              return (
+                                <label
+                                  key={op}
+                                  className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={marcada}
+                                    onChange={() =>
+                                      toggleChecklistClinico(
+                                        "examenExtraoral",
+                                        "detalleExamenExtraoral",
+                                        op
+                                      )
+                                    }
+                                    className="rounded border-slate-300"
+                                  />
+                                  <span>{op}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {pacienteActivo.hc.examenExtraoral.includes(
+                            "Otros"
+                          ) && (
+                            <div className="pt-1">
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Detallar examen extraoral (Otros)
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.detalleExamenExtraoral}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "detalleExamenExtraoral",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba los hallazgos extraorales..."
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Examen intraoral
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {OPCIONES_EXAMEN_INTRAORAL.map((op) => {
+                              const marcada =
+                                pacienteActivo.hc.examenIntraoral.includes(op);
+                              return (
+                                <label
+                                  key={op}
+                                  className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={marcada}
+                                    onChange={() =>
+                                      toggleChecklistClinico(
+                                        "examenIntraoral",
+                                        "detalleExamenIntraoral",
+                                        op
+                                      )
+                                    }
+                                    className="rounded border-slate-300"
+                                  />
+                                  <span>{op}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {pacienteActivo.hc.examenIntraoral.includes(
+                            "Otros"
+                          ) && (
+                            <div className="pt-1">
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Detallar examen intraoral (Otros)
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.detalleExamenIntraoral}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "detalleExamenIntraoral",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba los hallazgos intraorales..."
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Tejidos blandos
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {OPCIONES_TEJIDOS_BLANDOS.map((op) => {
+                              const marcada =
+                                pacienteActivo.hc.tejidosBlandos.includes(op);
+                              return (
+                                <label
+                                  key={op}
+                                  className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={marcada}
+                                    onChange={() =>
+                                      toggleChecklistClinico(
+                                        "tejidosBlandos",
+                                        "detalleTejidosBlandos",
+                                        op
+                                      )
+                                    }
+                                    className="rounded border-slate-300"
+                                  />
+                                  <span>{op}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          {pacienteActivo.hc.tejidosBlandos.includes("Otros") && (
+                            <div className="pt-1">
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Detallar tejidos blandos (Otros)
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.detalleTejidosBlandos}
+                                onChange={(e) =>
+                                  actualizarCampoHc(
+                                    "detalleTejidosBlandos",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Escriba los hallazgos en tejidos blandos..."
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {seccionHc === "odontograma" && (() => {
+                      const cpod = obtenerValoresCpod(pacienteActivo.hc);
+                      return (
+                        <div className="space-y-4 text-sm">
+                          {renderOdontogramaMsp(pacienteActivo.hc)}
+
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                              Resumen general del odontograma
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={pacienteActivo.hc.notasOdontograma}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "notasOdontograma",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Notas generales de piezas, restauraciones o patologías..."
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                                Índice CPOD (sincronizado con odontograma)
+                              </label>
+                              <span className="text-xs font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
+                                Total CPOD: {cpod.total}
+                              </span>
+                            </div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs border-collapse bg-white rounded-lg overflow-hidden">
+                                <thead>
+                                  <tr className="bg-slate-100 text-slate-800">
+                                    <th className="border border-slate-200 px-3 py-2 text-center">
+                                      C (Cariados)
+                                    </th>
+                                    <th className="border border-slate-200 px-3 py-2 text-center">
+                                      P (Perdidos)
+                                    </th>
+                                    <th className="border border-slate-200 px-3 py-2 text-center">
+                                      O (Obturados)
+                                    </th>
+                                    <th className="border border-slate-200 px-3 py-2 text-center">
+                                      Total CPOD
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td className="border border-slate-200 p-2 text-center">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={cpod.cariados}
+                                        onChange={(e) =>
+                                          actualizarCpodManual(
+                                            "cariados",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-20 text-center rounded border border-slate-200 px-2 py-1 text-sm font-semibold text-rose-700"
+                                      />
+                                    </td>
+                                    <td className="border border-slate-200 p-2 text-center">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={cpod.perdidos}
+                                        onChange={(e) =>
+                                          actualizarCpodManual(
+                                            "perdidos",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-20 text-center rounded border border-slate-200 px-2 py-1 text-sm font-semibold text-slate-900"
+                                      />
+                                    </td>
+                                    <td className="border border-slate-200 p-2 text-center">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={cpod.obturados}
+                                        onChange={(e) =>
+                                          actualizarCpodManual(
+                                            "obturados",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-20 text-center rounded border border-slate-200 px-2 py-1 text-sm font-semibold text-sky-700"
+                                      />
+                                    </td>
+                                    <td className="border border-slate-200 p-2 text-center font-semibold text-slate-900">
+                                      {cpod.total}
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2">
+                            <label className="block text-xs font-medium text-slate-800">
+                              Oclusión / Llave de Angle
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.oclusionLlaveAngle}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "oclusionLlaveAngle",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Seleccionar clasificación</option>
+                              {OPCIONES_OCLUSION_ANGLE.map((op) => (
+                                <option key={op} value={op}>
+                                  {op}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {seccionHc === "diagnostico" && (
+                      <div className="space-y-4 text-sm">
+                        {renderOdontogramaMsp(pacienteActivo.hc)}
+
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-3">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Diagnóstico CIE-10 (Códigos K y Z02.1)
+                          </label>
+
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <select
+                              value={
+                                CODIGOS_CIE10_ODONTO.some(
+                                  (c) =>
+                                    c.codigo === pacienteActivo.hc.codigoCie10
+                                )
+                                  ? pacienteActivo.hc.codigoCie10
+                                  : ""
+                              }
+                              onChange={(e) =>
+                                seleccionarCie10DesdeLista(e.target.value)
+                              }
+                              className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                            >
+                              <option value="">
+                                Seleccionar código CIE-10 (K / Z02.1)...
+                              </option>
+                              {CODIGOS_CIE10_ODONTO.map((item) => (
+                                <option key={item.codigo} value={item.codigo}>
+                                  {item.codigo} — {item.descripcion}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={registrarDiagnosticoSeleccionado}
+                              className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-semibold shrink-0 transition"
+                            >
+                              Registrar
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Código CIE-10
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.codigoCie10}
+                                onChange={(e) =>
+                                  actualizarCampoHc("codigoCie10", e.target.value)
+                                }
+                                placeholder="Ej. K02.1 o Z02.1"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                              <label className="block text-xs font-medium text-slate-700 mb-1">
+                                Diagnóstico presuntivo o definitivo (CIE-10)
+                              </label>
+                              <input
+                                type="text"
+                                value={pacienteActivo.hc.diagnostico}
+                                onChange={(e) =>
+                                  actualizarCampoHc("diagnostico", e.target.value)
+                                }
+                                placeholder="Diagnóstico clínico según CIE-10"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {(pacienteActivo.hc.diagnosticosRegistrados || [])
+                            .length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                              <p className="text-xs font-semibold text-slate-800">
+                                Diagnósticos registrados:
+                              </p>
+                              <ul className="space-y-1.5">
+                                {pacienteActivo.hc.diagnosticosRegistrados.map(
+                                  (d) => (
+                                    <li
+                                      key={d.id}
+                                      className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs"
+                                    >
+                                      <div>
+                                        <strong className="text-slate-900">
+                                          {d.codigoCie10}
+                                        </strong>{" "}
+                                        — {d.descripcion}{" "}
+                                        <span className="text-teal-700 font-medium">
+                                          (Pieza: {d.pieza})
+                                        </span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          eliminarDiagnosticoRegistrado(d.id)
+                                        }
+                                        className="text-rose-600 hover:underline shrink-0"
+                                      >
+                                        Quitar
+                                      </button>
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-3">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Plan de tratamiento
+                          </label>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <select
+                              value={pacienteActivo.hc.piezaPlanSeleccionada}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "piezaPlanSeleccionada",
+                                  e.target.value
+                                )
+                              }
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                            >
+                              <option value="">
+                                Pieza dental ({
+                                  pacienteActivo.hc.piezasSeleccionadas[0] ||
+                                    "General"
+                                })
+                              </option>
+                              <option value="General">General</option>
+                              {TODAS_LAS_PIEZAS.map((cod) => (
+                                <option key={cod} value={cod}>
+                                  Pieza #{cod}
+                                </option>
+                              ))}
+                            </select>
+
+                            <select
+                              value={
+                                servicios.some(
+                                  (s) =>
+                                    s.nombre ===
+                                    pacienteActivo.hc.procedimientoPlanSeleccionado
+                                )
+                                  ? pacienteActivo.hc
+                                      .procedimientoPlanSeleccionado
+                                  : ""
+                              }
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "procedimientoPlanSeleccionado",
+                                  e.target.value
+                                )
+                              }
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                            >
+                              <option value="">
+                                Seleccionar de Cartera de Servicios...
+                              </option>
+                              {servicios.map((srv) => (
+                                <option key={srv.id} value={srv.nombre}>
+                                  {srv.nombre} (${srv.precioNormal.toFixed(2)})
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={agregarItemPlanTratamiento}
+                              className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-semibold transition"
+                            >
+                              + Añadir al plan
+                            </button>
+                          </div>
+
+                          <div>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.procedimientoPlanSeleccionado}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "procedimientoPlanSeleccionado",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="O escriba el procedimiento a realizar en la pieza..."
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+
+                          {(pacienteActivo.hc.itemsPlanTratamiento || []).length >
+                            0 && (
+                            <ul className="space-y-1.5">
+                              {pacienteActivo.hc.itemsPlanTratamiento.map(
+                                (item) => (
+                                  <li
+                                    key={item.id}
+                                    className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs"
+                                  >
+                                    <div>
+                                      <strong className="text-slate-900">
+                                        Pieza {item.pieza}
+                                      </strong>{" "}
+                                      — {item.procedimiento}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        eliminarItemPlanTratamiento(item.id)
+                                      }
+                                      className="text-rose-600 hover:underline shrink-0"
+                                    >
+                                      Quitar
+                                    </button>
+                                  </li>
+                                )
+                              )}
+                            </ul>
+                          )}
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
+                              Observaciones del plan de tratamiento
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={pacienteActivo.hc.planTratamiento}
+                              onChange={(e) =>
+                                actualizarCampoHc("planTratamiento", e.target.value)
+                              }
+                              placeholder="Secuencia general de tratamientos y citas propuestas"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {seccionHc === "examenes" && (
+                      <div className="space-y-4 text-sm">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-700 mb-1">
+                            Exámenes complementarios (radiografías, fotografías
+                            clínicas, tomografías, laboratorio)
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={pacienteActivo.hc.examenesComplementarios}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "examenesComplementarios",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200">
+                          <label className="cursor-pointer rounded-lg bg-teal-600 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-teal-700 transition">
+                            Tomar foto con cámara
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              onChange={handleSubirFoto}
+                              className="hidden"
+                            />
+                          </label>
+
+                          <label className="cursor-pointer rounded-lg border border-slate-200 bg-white text-slate-800 px-3 py-2.5 text-center text-xs font-medium hover:bg-slate-50 transition">
+                            Adjuntar foto o imagen
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleSubirFoto}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+
+                        {pacienteActivo.hc.fotos.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {pacienteActivo.hc.fotos.map((foto) => (
+                              <div
+                                key={foto.id}
+                                className="border border-slate-200 rounded-xl overflow-hidden bg-white"
+                              >
+                                <img
+                                  src={foto.dataUrl}
+                                  alt={foto.nombreArchivo}
+                                  className="w-full h-36 object-cover bg-slate-50"
+                                />
+                                <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
+                                  <div className="truncate">
+                                    <p className="font-medium text-slate-900 truncate">
+                                      {foto.nombreArchivo}
+                                    </p>
+                                    <p className="text-slate-500">{foto.fecha}</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => eliminarFoto(foto.id)}
+                                    className="text-rose-600 hover:underline shrink-0"
+                                  >
+                                    Quitar
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {seccionHc === "prescripciones" && (
+                      <div className="space-y-4 text-sm">
+                        <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-3">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                            Lista general de medicamentos
+                          </h4>
+                          <form
+                            onSubmit={agregarMedicamentoCatalogo}
+                            className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+                          >
+                            <input
+                              type="text"
+                              value={nuevoMedNombre}
+                              onChange={(e) => setNuevoMedNombre(e.target.value)}
+                              placeholder="Nombre del medicamento"
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                            <input
+                              type="text"
+                              value={nuevoMedPresentacion}
+                              onChange={(e) =>
+                                setNuevoMedPresentacion(e.target.value)
+                              }
+                              placeholder="Concentración / presentación"
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                            <button
+                              type="submit"
+                              className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-semibold transition"
+                            >
+                              + Agregar a lista general
+                            </button>
+                          </form>
+
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {catalogoMedicamentos.map((med) => {
+                              const activa =
+                                pacienteActivo.hc.medicamentoPrescribirId ===
+                                med.id;
+                              return (
+                                <button
+                                  key={med.id}
+                                  type="button"
+                                  onClick={() =>
+                                    actualizarCampoHc(
+                                      "medicamentoPrescribirId",
+                                      med.id
+                                    )
+                                  }
+                                  className={`rounded-lg px-2.5 py-1 text-xs border transition ${
+                                    activa
+                                      ? "bg-teal-50 text-teal-950 border-teal-500 font-semibold"
+                                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                                  }`}
+                                >
+                                  {med.nombre} · {med.presentacion}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                              RP (Medicamentos a prescribir)
+                            </label>
+                            <select
+                              value={pacienteActivo.hc.medicamentoPrescribirId}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "medicamentoPrescribirId",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                            >
+                              <option value="">
+                                Seleccionar medicamento de la lista...
+                              </option>
+                              {catalogoMedicamentos.map((med) => (
+                                <option key={med.id} value={med.id}>
+                                  {med.nombre} ({med.presentacion})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/70 space-y-2">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700">
+                              Indicaciones
+                            </label>
+                            <input
+                              type="text"
+                              value={pacienteActivo.hc.indicacionesPrescripcion}
+                              onChange={(e) =>
+                                actualizarCampoHc(
+                                  "indicacionesPrescripcion",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Ej. Tomar 1 tableta cada 8 horas por 5 días"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={agregarPrescripcionPaciente}
+                            className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-semibold transition"
+                          >
+                            + Prescribir medicamento
+                          </button>
+                        </div>
+
+                        {(pacienteActivo.hc.prescripciones || []).length > 0 && (
+                          <div className="border border-slate-200 rounded-xl p-3.5 bg-white space-y-2">
+                            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                              RP e Indicaciones del paciente
+                            </h4>
+                            <ul className="divide-y divide-slate-100">
+                              {pacienteActivo.hc.prescripciones.map((presc) => (
+                                <li
+                                  key={presc.id}
+                                  className="py-2.5 flex items-start justify-between gap-3 text-xs"
+                                >
+                                  <div className="space-y-0.5">
+                                    <p className="font-semibold text-slate-900">
+                                      RP: {presc.medicamentoTexto}
+                                    </p>
+                                    <p className="text-slate-600">
+                                      <strong>Indicaciones:</strong>{" "}
+                                      {presc.indicaciones}
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      eliminarPrescripcionPaciente(presc.id)
+                                    }
+                                    className="text-rose-600 hover:underline shrink-0"
+                                  >
+                                    Quitar
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(() => {
+                      const idxActual = pestanasHc.findIndex(
+                        (p) => p.id === seccionHc
+                      );
+                      const mostrarAtras = idxActual > 0;
+                      const esCierreOdontograma = seccionHc === "odontograma";
+                      const mostrarSiguiente =
+                        !esCierreOdontograma && idxActual < pestanasHc.length - 1;
+
+                      return (
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          {mostrarAtras ? (
+                            <button
+                              type="button"
+                              onClick={retrocederPestana}
+                              className="rounded-lg border border-slate-200 bg-white text-slate-700 px-4 py-2 text-xs font-medium hover:bg-slate-50 transition"
+                            >
+                              Atrás
+                            </button>
+                          ) : (
+                            <div />
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            {mostrarSiguiente && (
+                              <button
+                                type="button"
+                                onClick={guardarYAvanzarPestana}
+                                className="rounded-lg bg-teal-600 text-white px-4 py-2 text-xs font-medium hover:bg-teal-700 transition"
+                              >
+                                Siguiente
+                              </button>
+                            )}
+
+                            {esCierreOdontograma && (
+                              <button
+                                type="button"
+                                onClick={guardarYAvanzarPestana}
+                                className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-xs font-medium hover:bg-emerald-700 transition"
+                              >
+                                Finalizar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {moduloActivo === "agenda" && (
+              <div className="space-y-4">
+                <form
+                  onSubmit={agregarCita}
+                  className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                >
+                  <input
+                    type="text"
+                    required
+                    value={pacienteCita}
+                    onChange={(e) => setPacienteCita(e.target.value)}
+                    placeholder="Nombre del paciente"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={motivoCita}
+                    onChange={(e) => setMotivoCita(e.target.value)}
+                    placeholder="Motivo de cita"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="time"
+                    value={horaCita}
+                    onChange={(e) => setHoraCita(e.target.value)}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-teal-600 text-white px-3 py-2 text-sm font-medium hover:bg-teal-700 transition"
+                  >
+                    + Agregar cita
+                  </button>
+                </form>
+
+                <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white overflow-hidden">
+                  {citas.map((cita) => (
+                    <li
+                      key={cita.id}
+                      className="p-3.5 flex items-center justify-between gap-2 text-sm"
+                    >
+                      <div>
+                        <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-800 mr-2">
+                          {cita.hora}
+                        </span>
+                        <strong className="text-slate-900">{cita.paciente}</strong>{" "}
+                        <span className="text-slate-500">({cita.motivo})</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCitas((prev) =>
+                            prev.map((item) =>
+                              item.id === cita.id
+                                ? { ...item, confirmada: !item.confirmada }
+                                : item
+                            )
+                          )
+                        }
+                        className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
+                          cita.confirmada
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        {cita.confirmada ? "✓ Confirmada" : "Marcar recordatorio"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {moduloActivo === "profesionales" && (
+              <div className="space-y-5 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                    <p className="text-xs text-slate-500">Salarios fijos del mes</p>
+                    <p className="text-xl font-semibold tracking-tight text-slate-900 mt-0.5">
+                      ${totalSalariosFijosEquipo.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3.5">
+                    <p className="text-xs text-amber-800">
+                      Aporte patronal IESS total
+                    </p>
+                    <p className="text-xl font-semibold tracking-tight text-amber-950 mt-0.5">
+                      ${totalAportesIessPatronales.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3.5">
+                    <p className="text-xs text-emerald-800">
+                      Nómina fija + Aporte patronal
+                    </p>
+                    <p className="text-xl font-semibold tracking-tight text-emerald-950 mt-0.5">
+                      $
+                      {(
+                        totalSalariosFijosEquipo + totalAportesIessPatronales
+                      ).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                <form
+                  onSubmit={agregarProfesional}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                >
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Nombre del profesional o colaborador
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profNombre}
+                      onChange={(e) => setProfNombre(e.target.value)}
+                      placeholder="Ej. Dra. Sofía Ruiz"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Número telefónico
+                    </label>
+                    <input
+                      type="text"
+                      value={profTelefono}
+                      onChange={(e) => setProfTelefono(e.target.value)}
+                      placeholder="Ej. 0991234567"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Dirección
+                    </label>
+                    <input
+                      type="text"
+                      value={profDireccion}
+                      onChange={(e) => setProfDireccion(e.target.value)}
+                      placeholder="Sector, calle principal y secundaria"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Rol o cargo
+                    </label>
+                    <select
+                      value={profCargo}
+                      onChange={(e) =>
+                        handleCambiarCargoProfesional(
+                          e.target.value as TipoCargoPersonal
+                        )
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="Odontólogo">Odontólogo</option>
+                      <option value="Especialista">Especialista</option>
+                      <option value="Auxiliar / Asistente">
+                        Auxiliar / Asistente
+                      </option>
+                      <option value="Recepcionista">Recepcionista</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Especialidad o área
+                    </label>
+                    <input
+                      type="text"
+                      value={profEspecialidad}
+                      onChange={(e) => setProfEspecialidad(e.target.value)}
+                      placeholder="Ej. Ortodoncia, Endodoncia, Asistencia"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Registro ACES
+                    </label>
+                    <input
+                      type="text"
+                      value={profRegistroAces}
+                      onChange={(e) => setProfRegistroAces(e.target.value)}
+                      placeholder="Ej. ACES-12345"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Licencia / Código MSP (solo odontólogos y especialistas)
+                    </label>
+                    {muestraLicenciaMspEnForm ? (
+                      <input
+                        type="text"
+                        value={profCodigoMsp}
+                        onChange={(e) => setProfCodigoMsp(e.target.value)}
+                        placeholder="Código Ministerio de Salud / Licencia"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    ) : (
+                      <div className="rounded-lg border border-slate-200 bg-slate-100/80 px-3 py-2 text-xs text-slate-500">
+                        No aplica para {profCargo}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Modalidad de pago
+                    </label>
+                    <select
+                      value={profEsquemaPago}
+                      onChange={(e) =>
+                        setProfEsquemaPago(
+                          e.target.value as EsquemaPagoPersonal
+                        )
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="salario_fijo">Salario fijo mensual</option>
+                      <option value="porcentaje">
+                        Porcentaje por atención (%)
+                      </option>
+                      <option value="mixto">Mixto (Salario + %)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Salario fijo mensual (USD)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={profSalario}
+                      onChange={(e) => setProfSalario(e.target.value)}
+                      placeholder="Ej. 600"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Porcentaje por procedimientos (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={profPorcentaje}
+                      onChange={(e) => setProfPorcentaje(e.target.value)}
+                      placeholder="Ej. 30"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-1.5">
+                    <label className="flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={profAplicaIess}
+                        onChange={(e) => setProfAplicaIess(e.target.checked)}
+                        className="rounded border-slate-300"
+                      />
+                      <span>Aplica aporte patronal IESS</span>
+                    </label>
+                    {profAplicaIess && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-500">
+                          % Patronal:
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={profPorcentajeIess}
+                          onChange={(e) =>
+                            setProfPorcentajeIess(e.target.value)
+                          }
+                          className="w-20 rounded border border-slate-200 px-2 py-1 text-xs"
+                        />
+                        <span className="text-[11px] font-semibold text-amber-800">
+                          = $
+                          {(
+                            ((parseFloat(profSalario || "0") || 0) *
+                              (parseFloat(profPorcentajeIess || "11.15") || 0)) /
+                            100
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Horario de atención / jornada
+                    </label>
+                    <input
+                      type="text"
+                      value={profHorario}
+                      onChange={(e) => setProfHorario(e.target.value)}
+                      placeholder="Ej. Lun a Vie 09:00 - 17:00"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="flex items-end sm:col-span-2 lg:col-span-3">
+                    <button
+                      type="submit"
+                      className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm font-medium transition"
+                    >
+                      + Registrar integrante en equipo
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-3">
+                  {profesionales.map((p) => {
+                    const aporteIess = calcularAportePatronalIess(p);
+                    const muestraLicencia = requiereLicenciaMsp(p.cargo);
+                    return (
+                      <div
+                        key={p.id}
+                        className="border border-slate-200 rounded-xl p-4 bg-white space-y-2.5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-semibold text-slate-900">
+                                {p.nombre}
+                              </h3>
+                              <span className="rounded-full bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
+                                {p.cargo}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {p.especialidad} · Tel: <strong>{p.telefono}</strong>{" "}
+                              · Dir: {p.direccion}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => eliminarProfesional(p.id)}
+                            className="text-xs text-rose-600 hover:underline"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs bg-slate-50/70 border border-slate-200/80 rounded-lg p-2.5">
+                          <div>
+                            <span className="text-slate-500 block">
+                              Registro ACES:
+                            </span>
+                            <strong className="text-slate-900">
+                              {p.registroAces}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block">
+                              Licencia / Código MSP:
+                            </span>
+                            <strong className="text-slate-900">
+                              {muestraLicencia ? p.codigoMsp : "No aplica"}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block">
+                              Remuneración e IESS:
+                            </span>
+                            <strong className="text-emerald-800">
+                              {p.esquemaPago === "salario_fijo" &&
+                                `Salario $${p.salarioMensual}/mes`}
+                              {p.esquemaPago === "porcentaje" &&
+                                `${p.porcentajePago}% por atención`}
+                              {p.esquemaPago === "mixto" &&
+                                `$${p.salarioMensual} + ${p.porcentajePago}%`}
+                              {p.aplicaIess &&
+                                ` · IESS pat. ($${aporteIess.toFixed(2)})`}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block">Horario:</span>
+                            <strong className="text-slate-900">
+                              {p.horarioTrabajo}
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {moduloActivo === "servicios" && (
+              <div className="space-y-6 text-sm">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
+                        Costos fijos mensuales operativos (USD)
+                      </h3>
+                      <span className="text-xs font-semibold bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-slate-900">
+                        Total: ${costoFijoTotalMensualOperativo.toFixed(2)}/mes
+                      </span>
+                    </div>
+
+                    <div className="text-xs bg-white border border-slate-200 rounded-lg p-2.5 space-y-1 text-slate-600">
+                      <div className="flex justify-between">
+                        <span>Salarios fijos del equipo:</span>
+                        <strong className="text-slate-900">
+                          ${totalSalariosFijosEquipo.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Aportes patronales IESS:</span>
+                        <strong className="text-amber-800">
+                          ${totalAportesIessPatronales.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Depreciación mensual equipos:</span>
+                        <strong className="text-slate-900">
+                          ${totalDepreciacionMensualEquipos.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>
+                          Uniformes, agasajos y seguros (prorrateo mensual):
+                        </span>
+                        <strong className="text-teal-800">
+                          ${totalProrrateoMensualRubrosFijos.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Arriendo, básicos y otros fijos:</span>
+                        <strong className="text-slate-900">
+                          ${totalCostosFijosRegistrados.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className="pt-1 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                        <span>Horas operativas del consultorio/mes:</span>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min={1}
+                            value={horasAtencionMensual}
+                            onChange={(e) =>
+                              setHorasAtencionMensual(e.target.value)
+                            }
+                            className="w-20 rounded border border-slate-200 px-2 py-0.5 text-right font-semibold text-slate-900"
+                          />
+                          <span className="text-slate-500">
+                            h (${(costoFijoPorMinuto * 60).toFixed(2)}/hora)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <form
+                      onSubmit={agregarCostoFijo}
+                      className="flex flex-col sm:flex-row gap-2"
+                    >
+                      <input
+                        type="text"
+                        value={nuevoCfConcepto}
+                        onChange={(e) => setNuevoCfConcepto(e.target.value)}
+                        placeholder="Concepto fijo (ej. Contador, limpieza)"
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={nuevoCfMonto}
+                        onChange={(e) => setNuevoCfMonto(e.target.value)}
+                        placeholder="USD/mes"
+                        className="w-28 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-teal-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-teal-700 transition"
+                      >
+                        + Fijo
+                      </button>
+                    </form>
+
+                    <ul className="space-y-1 max-h-36 overflow-y-auto">
+                      {costosFijos.map((cf) => (
+                        <li
+                          key={cf.id}
+                          className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs"
+                        >
+                          <span>{cf.concepto}</span>
+                          <div className="flex items-center gap-2">
+                            <strong>${cf.montoMensual.toFixed(2)}</strong>
+                            <button
+                              type="button"
+                              onClick={() => eliminarCostoFijo(cf.id)}
+                              className="text-rose-600 hover:underline"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
+                        Plantillas de costos variables por atención (USD)
+                      </h3>
+                      <span className="text-[11px] text-slate-500">
+                        Referencia de insumos
+                      </span>
+                    </div>
+
+                    <form
+                      onSubmit={agregarCostoVariable}
+                      className="flex flex-col sm:flex-row gap-2"
+                    >
+                      <input
+                        type="text"
+                        value={nuevoCvConcepto}
+                        onChange={(e) => setNuevoCvConcepto(e.target.value)}
+                        placeholder="Insumo / kit variable (ej. Aguja + anestesia)"
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={nuevoCvMonto}
+                        onChange={(e) => setNuevoCvMonto(e.target.value)}
+                        placeholder="Costo USD"
+                        className="w-28 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-teal-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-teal-700 transition"
+                      >
+                        + Variable
+                      </button>
+                    </form>
+
+                    <ul className="space-y-1 max-h-56 overflow-y-auto">
+                      {costosVariables.map((cv) => (
+                        <li
+                          key={cv.id}
+                          className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs"
+                        >
+                          <span className="truncate">{cv.concepto}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <strong>${cv.costoUnitario.toFixed(2)}</strong>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSrvCostoVariable((prev) =>
+                                  (
+                                    (parseFloat(prev || "0") || 0) +
+                                    cv.costoUnitario
+                                  ).toFixed(2)
+                                )
+                              }
+                              title="Sumar este costo variable al servicio que estás creando"
+                              className="rounded bg-teal-50 text-teal-800 border border-teal-200 px-1.5 py-0.5 text-[10px] font-semibold hover:bg-teal-100"
+                            >
+                              + Usar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => eliminarCostoVariable(cv.id)}
+                              className="text-rose-600 hover:underline"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <form
+                  onSubmit={agregarServicioCartera}
+                  className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-3"
+                >
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
+                    Nuevo servicio odontológico con cálculo de margen y utilidad
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="lg:col-span-2">
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Nombre del procedimiento / servicio
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={srvNombre}
+                        onChange={(e) => setSrvNombre(e.target.value)}
+                        placeholder="Ej. Profilaxis ultrasónica + flúor"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Especialidad odontológica
+                      </label>
+                      <select
+                        value={srvEspecialidad}
+                        onChange={(e) =>
+                          setSrvEspecialidad(
+                            e.target.value as EspecialidadOdontologia
+                          )
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      >
+                        {ESPECIALIDADES_ODONTOLOGIA.map((esp) => (
+                          <option key={esp} value={esp}>
+                            {esp}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Tiempo estimado (min)
+                      </label>
+                      <input
+                        type="number"
+                        min={5}
+                        step={5}
+                        value={srvDuracion}
+                        onChange={(e) => setSrvDuracion(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Tarifa particular normal (USD)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={srvPrecioNormal}
+                        onChange={(e) => setSrvPrecioNormal(e.target.value)}
+                        placeholder="Ej. 45.00"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-1.5">
+                      <label className="flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={srvAplicaConvenio}
+                          onChange={(e) =>
+                            setSrvAplicaConvenio(e.target.checked)
+                          }
+                          className="rounded border-slate-300"
+                        />
+                        <span>Aplica tarifa con convenio / seguro</span>
+                      </label>
+                      {srvAplicaConvenio && (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={srvPrecioConvenio}
+                          onChange={(e) =>
+                            setSrvPrecioConvenio(e.target.value)
+                          }
+                          placeholder="Precio convenio USD (ej. 35.00)"
+                          className="w-full rounded border border-slate-200 px-2.5 py-1 text-xs"
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Costo variable insumos (USD)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={srvCostoVariable}
+                        onChange={(e) => setSrvCostoVariable(e.target.value)}
+                        placeholder="Ej. 8.50"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Honorario / Comisión profesional
+                      </label>
+                      <div className="flex gap-1.5">
+                        <select
+                          value={srvHonorarioTipo}
+                          onChange={(e) =>
+                            setSrvHonorarioTipo(
+                              e.target.value as "porcentaje" | "fijo"
+                            )
+                          }
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs"
+                        >
+                          <option value="porcentaje">%</option>
+                          <option value="fijo">USD</option>
+                        </select>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={srvHonorarioValor}
+                          onChange={(e) =>
+                            setSrvHonorarioValor(e.target.value)
+                          }
+                          placeholder="30"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2 lg:col-span-4">
+                      <input
+                        type="text"
+                        value={srvDescripcion}
+                        onChange={(e) => setSrvDescripcion(e.target.value)}
+                        placeholder="Descripción o alcance del servicio..."
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 text-xs space-y-2">
+                    <p className="font-semibold text-slate-800">
+                      Vista previa de estructura de costos y utilidad neta:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="bg-slate-50 rounded-lg p-2.5">
+                        <span className="text-slate-500 block">
+                          Costo fijo ({srvDuracion || 30} min) + Variable:
+                        </span>
+                        <strong className="text-slate-900">
+                          ${simulacionEconomica.costoFijoAsignado.toFixed(2)} + $
+                          {simulacionEconomica.costoVariable.toFixed(2)} = $
+                          {simulacionEconomica.costoTotalOperativo.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className="bg-emerald-50/70 rounded-lg p-2.5">
+                        <span className="text-emerald-800 block">
+                          Utilidad Tarifa Normal:
+                        </span>
+                        <strong
+                          className={
+                            simulacionEconomica.normal.utilidadNeta >= 0
+                              ? "text-emerald-900"
+                              : "text-rose-700"
+                          }
+                        >
+                          ${simulacionEconomica.normal.utilidadNeta.toFixed(2)} (
+                          {simulacionEconomica.normal.margenPorcentaje.toFixed(
+                            1
+                          )}
+                          %)
+                        </strong>
+                      </div>
+                      {srvAplicaConvenio && (
+                        <div className="bg-teal-50/70 rounded-lg p-2.5">
+                          <span className="text-teal-800 block">
+                            Utilidad Tarifa Convenio:
+                          </span>
+                          <strong
+                            className={
+                              simulacionEconomica.convenio.utilidadNeta >= 0
+                                ? "text-teal-900"
+                                : "text-rose-700"
+                            }
+                          >
+                            $
+                            {simulacionEconomica.convenio.utilidadNeta.toFixed(
+                              2
+                            )}{" "}
+                            (
+                            {simulacionEconomica.convenio.margenPorcentaje.toFixed(
+                              1
+                            )}
+                            %)
+                          </strong>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm font-medium transition"
+                  >
+                    + Guardar servicio en cartera
+                  </button>
+                </form>
+
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
+                      Servicios registrados ({serviciosFiltrados.length})
+                    </h3>
+                    <select
+                      value={filtroEspecialidadSrv}
+                      onChange={(e) => setFiltroEspecialidadSrv(e.target.value)}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                    >
+                      <option value="Todas">Todas las especialidades</option>
+                      {ESPECIALIDADES_ODONTOLOGIA.map((esp) => (
+                        <option key={esp} value={esp}>
+                          {esp}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {serviciosFiltrados.map((srv) => {
+                      const econ = calcularEconomiaServicio(srv);
+                      return (
+                        <div
+                          key={srv.id}
+                          className="border border-slate-200 rounded-xl p-4 bg-white space-y-2.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="inline-block rounded-md bg-teal-50 border border-teal-200/80 px-2 py-0.5 text-[11px] font-semibold text-teal-800 mb-1">
+                                {srv.especialidad} · {srv.duracionMin} min
+                              </span>
+                              <h4 className="font-semibold text-slate-900">
+                                {srv.nombre}
+                              </h4>
+                              <p className="text-xs text-slate-500">
+                                {srv.descripcion}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => eliminarServicioCartera(srv.id)}
+                              className="text-xs text-rose-600 hover:underline shrink-0"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/70 border border-slate-200/80 rounded-lg p-2.5">
+                            <div>
+                              <span className="text-slate-500 block">
+                                Precio Normal:
+                              </span>
+                              <strong className="text-slate-900 text-sm">
+                                ${srv.precioNormal.toFixed(2)}
+                              </strong>
+                              <span className="block text-[11px] text-emerald-700 font-semibold">
+                                Utilidad: ${econ.normal.utilidadNeta.toFixed(2)} (
+                                {econ.normal.margenPorcentaje.toFixed(0)}%)
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-slate-500 block">
+                                Precio Convenio:
+                              </span>
+                              {srv.aplicaConvenio ? (
+                                <>
+                                  <strong className="text-teal-800 text-sm">
+                                    ${srv.precioConvenio.toFixed(2)}
+                                  </strong>
+                                  <span className="block text-[11px] text-teal-700 font-semibold">
+                                    Utilidad: $
+                                    {econ.convenio.utilidadNeta.toFixed(2)} (
+                                    {econ.convenio.margenPorcentaje.toFixed(0)}%)
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-slate-400">No aplica</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 border-t border-slate-100 pt-2">
+                            <span>
+                              Costo op.: ${econ.costoTotalOperativo.toFixed(2)}{" "}
+                              (Fijo ${econ.costoFijoAsignado.toFixed(2)} + Var $
+                              {econ.costoVariable.toFixed(2)})
+                            </span>
+                            <span>
+                              Honorario:{" "}
+                              {srv.honorarioTipo === "porcentaje"
+                                ? `${srv.honorarioValor}%`
+                                : `$${srv.honorarioValor.toFixed(2)}`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {moduloActivo === "inventario" && (
+              <div className="space-y-5 text-sm">
+                <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
+                  <button
+                    type="button"
+                    onClick={() => setTabInventario("insumos")}
+                    className={`rounded-xl px-4 py-2 text-xs font-semibold border transition flex items-center gap-2 ${
+                      tabInventario === "insumos"
+                        ? "bg-teal-600 text-white border-teal-600"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>1. Insumos clínicos</span>
+                    {alarmasInsumos > 0 && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          tabInventario === "insumos"
+                            ? "bg-rose-500 text-white"
+                            : "bg-rose-100 text-rose-800"
+                        }`}
+                      >
+                        {alarmasInsumos}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTabInventario("equipos")}
+                    className={`rounded-xl px-4 py-2 text-xs font-semibold border transition flex items-center gap-2 ${
+                      tabInventario === "equipos"
+                        ? "bg-teal-600 text-white border-teal-600"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>2. Equipos e Instrumental</span>
+                    {alarmasEquipos > 0 && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          tabInventario === "equipos"
+                            ? "bg-rose-500 text-white"
+                            : "bg-rose-100 text-rose-800"
+                        }`}
+                      >
+                        {alarmasEquipos}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTabInventario("propiedades")}
+                    className={`rounded-xl px-4 py-2 text-xs font-semibold border transition ${
+                      tabInventario === "propiedades"
+                        ? "bg-teal-600 text-white border-teal-600"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    3. Uniformes, Agasajos, Seguros y Propiedades
+                  </button>
+                </div>
+
+                {tabInventario === "insumos" && (
+                  <div className="space-y-4">
+                    <form
+                      onSubmit={agregarInsumo}
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                    >
+                      <div className="sm:col-span-2 lg:col-span-2">
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Seleccionar insumo odontológico
+                        </label>
+                        <select
+                          value={insSeleccionCatalogo}
+                          onChange={(e) =>
+                            handleSeleccionarInsumoCatalogo(e.target.value)
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                        >
+                          {CATALOGO_INSUMOS_ODONTOLOGIA.map((item) => (
+                            <option key={item.nombre} value={item.nombre}>
+                              {item.nombre} ({item.categoria})
+                            </option>
+                          ))}
+                          <option value="__OTRO__">
+                            + Otro insumo (escribir manualmente)...
+                          </option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Categoría
+                        </label>
+                        <select
+                          value={insCategoria}
+                          onChange={(e) => setInsCategoria(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="Bioseguridad">Bioseguridad</option>
+                          <option value="Esterilización">Esterilización</option>
+                          <option value="Anestesia">Anestesia</option>
+                          <option value="Operatoria">Operatoria</option>
+                          <option value="Endodoncia">Endodoncia</option>
+                          <option value="Profilaxis">Profilaxis</option>
+                          <option value="Cirugía">Cirugía</option>
+                          <option value="Rehabilitación">Rehabilitación</option>
+                          <option value="General">General</option>
+                        </select>
+                      </div>
+
+                      {insSeleccionCatalogo === "__OTRO__" && (
+                        <div className="sm:col-span-2 lg:col-span-3">
+                          <label className="block text-xs font-medium text-slate-700 mb-1">
+                            Nombre del nuevo insumo
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={insNombreExtra}
+                            onChange={(e) => setInsNombreExtra(e.target.value)}
+                            placeholder="Escriba el nombre del insumo..."
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Stock actual (unidades)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          required
+                          value={insCantidad}
+                          onChange={(e) => setInsCantidad(e.target.value)}
+                          placeholder="Cantidad actual"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Stock mínimo (alarma de compra)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          required
+                          value={insStockMinimo}
+                          onChange={(e) => setInsStockMinimo(e.target.value)}
+                          placeholder="Mínimo antes de pedir"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Costo unitario (USD)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={insCostoUnitario}
+                          onChange={(e) => setInsCostoUnitario(e.target.value)}
+                          placeholder="Ej. 24.50"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Caducidad (opcional)
+                        </label>
+                        <input
+                          type="text"
+                          value={insCaducidad}
+                          onChange={(e) => setInsCaducidad(e.target.value)}
+                          placeholder="Ej. 2027-10"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 flex items-end">
+                        <button
+                          type="submit"
+                          className="w-full rounded-lg bg-teal-600 text-white px-3 py-2 text-sm font-medium hover:bg-teal-700 transition"
+                        >
+                          + Agregar insumo
+                        </button>
+                      </div>
+                    </form>
+
+                    <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white overflow-hidden">
+                      {insumos.map((item) => {
+                        const alertaCompra = requiereNecesidadCompra(
+                          item.cantidad,
+                          item.stockMinimo
+                        );
+                        return (
+                          <li
+                            key={item.id}
+                            className={`p-3.5 flex flex-wrap items-center justify-between gap-3 ${
+                              alertaCompra ? "bg-rose-50/50" : ""
+                            }`}
+                          >
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <strong className="text-slate-900">
+                                  {item.nombre}
+                                </strong>
+                                <span className="text-xs text-slate-500">
+                                  ({item.categoria})
+                                </span>
+                                {alertaCompra && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
+                                    Necesidad de compra
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500">
+                                Stock actual: <strong>{item.cantidad}</strong> ·
+                                Stock mínimo: <strong>{item.stockMinimo}</strong>{" "}
+                                · Costo: ${item.costoUnitario.toFixed(2)} · Cad:{" "}
+                                {item.caducidad}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  ajustarCantidadInsumo(item.id, -1)
+                                }
+                                title="Descontar 1 unidad"
+                                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
+                              >
+                                -
+                              </button>
+                              <span className="min-w-8 text-center text-xs font-bold text-slate-900">
+                                {item.cantidad}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => ajustarCantidadInsumo(item.id, 1)}
+                                title="Sumar 1 unidad"
+                                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
+                              >
+                                +
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => eliminarInsumo(item.id)}
+                                className="text-xs text-rose-600 hover:underline ml-2"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                {tabInventario === "equipos" && (
+                  <div className="space-y-4">
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 text-xs flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-slate-700">
+                        Depreciación mensual total de equipos e instrumental
+                        (integrada en costos fijos):
+                      </span>
+                      <strong className="text-slate-900 text-sm">
+                        ${totalDepreciacionMensualEquipos.toFixed(2)}/mes
+                      </strong>
+                    </div>
+
+                    <form
+                      onSubmit={agregarEquipoInstrumental}
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                    >
+                      <div className="sm:col-span-2 lg:col-span-2">
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Seleccionar equipo odontológico o instrumental
+                        </label>
+                        <select
+                          value={eqSeleccionCatalogo}
+                          onChange={(e) =>
+                            handleSeleccionarEquipoCatalogo(e.target.value)
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                        >
+                          {CATALOGO_EQUIPOS_INSTRUMENTAL.map((item) => (
+                            <option key={item.nombre} value={item.nombre}>
+                              {item.nombre} ({item.tipoBien})
+                            </option>
+                          ))}
+                          <option value="__OTRO__">
+                            + Otro equipo o instrumental (escribir)...
+                          </option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Clasificación
+                        </label>
+                        <select
+                          value={eqTipoBien}
+                          onChange={(e) =>
+                            setEqTipoBien(
+                              e.target.value as
+                                | "Equipo odontológico"
+                                | "Instrumental clínico"
+                            )
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="Equipo odontológico">
+                            Equipo odontológico
+                          </option>
+                          <option value="Instrumental clínico">
+                            Instrumental clínico
+                          </option>
+                        </select>
+                      </div>
+
+                      {eqSeleccionCatalogo === "__OTRO__" && (
+                        <div className="sm:col-span-2 lg:col-span-3">
+                          <label className="block text-xs font-medium text-slate-700 mb-1">
+                            Nombre del equipo o instrumental
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={eqNombreExtra}
+                            onChange={(e) => setEqNombreExtra(e.target.value)}
+                            placeholder="Escriba el nombre del equipo o instrumental..."
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Cantidad disponible
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          required
+                          value={eqCantidad}
+                          onChange={(e) => setEqCantidad(e.target.value)}
+                          placeholder="Cantidad"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Stock mínimo (alarma de compra)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          required
+                          value={eqStockMinimo}
+                          onChange={(e) => setEqStockMinimo(e.target.value)}
+                          placeholder="Mínimo requerido"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Valor adquisición total (USD)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          value={eqValorAdquisicion}
+                          onChange={(e) =>
+                            setEqValorAdquisicion(e.target.value)
+                          }
+                          placeholder="Ej. 350.00"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Vida útil (años)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          step="0.5"
+                          value={eqVidaUtilAnios}
+                          onChange={(e) => setEqVidaUtilAnios(e.target.value)}
+                          placeholder="5"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Estado operativo
+                        </label>
+                        <select
+                          value={eqEstado}
+                          onChange={(e) =>
+                            setEqEstado(
+                              e.target.value as
+                                | "Operativo"
+                                | "Mantenimiento"
+                                | "Por renovar"
+                            )
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="Operativo">Operativo</option>
+                          <option value="Mantenimiento">Mantenimiento</option>
+                          <option value="Por renovar">Por renovar</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-end">
+                        <button
+                          type="submit"
+                          className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 text-sm font-medium transition"
+                        >
+                          + Registrar equipo / instrumental
+                        </button>
+                      </div>
+                    </form>
+
+                    <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white overflow-hidden">
+                      {equipos.map((eq) => {
+                        const depMensual = calcularDepreciacionMensualEquipo(eq);
+                        const alertaCompra = requiereNecesidadCompra(
+                          eq.cantidad,
+                          eq.stockMinimo
+                        );
+                        return (
+                          <li
+                            key={eq.id}
+                            className={`p-3.5 flex flex-wrap items-center justify-between gap-3 ${
+                              alertaCompra ? "bg-rose-50/50" : ""
+                            }`}
+                          >
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <strong className="text-slate-900">
+                                  {eq.nombre}
+                                </strong>
+                                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                                  {eq.tipoBien}
+                                </span>
+                                <span className="rounded-md bg-teal-50 border border-teal-200/80 px-2 py-0.5 text-[11px] font-medium text-teal-800">
+                                  {eq.estado}
+                                </span>
+                                {alertaCompra && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
+                                    Necesidad de compra
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500">
+                                Cantidad: <strong>{eq.cantidad}</strong> · Stock
+                                mínimo: <strong>{eq.stockMinimo}</strong> · Valor:
+                                ${eq.valorAdquisicion.toFixed(2)} · Vida útil:{" "}
+                                {eq.vidaUtilAnios} años · Depreciación:{" "}
+                                <strong>${depMensual.toFixed(2)}/mes</strong>
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  ajustarCantidadEquipo(eq.id, -1)
+                                }
+                                title="Descontar 1 unidad"
+                                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
+                              >
+                                -
+                              </button>
+                              <span className="min-w-8 text-center text-xs font-bold text-slate-900">
+                                {eq.cantidad}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => ajustarCantidadEquipo(eq.id, 1)}
+                                title="Sumar 1 unidad"
+                                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
+                              >
+                                +
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => eliminarEquipoInstrumental(eq.id)}
+                                className="text-xs text-rose-600 hover:underline ml-2"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                {tabInventario === "propiedades" && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 text-xs">
+                        <span className="text-slate-500 block">
+                          Valor total registrado en rubros y propiedades:
+                        </span>
+                        <strong className="text-slate-900 text-base">
+                          ${totalRubrosPropiedadUsd.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className="bg-teal-50/70 border border-teal-200/80 rounded-xl p-3.5 text-xs">
+                        <span className="text-teal-800 block">
+                          Prorrateo mensual integrado en costos fijos:
+                        </span>
+                        <strong className="text-teal-950 text-base">
+                          ${totalProrrateoMensualRubrosFijos.toFixed(2)}/mes
+                        </strong>
+                      </div>
+                    </div>
+
+                    <form
+                      onSubmit={agregarRubroPropiedad}
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                    >
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Categoría del rubro
+                        </label>
+                        <select
+                          value={rubCategoria}
+                          onChange={(e) =>
+                            handleCambiarCategoriaRubro(
+                              e.target.value as CategoriaRubroPropiedad
+                            )
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        >
+                          {CATEGORIAS_RUBRO_PROPIEDAD.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {cat}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Descripción / Concepto
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={rubTitulo}
+                          onChange={(e) => setRubTitulo(e.target.value)}
+                          placeholder="Ej. 5 uniformes antifluidos o Seguro demandas"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Cantidad de unidades (ej. 5 uniformes)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={rubCantidad}
+                          onChange={(e) => setRubCantidad(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Costo por unidad o póliza (USD)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          value={rubCostoUnitario}
+                          onChange={(e) => setRubCostoUnitario(e.target.value)}
+                          placeholder="Ej. 25.00"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Meses de prorrateo (ej. 12 meses)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={rubMesesProrrateo}
+                          onChange={(e) => setRubMesesProrrateo(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-lg p-2.5 flex items-center">
+                        <label className="flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={rubIncluirFijos}
+                            onChange={(e) =>
+                              setRubIncluirFijos(e.target.checked)
+                            }
+                            className="rounded border-slate-300"
+                          />
+                          <span>Sumar cuota mensual a costos fijos</span>
+                        </label>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <input
+                          type="text"
+                          value={rubNotas}
+                          onChange={(e) => setRubNotas(e.target.value)}
+                          placeholder="Observaciones adicionales (proveedor, vigencia de póliza, tallas...)"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <button
+                          type="submit"
+                          className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 text-sm font-medium transition"
+                        >
+                          + Agregar rubro / propiedad
+                        </button>
+                      </div>
+                    </form>
+
+                    <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white overflow-hidden">
+                      {rubrosPropiedad.map((rub) => {
+                        const totalUsd = calcularTotalRubroUsd(rub);
+                        const mensualUsd = calcularMensualRubroUsd(rub);
+                        return (
+                          <li
+                            key={rub.id}
+                            className="p-3.5 flex flex-wrap items-center justify-between gap-2"
+                          >
+                            <div className="space-y-0.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <strong className="text-slate-900">
+                                  {rub.titulo}
+                                </strong>
+                                <span className="rounded-md bg-teal-50 border border-teal-200/80 px-2 py-0.5 text-[11px] font-medium text-teal-800">
+                                  {rub.categoria}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500">
+                                {rub.cantidadUnidades} unid. × $
+                                {rub.costoUnitarioUsd.toFixed(2)} ={" "}
+                                <strong>${totalUsd.toFixed(2)}</strong> ·
+                                Prorrateo ({rub.mesesProrrateo} meses):{" "}
+                                <strong className="text-emerald-800">
+                                  ${mensualUsd.toFixed(2)}/mes
+                                </strong>
+                                {rub.notas ? ` · ${rub.notas}` : ""}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => eliminarRubroPropiedad(rub.id)}
+                              className="text-xs text-rose-600 hover:underline"
+                            >
+                              Quitar
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {moduloActivo === "proveedores" && (
+              <div className="space-y-5 text-sm">
+                <form
+                  onSubmit={agregarProveedor}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                >
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Nombre del proveedor o empresa
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={prvNombre}
+                      onChange={(e) => setPrvNombre(e.target.value)}
+                      placeholder="Ej. Laboratorio Cerámico Quito / Agencia Digital"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Rubro o categoría
+                    </label>
+                    <select
+                      value={prvRubro}
+                      onChange={(e) =>
+                        setPrvRubro(e.target.value as RubroProveedor)
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    >
+                      {RUBROS_PROVEEDOR.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Detalle de servicio o suministro
+                    </label>
+                    <input
+                      type="text"
+                      value={prvDetalle}
+                      onChange={(e) => setPrvDetalle(e.target.value)}
+                      placeholder="Ej. Manejo de redes sociales, pauta o prótesis"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Modalidad de pago
+                    </label>
+                    <select
+                      value={prvModalidad}
+                      onChange={(e) => setPrvModalidad(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="Mensualidad fija">Mensualidad fija</option>
+                      <option value="Por trabajo / caso">Por trabajo / caso</option>
+                      <option value="Por pedido / factura">
+                        Por pedido / factura
+                      </option>
+                      <option value="Pago contra entrega">
+                        Pago contra entrega
+                      </option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Monto referencial (USD)
+                    </label>
+                    <input
+                      type="text"
+                      value={prvMonto}
+                      onChange={(e) => setPrvMonto(e.target.value)}
+                      placeholder="Ej. $180/mes o Según orden"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Teléfono / Contacto
+                    </label>
+                    <input
+                      type="text"
+                      value={prvContacto}
+                      onChange={(e) => setPrvContacto(e.target.value)}
+                      placeholder="Ej. 0991234567"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <input
+                      type="text"
+                      value={prvNotas}
+                      onChange={(e) => setPrvNotas(e.target.value)}
+                      placeholder="Notas de entrega, tiempos de respuesta o acuerdos..."
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <button
+                      type="submit"
+                      className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm font-medium transition"
+                    >
+                      + Registrar proveedor
+                    </button>
+                  </div>
+                </form>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {proveedores.map((prv) => (
+                    <div
+                      key={prv.id}
+                      className="border border-slate-200 rounded-xl p-4 bg-white space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="inline-block rounded-md bg-teal-50 border border-teal-200/80 px-2 py-0.5 text-[11px] font-semibold text-teal-800 mb-1">
+                            {prv.rubro}
+                          </span>
+                          <h3 className="font-semibold text-slate-900">
+                            {prv.nombre}
+                          </h3>
+                          <p className="text-xs text-slate-600">
+                            {prv.detalleServicio}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => eliminarProveedor(prv.id)}
+                          className="text-xs text-rose-600 hover:underline"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+
+                      <div className="text-xs bg-slate-50/70 border border-slate-200/80 rounded-lg p-2.5 space-y-0.5">
+                        <p>
+                          <span className="text-slate-500">Pago:</span>{" "}
+                          <strong>{prv.modalidadPago}</strong> (
+                          {prv.montoReferencial})
+                        </p>
+                        <p>
+                          <span className="text-slate-500">Contacto:</span>{" "}
+                          <strong>{prv.contacto}</strong>
+                        </p>
+                        {prv.notas && (
+                          <p className="text-slate-500">{prv.notas}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {moduloActivo === "pagos" && (
+              <div className="space-y-2 text-sm text-slate-700">
+                <p>
+                  Los presupuestos en dólares ($) se generan desde los planes de
+                  tratamiento de cada paciente utilizando los precios normales o
+                  de convenio de la <strong>Cartera de Servicios</strong>.
+                </p>
+                <p className="text-xs text-slate-500">
+                  Cuando lo indiques, conectamos la emisión automática de
+                  presupuestos y registro de abonos en USD ($) desde el plan de
+                  tratamiento.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
