@@ -4397,4 +4397,459 @@ export default function HomePage() {
                               actualizarCampoHc(
                                 "procedimientoPlanSeleccionado",
                                 e.target.value
-                              
+                              )
+                            }
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Seleccionar procedimiento...
+                            </option>
+                            {PROCEDIMIENTOS_MSP.map((p) => (
+                              <option key={p.id} value={p.titulo}>
+                                {p.titulo}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={agregarItemPlanTratamiento}
+                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                          >
+                            + Añadir al plan
+                          </button>
+                        </div>
+
+                        <div>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.procedimientoPlanSeleccionado}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "procedimientoPlanSeleccionado",
+                                e.target.value
+                              )
+                            }
+                            placeholder="O escriba el procedimiento a realizar en la pieza..."
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        {(pacienteActivo.hc.itemsPlanTratamiento || []).length >
+                          0 && (
+                          <ul className="space-y-1.5">
+                            {pacienteActivo.hc.itemsPlanTratamiento.map(
+                              (item) => (
+                                <li
+                                  key={item.id}
+                                  className="flex items-center justify-between gap-2 bg-white border border-sky-200 rounded-lg px-3 py-2 text-xs"
+                                >
+                                  <div>
+                                    <strong className="text-sky-950">
+                                      Pieza {item.pieza}
+                                    </strong>{" "}
+                                    — {item.procedimiento}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      eliminarItemPlanTratamiento(item.id)
+                                    }
+                                    className="text-red-600 hover:underline shrink-0"
+                                  >
+                                    Quitar
+                                  </button>
+                                </li>
+                              )
+                            )}
+                          </ul>
+                        )}
+
+                        <div>
+                          <label className="block text-xs font-medium text-sky-900 mb-1">
+                            Observaciones del plan de tratamiento
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={pacienteActivo.hc.planTratamiento}
+                            onChange={(e) =>
+                              actualizarCampoHc("planTratamiento", e.target.value)
+                            }
+                            placeholder="Secuencia general de tratamientos y citas propuestas"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {seccionHc === "examenes" && (
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <label className="block text-xs font-medium text-sky-900 mb-1">
+                          Exámenes complementarios (radiografías, fotografías
+                          clínicas, tomografías, laboratorio)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={pacienteActivo.hc.examenesComplementarios}
+                          onChange={(e) =>
+                            actualizarCampoHc(
+                              "examenesComplementarios",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Detalle o hallazgos de Rx periapical/panorámica, fotos clínicas, CBCT o análisis de laboratorio"
+                          className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-sky-50/70 p-3.5 rounded-xl border border-sky-200">
+                        <label className="cursor-pointer rounded-lg bg-sky-600 text-white px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-700">
+                          Tomar foto con cámara
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+
+                        <label className="cursor-pointer rounded-lg border border-sky-300 bg-white text-sky-900 px-3 py-2.5 text-center text-xs font-medium hover:bg-sky-100">
+                          Adjuntar foto o imagen
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleSubirFoto}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {pacienteActivo.hc.fotos.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {pacienteActivo.hc.fotos.map((foto) => (
+                            <div
+                              key={foto.id}
+                              className="border border-sky-200 rounded-xl overflow-hidden bg-white"
+                            >
+                              <img
+                                src={foto.dataUrl}
+                                alt={foto.nombreArchivo}
+                                className="w-full h-36 object-cover bg-sky-50"
+                              />
+                              <div className="p-2.5 flex items-center justify-between gap-2 text-xs">
+                                <div className="truncate">
+                                  <p className="font-medium text-sky-950 truncate">
+                                    {foto.nombreArchivo}
+                                  </p>
+                                  <p className="text-sky-600">{foto.fecha}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarFoto(foto.id)}
+                                  className="text-red-600 hover:underline shrink-0"
+                                >
+                                  Quitar
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {seccionHc === "prescripciones" && (
+                    <div className="space-y-4 text-sm">
+                      <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-3">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                          Lista general de medicamentos
+                        </h4>
+                        <form
+                          onSubmit={agregarMedicamentoCatalogo}
+                          className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+                        >
+                          <input
+                            type="text"
+                            value={nuevoMedNombre}
+                            onChange={(e) => setNuevoMedNombre(e.target.value)}
+                            placeholder="Nombre del medicamento"
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={nuevoMedPresentacion}
+                            onChange={(e) =>
+                              setNuevoMedPresentacion(e.target.value)
+                            }
+                            placeholder="Concentración / presentación"
+                            className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                          >
+                            + Agregar a lista general
+                          </button>
+                        </form>
+
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {catalogoMedicamentos.map((med) => {
+                            const activa =
+                              pacienteActivo.hc.medicamentoPrescribirId ===
+                              med.id;
+                            return (
+                              <button
+                                key={med.id}
+                                type="button"
+                                onClick={() =>
+                                  actualizarCampoHc(
+                                    "medicamentoPrescribirId",
+                                    med.id
+                                  )
+                                }
+                                className={`rounded-lg px-2.5 py-1 text-xs border transition ${
+                                  activa
+                                    ? "bg-sky-200 text-sky-950 border-sky-400 font-semibold"
+                                    : "bg-white text-sky-800 border-sky-200 hover:bg-sky-100"
+                                }`}
+                              >
+                                {med.nombre} · {med.presentacion}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            RP (Medicamentos a prescribir)
+                          </label>
+                          <select
+                            value={pacienteActivo.hc.medicamentoPrescribirId}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "medicamentoPrescribirId",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-sky-950"
+                          >
+                            <option value="">
+                              Seleccionar medicamento de la lista...
+                            </option>
+                            {catalogoMedicamentos.map((med) => (
+                              <option key={med.id} value={med.id}>
+                                {med.nombre} ({med.presentacion})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-sky-50/60 space-y-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            Indicaciones
+                          </label>
+                          <input
+                            type="text"
+                            value={pacienteActivo.hc.indicacionesPrescripcion}
+                            onChange={(e) =>
+                              actualizarCampoHc(
+                                "indicacionesPrescripcion",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej. Tomar 1 tableta cada 8 horas por 5 días"
+                            className="w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={agregarPrescripcionPaciente}
+                          className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-xs font-semibold"
+                        >
+                          + Prescribir medicamento
+                        </button>
+                      </div>
+
+                      {(pacienteActivo.hc.prescripciones || []).length > 0 && (
+                        <div className="border border-sky-200 rounded-xl p-3.5 bg-white space-y-2">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+                            RP e Indicaciones del paciente
+                          </h4>
+                          <ul className="divide-y divide-sky-100">
+                            {pacienteActivo.hc.prescripciones.map((presc) => (
+                              <li
+                                key={presc.id}
+                                className="py-2.5 flex items-start justify-between gap-3 text-xs"
+                              >
+                                <div className="space-y-0.5">
+                                  <p className="font-semibold text-sky-950">
+                                    RP: {presc.medicamentoTexto}
+                                  </p>
+                                  <p className="text-sky-800">
+                                    <strong>Indicaciones:</strong>{" "}
+                                    {presc.indicaciones}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    eliminarPrescripcionPaciente(presc.id)
+                                  }
+                                  className="text-red-600 hover:underline shrink-0"
+                                >
+                                  Quitar
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(() => {
+                    const idxActual = pestanasHc.findIndex(
+                      (p) => p.id === seccionHc
+                    );
+                    const mostrarAtras = idxActual > 0;
+                    const esCierreOdontograma = seccionHc === "odontograma";
+                    const mostrarSiguiente =
+                      !esCierreOdontograma && idxActual < pestanasHc.length - 1;
+
+                    return (
+                      <div className="pt-2 flex items-center justify-between gap-2">
+                        {mostrarAtras ? (
+                          <button
+                            type="button"
+                            onClick={retrocederPestana}
+                            className="rounded-lg border border-sky-300 bg-white text-sky-900 px-4 py-2 text-xs font-medium hover:bg-sky-50"
+                          >
+                            Atrás
+                          </button>
+                        ) : (
+                          <div />
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          {mostrarSiguiente && (
+                            <button
+                              type="button"
+                              onClick={guardarYAvanzarPestana}
+                              className="rounded-lg bg-sky-600 text-white px-4 py-2 text-xs font-medium hover:bg-sky-700"
+                            >
+                              Siguiente
+                            </button>
+                          )}
+
+                          {esCierreOdontograma && (
+                            <button
+                              type="button"
+                              onClick={guardarYAvanzarPestana}
+                              className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-xs font-medium hover:bg-emerald-700"
+                            >
+                              Finalizar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+
+          {moduloActivo === "agenda" && (
+            <div className="space-y-4">
+              <form
+                onSubmit={agregarCita}
+                className="grid grid-cols-1 sm:grid-cols-4 gap-2"
+              >
+                <input
+                  type="text"
+                  required
+                  value={pacienteCita}
+                  onChange={(e) => setPacienteCita(e.target.value)}
+                  placeholder="Nombre del paciente"
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                />
+                <input
+                  type="text"
+                  required
+                  value={motivoCita}
+                  onChange={(e) => setMotivoCita(e.target.value)}
+                  placeholder="Motivo de cita"
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                />
+                <input
+                  type="time"
+                  value={horaCita}
+                  onChange={(e) => setHoraCita(e.target.value)}
+                  className="rounded-lg border border-sky-200 px-3 py-2 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-medium hover:bg-sky-700"
+                >
+                  Agregar cita
+                </button>
+              </form>
+
+              <ul className="divide-y divide-sky-100">
+                {citas.map((cita) => (
+                  <li
+                    key={cita.id}
+                    className="py-2.5 flex items-center justify-between gap-2 text-sm"
+                  >
+                    <div>
+                      <strong className="text-sky-950">{cita.hora}</strong> —{" "}
+                      {cita.paciente} ({cita.motivo})
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCitas((prev) =>
+                          prev.map((item) =>
+                            item.id === cita.id
+                              ? { ...item, confirmada: !item.confirmada }
+                              : item
+                          )
+                        )
+                      }
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                        cita.confirmada
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-sky-100 text-sky-900"
+                      }`}
+                    >
+                      {cita.confirmada ? "Confirmada" : "Marcar recordatorio"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {(moduloActivo === "pagos" || moduloActivo === "inventario") && (
+            <p className="text-sm text-sky-800">
+              Este módulo ya tiene su vista abierta y lista para añadirle
+              campos. Dime si quieres que armemos primero{" "}
+              {moduloActivo === "pagos"
+                ? "el registro de presupuestos y abonos"
+                : "el control de insumos y cantidades"}
+              .
+            </p>
+          )}
+        </section>
+      )}
+    </main>
+  );
+}
