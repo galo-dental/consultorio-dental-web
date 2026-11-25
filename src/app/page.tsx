@@ -64,9 +64,19 @@ interface EstadoPiezaMsp {
   movilidadRecesion: string;
 }
 
+interface ClinicaActiva {
+  id: string;
+  nombre: string;
+  plan?: string | null;
+  estado?: string | null;
+}
+
 interface Perfil {
   id: string;
+  clinica_id: string | null;
+  nombre_clinica: string;
   rol: RolUsuario;
+  es_propietario: boolean;
   nombre_completo?: string | null;
 }
 
@@ -334,7 +344,6 @@ interface Cita {
   hora: string;
   confirmada: boolean;
 }
-
 const CATALOGO_INSUMOS_ODONTOLOGIA: CatalogoInsumoItem[] = [
   { nombre: "Guantes de nitrilo (caja x100)", categoria: "Bioseguridad" },
   { nombre: "Guantes de látex (caja x100)", categoria: "Bioseguridad" },
@@ -843,7 +852,6 @@ const PROVEEDORES_INICIALES: ProveedorRegistro[] = [
     notas: "Enfocado en pacientes con agenda limitada y citas programadas.",
   },
 ];
-
 const LINEA_DIAGRAMA_TENUE = "#94a3b8";
 
 function requiereNecesidadCompra(cantidad: number, stockMinimo: number): boolean {
@@ -1454,7 +1462,6 @@ function IconoModulo({ modulo }: { modulo: Exclude<ModuloActivo, null> }) {
       );
   }
 }
-
 export default function HomePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1462,6 +1469,7 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [clinicaActiva, setClinicaActiva] = useState<ClinicaActiva | null>(null);
   const [moduloActivo, setModuloActivo] = useState<ModuloActivo>(null);
   const [mostrarVista3D, setMostrarVista3D] = useState(false);
 
@@ -1632,30 +1640,56 @@ export default function HomePage() {
 
     if (userError || !user) {
       setPerfil(null);
+      setClinicaActiva(null);
       setLoading(false);
       return;
     }
 
-    const { data, error } = await supabase
+    const { data: membresia } = await supabase
+      .from("miembros_clinica")
+      .select("clinica_id, rol, es_propietario")
+      .eq("usuario_id", user.id)
+      .limit(1)
+      .maybeSingle();
+
+    const { data: perfilDb } = await supabase
       .from("perfiles")
       .select("id, rol, nombre_completo")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (error || !data) {
-      setPerfil({
-        id: user.id,
-        rol: inferirRolRespaldo(user.email),
-        nombre_completo: user.email || "Usuario del Consultorio",
-      });
+    const clinicaId: string | null = membresia?.clinica_id || null;
+    let nombreClinica = "Consultorio Dental";
+
+    if (clinicaId) {
+      const { data: clinicaData } = await supabase
+        .from("clinicas")
+        .select("id, nombre, plan, estado")
+        .eq("id", clinicaId)
+        .maybeSingle();
+
+      if (clinicaData) {
+        nombreClinica = clinicaData.nombre || nombreClinica;
+        setClinicaActiva(clinicaData);
+      } else {
+        setClinicaActiva({ id: clinicaId, nombre: nombreClinica });
+      }
     } else {
-      setPerfil({
-        id: data.id,
-        rol: data.rol || inferirRolRespaldo(user.email),
-        nombre_completo:
-          data.nombre_completo || user.email || "Panel del Consultorio",
-      });
+      setClinicaActiva(null);
     }
+
+    const rolResuelto =
+      membresia?.rol || perfilDb?.rol || inferirRolRespaldo(user.email);
+
+    setPerfil({
+      id: user.id,
+      clinica_id: clinicaId,
+      nombre_clinica: nombreClinica,
+      rol: rolResuelto,
+      es_propietario: Boolean(membresia?.es_propietario),
+      nombre_completo:
+        perfilDb?.nombre_completo || user.email || "Usuario del Consultorio",
+    });
 
     setLoading(false);
   }
@@ -1687,6 +1721,7 @@ export default function HomePage() {
   async function handleLogout() {
     await supabase.auth.signOut();
     setPerfil(null);
+    setClinicaActiva(null);
     setModuloActivo(null);
     setPassword("");
   }
@@ -1739,7 +1774,6 @@ export default function HomePage() {
     setProfesionales((prev) => prev.filter((p) => p.id !== id));
   }
 
-  // Cálculos de costos fijos, depreciación, rubros (uniformes, agasajos, seguros) y servicios
   const totalSalariosFijosEquipo = profesionales.reduce(
     (acc, p) => acc + (parseFloat(p.salarioMensual || "0") || 0),
     0
@@ -2058,7 +2092,6 @@ export default function HomePage() {
   function eliminarProveedor(id: string) {
     setProveedores((prev) => prev.filter((p) => p.id !== id));
   }
-
   function crearPaciente(e: React.FormEvent) {
     e.preventDefault();
     if (!nombresNuevo.trim() && !apellidosNuevo.trim()) return;
@@ -3674,7 +3707,6 @@ export default function HomePage() {
       </div>
     );
   }
-
   const pacienteActivo =
     pacientes.find((p) => p.id === pacienteSeleccionadoId) || null;
 
@@ -3881,7 +3913,6 @@ export default function HomePage() {
       meta: `${proveedores.length} proveedor(es)`,
     },
   ];
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
@@ -3900,14 +3931,16 @@ export default function HomePage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900 truncate">
-                  {perfil.nombre_completo || "Panel del Consultorio"}
+                  {clinicaActiva?.nombre ||
+                    perfil.nombre_clinica ||
+                    "Panel del Consultorio"}
                 </h1>
                 <span className="hidden sm:inline-flex items-center rounded-full bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 text-[11px] font-semibold capitalize text-teal-800">
                   {perfil.rol}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Gestión Odontológica · Moneda USD ($)
+              <p className="text-[11px] text-slate-500 truncate">
+                {perfil.nombre_completo} · Moneda USD ($)
               </p>
             </div>
           </div>
@@ -4021,7 +4054,7 @@ export default function HomePage() {
                     {moduloActivo === "proveedores" && "Proveedores del Consultorio"}
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Módulo activo del consultorio
+                    {clinicaActiva?.nombre || perfil.nombre_clinica} · Módulo activo
                   </p>
                 </div>
               </div>
@@ -4033,7 +4066,6 @@ export default function HomePage() {
                 ← Volver al menú
               </button>
             </div>
-
             {moduloActivo === "historias" && (
               <div className="space-y-5">
                 <form
@@ -5298,7 +5330,6 @@ export default function HomePage() {
                         </div>
                       </div>
                     )}
-
                     {seccionHc === "odontograma" && (() => {
                       const cpod = obtenerValoresCpod(pacienteActivo.hc);
                       return (
@@ -5896,68 +5927,7 @@ export default function HomePage() {
                                     }
                                     className="text-rose-600 hover:underline shrink-0"
                                   >
-                                    Quitar
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {(() => {
-                      const idxActual = pestanasHc.findIndex(
-                        (p) => p.id === seccionHc
-                      );
-                      const mostrarAtras = idxActual > 0;
-                      const esCierreOdontograma = seccionHc === "odontograma";
-                      const mostrarSiguiente =
-                        !esCierreOdontograma && idxActual < pestanasHc.length - 1;
-
-                      return (
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                          {mostrarAtras ? (
-                            <button
-                              type="button"
-                              onClick={retrocederPestana}
-                              className="rounded-lg border border-slate-200 bg-white text-slate-700 px-4 py-2 text-xs font-medium hover:bg-slate-50 transition"
-                            >
-                              Atrás
-                            </button>
-                          ) : (
-                            <div />
-                          )}
-
-                          <div className="flex items-center gap-2">
-                            {mostrarSiguiente && (
-                              <button
-                                type="button"
-                                onClick={guardarYAvanzarPestana}
-                                className="rounded-lg bg-teal-600 text-white px-4 py-2 text-xs font-medium hover:bg-teal-700 transition"
-                              >
-                                Siguiente
-                              </button>
-                            )}
-
-                            {esCierreOdontograma && (
-                              <button
-                                type="button"
-                                onClick={guardarYAvanzarPestana}
-                                className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-xs font-medium hover:bg-emerald-700 transition"
-                              >
-                                Finalizar
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-            )}
-
+                               
             {moduloActivo === "agenda" && (
               <div className="space-y-4">
                 <form
@@ -6130,13 +6100,13 @@ export default function HomePage() {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Especialidad o área
+                      Especialidad o función
                     </label>
                     <input
                       type="text"
                       value={profEspecialidad}
                       onChange={(e) => setProfEspecialidad(e.target.value)}
-                      placeholder="Ej. Ortodoncia, Endodoncia, Asistencia"
+                      placeholder="Ej. Ortodoncia, asistente, recepción"
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                     />
                   </div>
@@ -6149,33 +6119,29 @@ export default function HomePage() {
                       type="text"
                       value={profRegistroAces}
                       onChange={(e) => setProfRegistroAces(e.target.value)}
-                      placeholder="Ej. ACES-12345"
+                      placeholder="Ej. ACES-OD-12345"
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Licencia / Código MSP (solo odontólogos y especialistas)
-                    </label>
-                    {muestraLicenciaMspEnForm ? (
+                  {muestraLicenciaMspEnForm && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Código / licencia MSP
+                      </label>
                       <input
                         type="text"
                         value={profCodigoMsp}
                         onChange={(e) => setProfCodigoMsp(e.target.value)}
-                        placeholder="Código Ministerio de Salud / Licencia"
+                        placeholder="Ej. MSP-1712345678"
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                       />
-                    ) : (
-                      <div className="rounded-lg border border-slate-200 bg-slate-100/80 px-3 py-2 text-xs text-slate-500">
-                        No aplica para {profCargo}
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Modalidad de pago
+                      Esquema de pago
                     </label>
                     <select
                       value={profEsquemaPago}
@@ -6186,43 +6152,52 @@ export default function HomePage() {
                       }
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                     >
-                      <option value="salario_fijo">Salario fijo mensual</option>
+                      <option value="salario_fijo">Salario fijo (USD $)</option>
                       <option value="porcentaje">
-                        Porcentaje por atención (%)
+                        Porcentaje de producción (%)
                       </option>
-                      <option value="mixto">Mixto (Salario + %)</option>
+                      <option value="mixto">Mixto (Salario fijo + %)</option>
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Salario fijo mensual (USD)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={profSalario}
-                      onChange={(e) => setProfSalario(e.target.value)}
-                      placeholder="Ej. 600"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    />
-                  </div>
+                  {(profEsquemaPago === "salario_fijo" ||
+                    profEsquemaPago === "mixto") && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Salario mensual (USD $)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={profSalario}
+                        onChange={(e) => setProfSalario(e.target.value)}
+                        placeholder="Ej. 800"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Porcentaje por procedimientos (%)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={profPorcentaje}
-                      onChange={(e) => setProfPorcentaje(e.target.value)}
-                      placeholder="Ej. 30"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    />
-                  </div>
+                  {(profEsquemaPago === "porcentaje" ||
+                    profEsquemaPago === "mixto") && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Porcentaje de pago (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={profPorcentaje}
+                        onChange={(e) => setProfPorcentaje(e.target.value)}
+                        placeholder="Ej. 30"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                  )}
 
-                  <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-1.5">
+                  <div className="border border-slate-200 rounded-xl p-3 bg-white space-y-2">
                     <label className="flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer">
                       <input
                         type="checkbox"
@@ -6233,26 +6208,27 @@ export default function HomePage() {
                       <span>Aplica aporte patronal IESS</span>
                     </label>
                     {profAplicaIess && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-slate-500">
-                          % Patronal:
-                        </span>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-slate-600">Tasa (%):</span>
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={profPorcentajeIess}
                           onChange={(e) =>
                             setProfPorcentajeIess(e.target.value)
                           }
-                          className="w-20 rounded border border-slate-200 px-2 py-1 text-xs"
+                          className="w-20 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium"
                         />
-                        <span className="text-[11px] font-semibold text-amber-800">
-                          = $
+                        <span className="text-slate-700 font-semibold ml-auto">
+                          $
                           {(
                             ((parseFloat(profSalario || "0") || 0) *
-                              (parseFloat(profPorcentajeIess || "11.15") || 0)) /
+                              (parseFloat(profPorcentajeIess || "11.15") ||
+                                0)) /
                             100
                           ).toFixed(2)}
+                          /mes
                         </span>
                       </div>
                     )}
@@ -6260,99 +6236,98 @@ export default function HomePage() {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Horario de atención / jornada
+                      Horario o disponibilidad
                     </label>
                     <input
                       type="text"
                       value={profHorario}
                       onChange={(e) => setProfHorario(e.target.value)}
-                      placeholder="Ej. Lun a Vie 09:00 - 17:00"
+                      placeholder="Ej. Lun-Vie 09:00-18:00 o Sábados"
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                     />
                   </div>
 
-                  <div className="flex items-end sm:col-span-2 lg:col-span-3">
+                  <div className="sm:col-span-2 lg:col-span-3 flex justify-end">
                     <button
                       type="submit"
-                      className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm font-medium transition"
+                      className="rounded-lg bg-teal-600 text-white px-4 py-2 text-sm font-medium hover:bg-teal-700 transition"
                     >
-                      + Registrar integrante en equipo
+                      + Guardar integrante del equipo
                     </button>
                   </div>
                 </form>
 
-                <div className="space-y-3">
-                  {profesionales.map((p) => {
-                    const aporteIess = calcularAportePatronalIess(p);
-                    const muestraLicencia = requiereLicenciaMsp(p.cargo);
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {profesionales.map((prof) => {
+                    const salarioNum = parseFloat(prof.salarioMensual || "0") || 0;
+                    const pctNum = parseFloat(prof.porcentajePago || "0") || 0;
+                    const aporteIess = calcularAportePatronalIess(prof);
+                    const muestraMspTarjeta =
+                      requiereLicenciaMsp(prof.cargo) ||
+                      (prof.codigoMsp && prof.codigoMsp !== "No aplica");
+
+                    let resumenPago = "";
+                    if (prof.esquemaPago === "salario_fijo") {
+                      resumenPago = `Salario fijo: $${salarioNum.toFixed(2)}/mes`;
+                    } else if (prof.esquemaPago === "porcentaje") {
+                      resumenPago = `Porcentaje: ${pctNum}% de producción`;
+                    } else {
+                      resumenPago = `Mixto: $${salarioNum.toFixed(
+                        2
+                      )}/mes + ${pctNum}%`;
+                    }
+
                     return (
                       <div
-                        key={p.id}
-                        className="border border-slate-200 rounded-xl p-4 bg-white space-y-2.5"
+                        key={prof.id}
+                        className="border border-slate-200 rounded-xl p-4 bg-white space-y-2"
                       >
-                        <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-semibold text-slate-900">
-                                {p.nombre}
-                              </h3>
-                              <span className="rounded-full bg-teal-50 border border-teal-200/80 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
-                                {p.cargo}
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              {p.especialidad} · Tel: <strong>{p.telefono}</strong>{" "}
-                              · Dir: {p.direccion}
+                            <p className="font-semibold text-slate-900">
+                              {prof.nombre}
+                            </p>
+                            <p className="text-xs font-medium text-teal-700">
+                              {prof.cargo} · {prof.especialidad}
                             </p>
                           </div>
-
                           <button
                             type="button"
-                            onClick={() => eliminarProfesional(p.id)}
-                            className="text-xs text-rose-600 hover:underline"
+                            onClick={() => eliminarProfesional(prof.id)}
+                            className="text-xs text-rose-600 hover:underline shrink-0"
                           >
-                            Quitar
+                            Eliminar
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs bg-slate-50/70 border border-slate-200/80 rounded-lg p-2.5">
-                          <div>
-                            <span className="text-slate-500 block">
-                              Registro ACES:
-                            </span>
-                            <strong className="text-slate-900">
-                              {p.registroAces}
-                            </strong>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 block">
-                              Licencia / Código MSP:
-                            </span>
-                            <strong className="text-slate-900">
-                              {muestraLicencia ? p.codigoMsp : "No aplica"}
-                            </strong>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 block">
-                              Remuneración e IESS:
-                            </span>
-                            <strong className="text-emerald-800">
-                              {p.esquemaPago === "salario_fijo" &&
-                                `Salario $${p.salarioMensual}/mes`}
-                              {p.esquemaPago === "porcentaje" &&
-                                `${p.porcentajePago}% por atención`}
-                              {p.esquemaPago === "mixto" &&
-                                `$${p.salarioMensual} + ${p.porcentajePago}%`}
-                              {p.aplicaIess &&
-                                ` · IESS pat. ($${aporteIess.toFixed(2)})`}
-                            </strong>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 block">Horario:</span>
-                            <strong className="text-slate-900">
-                              {p.horarioTrabajo}
-                            </strong>
-                          </div>
+                        <div className="text-xs text-slate-600 space-y-0.5">
+                          <p>
+                            <strong>Teléfono:</strong> {prof.telefono} ·{" "}
+                            <strong>Dirección:</strong> {prof.direccion}
+                          </p>
+                          <p>
+                            <strong>Registro ACES:</strong> {prof.registroAces}
+                            {muestraMspTarjeta && (
+                              <>
+                                {" "}
+                                · <strong>MSP:</strong> {prof.codigoMsp}
+                              </>
+                            )}
+                          </p>
+                          <p>
+                            <strong>Esquema:</strong> {resumenPago}
+                          </p>
+                          <p>
+                            <strong>IESS patronal:</strong>{" "}
+                            {prof.aplicaIess
+                              ? `Sí (${prof.porcentajeIess}%) → $${aporteIess.toFixed(
+                                  2
+                                )}/mes`
+                              : "No aplica"}
+                          </p>
+                          <p>
+                            <strong>Horario:</strong> {prof.horarioTrabajo}
+                          </p>
                         </div>
                       </div>
                     );
@@ -6360,70 +6335,74 @@ export default function HomePage() {
                 </div>
               </div>
             )}
-
             {moduloActivo === "servicios" && (
               <div className="space-y-6 text-sm">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
-                        Costos fijos mensuales operativos (USD)
-                      </h3>
-                      <span className="text-xs font-semibold bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-slate-900">
-                        Total: ${costoFijoTotalMensualOperativo.toFixed(2)}/mes
-                      </span>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                    <p className="text-xs text-slate-500">
+                      Costo fijo mensual total
+                    </p>
+                    <p className="text-xl font-semibold tracking-tight text-slate-900 mt-0.5">
+                      ${costoFijoTotalMensualOperativo.toFixed(2)}
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Fijos ${totalCostosFijosRegistrados.toFixed(0)} + Nómina $
+                      {(
+                        totalSalariosFijosEquipo + totalAportesIessPatronales
+                      ).toFixed(0)}{" "}
+                      + Depr. ${totalDepreciacionMensualEquipos.toFixed(0)} +
+                      Rubros ${totalProrrateoMensualRubrosFijos.toFixed(0)}
+                    </p>
+                  </div>
 
-                    <div className="text-xs bg-white border border-slate-200 rounded-lg p-2.5 space-y-1 text-slate-600">
-                      <div className="flex justify-between">
-                        <span>Salarios fijos del equipo:</span>
-                        <strong className="text-slate-900">
-                          ${totalSalariosFijosEquipo.toFixed(2)}
-                        </strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Aportes patronales IESS:</span>
-                        <strong className="text-amber-800">
-                          ${totalAportesIessPatronales.toFixed(2)}
-                        </strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Depreciación mensual equipos:</span>
-                        <strong className="text-slate-900">
-                          ${totalDepreciacionMensualEquipos.toFixed(2)}
-                        </strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>
-                          Uniformes, agasajos y seguros (prorrateo mensual):
-                        </span>
-                        <strong className="text-teal-800">
-                          ${totalProrrateoMensualRubrosFijos.toFixed(2)}
-                        </strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Arriendo, básicos y otros fijos:</span>
-                        <strong className="text-slate-900">
-                          ${totalCostosFijosRegistrados.toFixed(2)}
-                        </strong>
-                      </div>
-                      <div className="pt-1 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                        <span>Horas operativas del consultorio/mes:</span>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min={1}
-                            value={horasAtencionMensual}
-                            onChange={(e) =>
-                              setHorasAtencionMensual(e.target.value)
-                            }
-                            className="w-20 rounded border border-slate-200 px-2 py-0.5 text-right font-semibold text-slate-900"
-                          />
-                          <span className="text-slate-500">
-                            h (${(costoFijoPorMinuto * 60).toFixed(2)}/hora)
-                          </span>
-                        </div>
-                      </div>
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                    <p className="text-xs text-slate-500">
+                      Horas de atención / mes
+                    </p>
+                    <input
+                      type="number"
+                      min="1"
+                      value={horasAtencionMensual}
+                      onChange={(e) => setHorasAtencionMensual(e.target.value)}
+                      className="w-28 mt-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-sm font-semibold text-slate-900"
+                    />
+                  </div>
+
+                  <div className="bg-teal-50/70 border border-teal-200/80 rounded-xl p-3.5">
+                    <p className="text-xs text-teal-800">
+                      Costo fijo por minuto
+                    </p>
+                    <p className="text-xl font-semibold tracking-tight text-teal-950 mt-0.5">
+                      ${costoFijoPorMinuto.toFixed(2)}/min
+                    </p>
+                    <p className="text-[11px] text-teal-700 mt-0.5">
+                      30 min = ${(costoFijoPorMinuto * 30).toFixed(2)} · 60 min
+                      = ${(costoFijoPorMinuto * 60).toFixed(2)}
+                    </p>
+                  </div>
+
+                  <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3.5">
+                    <p className="text-xs text-emerald-800">
+                      Servicios registrados
+                    </p>
+                    <p className="text-xl font-semibold tracking-tight text-emerald-950 mt-0.5">
+                      {servicios.length}
+                    </p>
+                    <p className="text-[11px] text-emerald-700 mt-0.5">
+                      Particular y convenios
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
+                        Costos fijos mensuales base
+                      </h3>
+                      <span className="text-xs font-semibold text-slate-700">
+                        ${totalCostosFijosRegistrados.toFixed(2)}/mes
+                      </span>
                     </div>
 
                     <form
@@ -6434,40 +6413,43 @@ export default function HomePage() {
                         type="text"
                         value={nuevoCfConcepto}
                         onChange={(e) => setNuevoCfConcepto(e.target.value)}
-                        placeholder="Concepto fijo (ej. Contador, limpieza)"
-                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                        placeholder="Ej. Arriendo, luz, agua, internet"
+                        className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs"
                       />
                       <input
                         type="number"
                         step="0.01"
+                        min="0"
                         value={nuevoCfMonto}
                         onChange={(e) => setNuevoCfMonto(e.target.value)}
-                        placeholder="USD/mes"
-                        className="w-28 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                        placeholder="Monto USD"
+                        className="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-xs"
                       />
                       <button
                         type="submit"
-                        className="rounded-lg bg-teal-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-teal-700 transition"
+                        className="rounded-lg bg-teal-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-teal-700 transition"
                       >
-                        + Fijo
+                        + Agregar
                       </button>
                     </form>
 
-                    <ul className="space-y-1 max-h-36 overflow-y-auto">
+                    <ul className="divide-y divide-slate-100 text-xs">
                       {costosFijos.map((cf) => (
                         <li
                           key={cf.id}
-                          className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs"
+                          className="py-2 flex items-center justify-between gap-2"
                         >
-                          <span>{cf.concepto}</span>
-                          <div className="flex items-center gap-2">
-                            <strong>${cf.montoMensual.toFixed(2)}</strong>
+                          <span className="text-slate-700">{cf.concepto}</span>
+                          <div className="flex items-center gap-3">
+                            <strong className="text-slate-900">
+                              ${cf.montoMensual.toFixed(2)}
+                            </strong>
                             <button
                               type="button"
                               onClick={() => eliminarCostoFijo(cf.id)}
                               className="text-rose-600 hover:underline"
                             >
-                              ×
+                              Quitar
                             </button>
                           </div>
                         </li>
@@ -6475,14 +6457,12 @@ export default function HomePage() {
                     </ul>
                   </div>
 
-                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-3">
+                  <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
-                        Plantillas de costos variables por atención (USD)
+                        Referencia de costos variables (insumos)
                       </h3>
-                      <span className="text-[11px] text-slate-500">
-                        Referencia de insumos
-                      </span>
+                      <span className="text-xs text-slate-500">Por uso</span>
                     </div>
 
                     <form
@@ -6493,55 +6473,43 @@ export default function HomePage() {
                         type="text"
                         value={nuevoCvConcepto}
                         onChange={(e) => setNuevoCvConcepto(e.target.value)}
-                        placeholder="Insumo / kit variable (ej. Aguja + anestesia)"
-                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                        placeholder="Ej. Kit resina, anestesia, endodoncia"
+                        className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs"
                       />
                       <input
                         type="number"
                         step="0.01"
+                        min="0"
                         value={nuevoCvMonto}
                         onChange={(e) => setNuevoCvMonto(e.target.value)}
                         placeholder="Costo USD"
-                        className="w-28 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                        className="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-xs"
                       />
                       <button
                         type="submit"
-                        className="rounded-lg bg-teal-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-teal-700 transition"
+                        className="rounded-lg bg-teal-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-teal-700 transition"
                       >
-                        + Variable
+                        + Agregar
                       </button>
                     </form>
 
-                    <ul className="space-y-1 max-h-56 overflow-y-auto">
+                    <ul className="divide-y divide-slate-100 text-xs">
                       {costosVariables.map((cv) => (
                         <li
                           key={cv.id}
-                          className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs"
+                          className="py-2 flex items-center justify-between gap-2"
                         >
-                          <span className="truncate">{cv.concepto}</span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <strong>${cv.costoUnitario.toFixed(2)}</strong>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSrvCostoVariable((prev) =>
-                                  (
-                                    (parseFloat(prev || "0") || 0) +
-                                    cv.costoUnitario
-                                  ).toFixed(2)
-                                )
-                              }
-                              title="Sumar este costo variable al servicio que estás creando"
-                              className="rounded bg-teal-50 text-teal-800 border border-teal-200 px-1.5 py-0.5 text-[10px] font-semibold hover:bg-teal-100"
-                            >
-                              + Usar
-                            </button>
+                          <span className="text-slate-700">{cv.concepto}</span>
+                          <div className="flex items-center gap-3">
+                            <strong className="text-slate-900">
+                              ${cv.costoUnitario.toFixed(2)}
+                            </strong>
                             <button
                               type="button"
                               onClick={() => eliminarCostoVariable(cv.id)}
                               className="text-rose-600 hover:underline"
                             >
-                              ×
+                              Quitar
                             </button>
                           </div>
                         </li>
@@ -6552,23 +6520,23 @@ export default function HomePage() {
 
                 <form
                   onSubmit={agregarServicioCartera}
-                  className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-3"
+                  className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-4"
                 >
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
-                    Nuevo servicio odontológico con cálculo de margen y utilidad
+                    Nuevo servicio en cartera y calculadora de rentabilidad
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="lg:col-span-2">
+                    <div className="sm:col-span-2">
                       <label className="block text-xs font-medium text-slate-700 mb-1">
-                        Nombre del procedimiento / servicio
+                        Nombre del servicio o tratamiento
                       </label>
                       <input
                         type="text"
                         required
                         value={srvNombre}
                         onChange={(e) => setSrvNombre(e.target.value)}
-                        placeholder="Ej. Profilaxis ultrasónica + flúor"
+                        placeholder="Ej. Profilaxis ultrasónica + fluorización"
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                       />
                     </div>
@@ -6596,12 +6564,11 @@ export default function HomePage() {
 
                     <div>
                       <label className="block text-xs font-medium text-slate-700 mb-1">
-                        Tiempo estimado (min)
+                        Duración estimada (min)
                       </label>
                       <input
                         type="number"
-                        min={5}
-                        step={5}
+                        min="5"
                         value={srvDuracion}
                         onChange={(e) => setSrvDuracion(e.target.value)}
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
@@ -6610,20 +6577,21 @@ export default function HomePage() {
 
                     <div>
                       <label className="block text-xs font-medium text-slate-700 mb-1">
-                        Tarifa particular normal (USD)
+                        Precio normal particular (USD $)
                       </label>
                       <input
                         type="number"
                         step="0.01"
+                        min="0"
                         required
                         value={srvPrecioNormal}
                         onChange={(e) => setSrvPrecioNormal(e.target.value)}
-                        placeholder="Ej. 45.00"
+                        placeholder="Ej. 35.00"
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                       />
                     </div>
 
-                    <div className="bg-white border border-slate-200 rounded-lg p-2.5 space-y-1.5">
+                    <div className="border border-slate-200 rounded-xl p-2.5 bg-white space-y-1.5">
                       <label className="flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer">
                         <input
                           type="checkbox"
@@ -6633,39 +6601,38 @@ export default function HomePage() {
                           }
                           className="rounded border-slate-300"
                         />
-                        <span>Aplica tarifa con convenio / seguro</span>
-                      </label>
-                      {srvAplicaConvenio && (
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={srvPrecioConvenio}
-                          onChange={(e) =>
-                            setSrvPrecioConvenio(e.target.value)
-                          }
-                          placeholder="Precio convenio USD (ej. 35.00)"
-                          className="w-full rounded border border-slate-200 px-2.5 py-1 text-xs"
-                        />
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">
-                        Costo variable insumos (USD)
+                        <span>Precio convenio / seguro</span>
                       </label>
                       <input
                         type="number"
                         step="0.01"
-                        value={srvCostoVariable}
-                        onChange={(e) => setSrvCostoVariable(e.target.value)}
-                        placeholder="Ej. 8.50"
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        min="0"
+                        disabled={!srvAplicaConvenio}
+                        value={srvPrecioConvenio}
+                        onChange={(e) => setSrvPrecioConvenio(e.target.value)}
+                        placeholder="Ej. 28.00"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm disabled:opacity-50"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-medium text-slate-700 mb-1">
-                        Honorario / Comisión profesional
+                        Costo variable directo (USD $)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={srvCostoVariable}
+                        onChange={(e) => setSrvCostoVariable(e.target.value)}
+                        placeholder="Insumos/materiales del caso"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="border border-slate-200 rounded-xl p-2.5 bg-white space-y-1.5">
+                      <label className="block text-xs font-medium text-slate-700">
+                        Honorario / comisión profesional
                       </label>
                       <div className="flex gap-1.5">
                         <select
@@ -6675,112 +6642,106 @@ export default function HomePage() {
                               e.target.value as "porcentaje" | "fijo"
                             )
                           }
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs"
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
                         >
                           <option value="porcentaje">%</option>
-                          <option value="fijo">USD</option>
+                          <option value="fijo">USD $</option>
                         </select>
                         <input
                           type="number"
-                          step="0.5"
+                          step="0.01"
+                          min="0"
                           value={srvHonorarioValor}
-                          onChange={(e) =>
-                            setSrvHonorarioValor(e.target.value)
-                          }
-                          placeholder="30"
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                          onChange={(e) => setSrvHonorarioValor(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs"
                         />
                       </div>
                     </div>
 
                     <div className="sm:col-span-2 lg:col-span-4">
+                      <label className="block text-xs font-medium text-slate-700 mb-1">
+                        Descripción clínica / alcance del servicio
+                      </label>
                       <input
                         type="text"
                         value={srvDescripcion}
                         onChange={(e) => setSrvDescripcion(e.target.value)}
-                        placeholder="Descripción o alcance del servicio..."
+                        placeholder="Detalles incluidos en el procedimiento"
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 text-xs space-y-2">
-                    <p className="font-semibold text-slate-800">
-                      Vista previa de estructura de costos y utilidad neta:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <div className="bg-slate-50 rounded-lg p-2.5">
-                        <span className="text-slate-500 block">
-                          Costo fijo ({srvDuracion || 30} min) + Variable:
-                        </span>
-                        <strong className="text-slate-900">
-                          ${simulacionEconomica.costoFijoAsignado.toFixed(2)} + $
-                          {simulacionEconomica.costoVariable.toFixed(2)} = $
-                          {simulacionEconomica.costoTotalOperativo.toFixed(2)}
-                        </strong>
-                      </div>
-                      <div className="bg-emerald-50/70 rounded-lg p-2.5">
-                        <span className="text-emerald-800 block">
-                          Utilidad Tarifa Normal:
-                        </span>
-                        <strong
-                          className={
-                            simulacionEconomica.normal.utilidadNeta >= 0
-                              ? "text-emerald-900"
-                              : "text-rose-700"
-                          }
-                        >
-                          ${simulacionEconomica.normal.utilidadNeta.toFixed(2)} (
-                          {simulacionEconomica.normal.margenPorcentaje.toFixed(
-                            1
-                          )}
-                          %)
-                        </strong>
-                      </div>
-                      {srvAplicaConvenio && (
-                        <div className="bg-teal-50/70 rounded-lg p-2.5">
-                          <span className="text-teal-800 block">
-                            Utilidad Tarifa Convenio:
-                          </span>
-                          <strong
-                            className={
-                              simulacionEconomica.convenio.utilidadNeta >= 0
-                                ? "text-teal-900"
-                                : "text-rose-700"
-                            }
-                          >
-                            $
-                            {simulacionEconomica.convenio.utilidadNeta.toFixed(
-                              2
-                            )}{" "}
-                            (
-                            {simulacionEconomica.convenio.margenPorcentaje.toFixed(
-                              1
-                            )}
-                            %)
-                          </strong>
-                        </div>
-                      )}
+                  <div className="border border-teal-200/80 bg-teal-50/70 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <p className="text-slate-600">
+                        Costo fijo asignado ({srvDuracion || 30} min) + Variable
+                      </p>
+                      <p className="font-semibold text-slate-900 text-sm mt-0.5">
+                        ${simulacionEconomica.costoFijoAsignado.toFixed(2)} + $
+                        {simulacionEconomica.costoVariable.toFixed(2)} = $
+                        {simulacionEconomica.costoTotalOperativo.toFixed(2)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-slate-600">
+                        Utilidad neta tarifa normal ($
+                        {simulacionEconomica.normal.precioVenta.toFixed(2)})
+                      </p>
+                      <p
+                        className={`font-semibold text-sm mt-0.5 ${
+                          simulacionEconomica.normal.utilidadNeta >= 0
+                            ? "text-emerald-700"
+                            : "text-rose-700"
+                        }`}
+                      >
+                        ${simulacionEconomica.normal.utilidadNeta.toFixed(2)} (
+                        {simulacionEconomica.normal.margenPorcentaje.toFixed(1)}
+                        %)
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-slate-600">
+                        Utilidad neta convenio ($
+                        {simulacionEconomica.convenio.precioVenta.toFixed(2)})
+                      </p>
+                      <p
+                        className={`font-semibold text-sm mt-0.5 ${
+                          simulacionEconomica.convenio.utilidadNeta >= 0
+                            ? "text-emerald-700"
+                            : "text-rose-700"
+                        }`}
+                      >
+                        ${simulacionEconomica.convenio.utilidadNeta.toFixed(2)} (
+                        {simulacionEconomica.convenio.margenPorcentaje.toFixed(
+                          1
+                        )}
+                        %)
+                      </p>
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm font-medium transition"
-                  >
-                    + Guardar servicio en cartera
-                  </button>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-teal-600 text-white px-4 py-2 text-sm font-medium hover:bg-teal-700 transition"
+                    >
+                      + Guardar servicio en cartera
+                    </button>
+                  </div>
                 </form>
 
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
-                      Servicios registrados ({serviciosFiltrados.length})
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                      Servicios configurados
                     </h3>
                     <select
                       value={filtroEspecialidadSrv}
                       onChange={(e) => setFiltroEspecialidadSrv(e.target.value)}
-                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium"
                     >
                       <option value="Todas">Todas las especialidades</option>
                       {ESPECIALIDADES_ODONTOLOGIA.map((esp) => (
@@ -6801,72 +6762,80 @@ export default function HomePage() {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <span className="inline-block rounded-md bg-teal-50 border border-teal-200/80 px-2 py-0.5 text-[11px] font-semibold text-teal-800 mb-1">
-                                {srv.especialidad} · {srv.duracionMin} min
-                              </span>
-                              <h4 className="font-semibold text-slate-900">
+                              <p className="font-semibold text-slate-900">
                                 {srv.nombre}
-                              </h4>
-                              <p className="text-xs text-slate-500">
-                                {srv.descripcion}
+                              </p>
+                              <p className="text-xs text-teal-700 font-medium">
+                                {srv.especialidad} · {srv.duracionMin} min
                               </p>
                             </div>
-
                             <button
                               type="button"
                               onClick={() => eliminarServicioCartera(srv.id)}
                               className="text-xs text-rose-600 hover:underline shrink-0"
                             >
-                              Quitar
+                              Eliminar
                             </button>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/70 border border-slate-200/80 rounded-lg p-2.5">
+                          <p className="text-xs text-slate-600">
+                            {srv.descripcion}
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
                             <div>
-                              <span className="text-slate-500 block">
-                                Precio Normal:
-                              </span>
-                              <strong className="text-slate-900 text-sm">
+                              <p className="text-slate-500">Tarifa normal</p>
+                              <p className="font-semibold text-slate-900">
                                 ${srv.precioNormal.toFixed(2)}
-                              </strong>
-                              <span className="block text-[11px] text-emerald-700 font-semibold">
-                                Utilidad: ${econ.normal.utilidadNeta.toFixed(2)} (
-                                {econ.normal.margenPorcentaje.toFixed(0)}%)
-                              </span>
+                              </p>
+                              <p
+                                className={
+                                  econ.normal.utilidadNeta >= 0
+                                    ? "text-emerald-700 font-medium"
+                                    : "text-rose-700 font-medium"
+                                }
+                              >
+                                Utilidad: ${econ.normal.utilidadNeta.toFixed(2)}{" "}
+                                ({econ.normal.margenPorcentaje.toFixed(1)}%)
+                              </p>
                             </div>
 
                             <div>
-                              <span className="text-slate-500 block">
-                                Precio Convenio:
-                              </span>
-                              {srv.aplicaConvenio ? (
-                                <>
-                                  <strong className="text-teal-800 text-sm">
-                                    ${srv.precioConvenio.toFixed(2)}
-                                  </strong>
-                                  <span className="block text-[11px] text-teal-700 font-semibold">
-                                    Utilidad: $
-                                    {econ.convenio.utilidadNeta.toFixed(2)} (
-                                    {econ.convenio.margenPorcentaje.toFixed(0)}%)
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-slate-400">No aplica</span>
-                              )}
+                              <p className="text-slate-500">
+                                {srv.aplicaConvenio
+                                  ? "Tarifa convenio"
+                                  : "Convenio no aplica"}
+                              </p>
+                              <p className="font-semibold text-slate-900">
+                                ${srv.precioConvenio.toFixed(2)}
+                              </p>
+                              <p
+                                className={
+                                  econ.convenio.utilidadNeta >= 0
+                                    ? "text-emerald-700 font-medium"
+                                    : "text-rose-700 font-medium"
+                                }
+                              >
+                                Utilidad: $
+                                {econ.convenio.utilidadNeta.toFixed(2)} (
+                                {econ.convenio.margenPorcentaje.toFixed(1)}%)
+                              </p>
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 border-t border-slate-100 pt-2">
+                          <div className="text-[11px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5">
                             <span>
-                              Costo op.: ${econ.costoTotalOperativo.toFixed(2)}{" "}
-                              (Fijo ${econ.costoFijoAsignado.toFixed(2)} + Var $
-                              {econ.costoVariable.toFixed(2)})
+                              Costo fijo asignado: $
+                              {econ.costoFijoAsignado.toFixed(2)}
+                            </span>
+                            <span>
+                              Costo variable: ${econ.costoVariable.toFixed(2)}
                             </span>
                             <span>
                               Honorario:{" "}
-                              {srv.honorarioTipo === "porcentaje"
-                                ? `${srv.honorarioValor}%`
-                                : `$${srv.honorarioValor.toFixed(2)}`}
+                              {srv.honorarioTipo === "fijo"
+                                ? `$${srv.honorarioValor.toFixed(2)}`
+                                : `${srv.honorarioValor}%`}
                             </span>
                           </div>
                         </div>
@@ -6877,65 +6846,74 @@ export default function HomePage() {
               </div>
             )}
 
+            {moduloActivo === "pagos" && (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600">
+                  Control de planes de tratamiento, cuotas y pagos en USD ($).
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="border border-slate-200/80 rounded-xl p-4 bg-slate-50">
+                    <p className="text-xs text-slate-500">
+                      Presupuestos emitidos
+                    </p>
+                    <p className="text-xl font-semibold tracking-tight text-slate-900 mt-1">
+                      $0.00
+                    </p>
+                  </div>
+                  <div className="border border-emerald-200/80 rounded-xl p-4 bg-emerald-50/70">
+                    <p className="text-xs text-emerald-800">Abonos recibidos</p>
+                    <p className="text-xl font-semibold tracking-tight text-emerald-950 mt-1">
+                      $0.00
+                    </p>
+                  </div>
+                  <div className="border border-amber-200/80 rounded-xl p-4 bg-amber-50/70">
+                    <p className="text-xs text-amber-800">Saldo pendiente</p>
+                    <p className="text-xl font-semibold tracking-tight text-amber-950 mt-1">
+                      $0.00
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {moduloActivo === "inventario" && (
               <div className="space-y-5 text-sm">
                 <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
                   <button
                     type="button"
                     onClick={() => setTabInventario("insumos")}
-                    className={`rounded-xl px-4 py-2 text-xs font-semibold border transition flex items-center gap-2 ${
+                    className={`rounded-lg px-3.5 py-1.5 text-xs font-medium border transition ${
                       tabInventario === "insumos"
-                        ? "bg-teal-600 text-white border-teal-600"
+                        ? "bg-teal-600 text-white border-teal-600 font-semibold"
                         : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
                     }`}
                   >
-                    <span>1. Insumos clínicos</span>
-                    {alarmasInsumos > 0 && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          tabInventario === "insumos"
-                            ? "bg-rose-500 text-white"
-                            : "bg-rose-100 text-rose-800"
-                        }`}
-                      >
-                        {alarmasInsumos}
-                      </span>
-                    )}
+                    Insumos y materiales ({insumos.length})
+                    {alarmasInsumos > 0 ? ` · ${alarmasInsumos} alerta` : ""}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setTabInventario("equipos")}
-                    className={`rounded-xl px-4 py-2 text-xs font-semibold border transition flex items-center gap-2 ${
+                    className={`rounded-lg px-3.5 py-1.5 text-xs font-medium border transition ${
                       tabInventario === "equipos"
-                        ? "bg-teal-600 text-white border-teal-600"
+                        ? "bg-teal-600 text-white border-teal-600 font-semibold"
                         : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
                     }`}
                   >
-                    <span>2. Equipos e Instrumental</span>
-                    {alarmasEquipos > 0 && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          tabInventario === "equipos"
-                            ? "bg-rose-500 text-white"
-                            : "bg-rose-100 text-rose-800"
-                        }`}
-                      >
-                        {alarmasEquipos}
-                      </span>
-                    )}
+                    Equipos e instrumental ({equipos.length})
+                    {alarmasEquipos > 0 ? ` · ${alarmasEquipos} alerta` : ""}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setTabInventario("propiedades")}
-                    className={`rounded-xl px-4 py-2 text-xs font-semibold border transition ${
+                    className={`rounded-lg px-3.5 py-1.5 text-xs font-medium border transition ${
                       tabInventario === "propiedades"
-                        ? "bg-teal-600 text-white border-teal-600"
+                        ? "bg-teal-600 text-white border-teal-600 font-semibold"
                         : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
                     }`}
                   >
-                    3. Uniformes, Agasajos, Seguros y Propiedades
+                    Uniformes, agasajos y seguros ({rubrosPropiedad.length})
                   </button>
                 </div>
 
@@ -6943,18 +6921,18 @@ export default function HomePage() {
                   <div className="space-y-4">
                     <form
                       onSubmit={agregarInsumo}
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
                     >
-                      <div className="sm:col-span-2 lg:col-span-2">
+                      <div className="sm:col-span-2">
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Seleccionar insumo odontológico
+                          Insumo o material odontológico
                         </label>
                         <select
                           value={insSeleccionCatalogo}
                           onChange={(e) =>
                             handleSeleccionarInsumoCatalogo(e.target.value)
                           }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         >
                           {CATALOGO_INSUMOS_ODONTOLOGIA.map((item) => (
                             <option key={item.nombre} value={item.nombre}>
@@ -6962,34 +6940,13 @@ export default function HomePage() {
                             </option>
                           ))}
                           <option value="__OTRO__">
-                            + Otro insumo (escribir manualmente)...
+                            Otro insumo personalizado...
                           </option>
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Categoría
-                        </label>
-                        <select
-                          value={insCategoria}
-                          onChange={(e) => setInsCategoria(e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                        >
-                          <option value="Bioseguridad">Bioseguridad</option>
-                          <option value="Esterilización">Esterilización</option>
-                          <option value="Anestesia">Anestesia</option>
-                          <option value="Operatoria">Operatoria</option>
-                          <option value="Endodoncia">Endodoncia</option>
-                          <option value="Profilaxis">Profilaxis</option>
-                          <option value="Cirugía">Cirugía</option>
-                          <option value="Rehabilitación">Rehabilitación</option>
-                          <option value="General">General</option>
-                        </select>
-                      </div>
-
                       {insSeleccionCatalogo === "__OTRO__" && (
-                        <div className="sm:col-span-2 lg:col-span-3">
+                        <div className="sm:col-span-2">
                           <label className="block text-xs font-medium text-slate-700 mb-1">
                             Nombre del nuevo insumo
                           </label>
@@ -6998,7 +6955,7 @@ export default function HomePage() {
                             required
                             value={insNombreExtra}
                             onChange={(e) => setInsNombreExtra(e.target.value)}
-                            placeholder="Escriba el nombre del insumo..."
+                            placeholder="Escriba el insumo o biomaterial"
                             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                           />
                         </div>
@@ -7006,51 +6963,60 @@ export default function HomePage() {
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Stock actual (unidades)
+                          Categoría
+                        </label>
+                        <input
+                          type="text"
+                          value={insCategoria}
+                          onChange={(e) => setInsCategoria(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Cantidad actual
                         </label>
                         <input
                           type="number"
-                          min={0}
-                          required
+                          min="0"
                           value={insCantidad}
                           onChange={(e) => setInsCantidad(e.target.value)}
-                          placeholder="Cantidad actual"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Stock mínimo (alarma de compra)
+                          Stock mínimo (alarma si ≤)
                         </label>
                         <input
                           type="number"
-                          min={0}
-                          required
+                          min="0"
                           value={insStockMinimo}
                           onChange={(e) => setInsStockMinimo(e.target.value)}
-                          placeholder="Mínimo antes de pedir"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Costo unitario (USD)
+                          Costo unitario (USD $)
                         </label>
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={insCostoUnitario}
                           onChange={(e) => setInsCostoUnitario(e.target.value)}
-                          placeholder="Ej. 24.50"
+                          placeholder="0.00"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Caducidad (opcional)
+                          Caducidad / lote
                         </label>
                         <input
                           type="text"
@@ -7061,129 +7027,145 @@ export default function HomePage() {
                         />
                       </div>
 
-                      <div className="sm:col-span-2 flex items-end">
+                      <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
                         <button
                           type="submit"
-                          className="w-full rounded-lg bg-teal-600 text-white px-3 py-2 text-sm font-medium hover:bg-teal-700 transition"
+                          className="rounded-lg bg-teal-600 text-white px-4 py-2 text-sm font-medium hover:bg-teal-700 transition"
                         >
                           + Agregar insumo
                         </button>
                       </div>
                     </form>
 
-                    <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white overflow-hidden">
+                    <div className="space-y-2.5">
                       {insumos.map((item) => {
-                        const alertaCompra = requiereNecesidadCompra(
+                        const necesitaCompra = requiereNecesidadCompra(
                           item.cantidad,
                           item.stockMinimo
                         );
                         return (
-                          <li
+                          <div
                             key={item.id}
-                            className={`p-3.5 flex flex-wrap items-center justify-between gap-3 ${
-                              alertaCompra ? "bg-rose-50/50" : ""
+                            className={`border rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                              necesitaCompra
+                                ? "border-rose-300 bg-rose-50/70"
+                                : "border-slate-200 bg-white"
                             }`}
                           >
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                               <div className="flex flex-wrap items-center gap-2">
-                                <strong className="text-slate-900">
+                                <p className="font-semibold text-slate-900">
                                   {item.nombre}
-                                </strong>
-                                <span className="text-xs text-slate-500">
-                                  ({item.categoria})
+                                </p>
+                                <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                  {item.categoria}
                                 </span>
-                                {alertaCompra && (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
+                                {necesitaCompra && (
+                                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-rose-600 text-white">
                                     Necesidad de compra
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-slate-500">
-                                Stock actual: <strong>{item.cantidad}</strong> ·
-                                Stock mínimo: <strong>{item.stockMinimo}</strong>{" "}
-                                · Costo: ${item.costoUnitario.toFixed(2)} · Cad:{" "}
-                                {item.caducidad}
+                              <p className="text-xs text-slate-600">
+                                Stock: <strong>{item.cantidad}</strong> · Mínimo:{" "}
+                                <strong>{item.stockMinimo}</strong> · Costo
+                                unitario: ${item.costoUnitario.toFixed(2)} ·
+                                Caducidad: {item.caducidad}
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  ajustarCantidadInsumo(item.id, -1)
-                                }
-                                title="Descontar 1 unidad"
-                                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
+                                onClick={() => ajustarCantidadInsumo(item.id, -1)}
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white font-semibold hover:bg-slate-50"
                               >
                                 -
                               </button>
-                              <span className="min-w-8 text-center text-xs font-bold text-slate-900">
-                                {item.cantidad}
-                              </span>
                               <button
                                 type="button"
                                 onClick={() => ajustarCantidadInsumo(item.id, 1)}
-                                title="Sumar 1 unidad"
-                                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white font-semibold hover:bg-slate-50"
                               >
                                 +
                               </button>
                               <button
                                 type="button"
                                 onClick={() => eliminarInsumo(item.id)}
-                                className="text-xs text-rose-600 hover:underline ml-2"
+                                className="text-xs text-rose-600 hover:underline ml-1"
                               >
                                 Quitar
                               </button>
                             </div>
-                          </li>
+                          </div>
                         );
                       })}
-                    </ul>
+                    </div>
                   </div>
                 )}
 
                 {tabInventario === "equipos" && (
                   <div className="space-y-4">
-                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 text-xs flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-slate-700">
-                        Depreciación mensual total de equipos e instrumental
-                        (integrada en costos fijos):
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs text-slate-500">
+                          Depreciación mensual acumulada de equipos e
+                          instrumental
+                        </p>
+                        <p className="text-lg font-semibold text-slate-900">
+                          ${totalDepreciacionMensualEquipos.toFixed(2)}/mes
+                        </p>
+                      </div>
+                      <span className="text-xs text-slate-500">
+                        Incluida en costos fijos operativos
                       </span>
-                      <strong className="text-slate-900 text-sm">
-                        ${totalDepreciacionMensualEquipos.toFixed(2)}/mes
-                      </strong>
                     </div>
 
                     <form
                       onSubmit={agregarEquipoInstrumental}
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
                     >
-                      <div className="sm:col-span-2 lg:col-span-2">
+                      <div className="sm:col-span-2">
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Seleccionar equipo odontológico o instrumental
+                          Equipo odontológico o instrumental clínico
                         </label>
                         <select
                           value={eqSeleccionCatalogo}
                           onChange={(e) =>
                             handleSeleccionarEquipoCatalogo(e.target.value)
                           }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         >
-                          {CATALOGO_EQUIPOS_INSTRUMENTAL.map((item) => (
-                            <option key={item.nombre} value={item.nombre}>
-                              {item.nombre} ({item.tipoBien})
+                          {CATALOGO_EQUIPOS_INSTRUMENTAL.map((eq) => (
+                            <option key={eq.nombre} value={eq.nombre}>
+                              {eq.nombre} ({eq.tipoBien})
                             </option>
                           ))}
                           <option value="__OTRO__">
-                            + Otro equipo o instrumental (escribir)...
+                            Otro equipo o instrumental...
                           </option>
                         </select>
                       </div>
 
+                      {eqSeleccionCatalogo === "__OTRO__" && (
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-medium text-slate-700 mb-1">
+                            Nombre del equipo o instrumental
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={eqNombreExtra}
+                            onChange={(e) => setEqNombreExtra(e.target.value)}
+                            placeholder="Escriba el nombre"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </div>
+                      )}
+
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Clasificación
+                          Tipo de bien
                         </label>
                         <select
                           value={eqTipoBien}
@@ -7205,65 +7187,45 @@ export default function HomePage() {
                         </select>
                       </div>
 
-                      {eqSeleccionCatalogo === "__OTRO__" && (
-                        <div className="sm:col-span-2 lg:col-span-3">
-                          <label className="block text-xs font-medium text-slate-700 mb-1">
-                            Nombre del equipo o instrumental
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={eqNombreExtra}
-                            onChange={(e) => setEqNombreExtra(e.target.value)}
-                            placeholder="Escriba el nombre del equipo o instrumental..."
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-                      )}
-
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Cantidad disponible
+                          Cantidad
                         </label>
                         <input
                           type="number"
-                          min={0}
-                          required
+                          min="0"
                           value={eqCantidad}
                           onChange={(e) => setEqCantidad(e.target.value)}
-                          placeholder="Cantidad"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Stock mínimo (alarma de compra)
+                          Stock mínimo (alarma si ≤)
                         </label>
                         <input
                           type="number"
-                          min={0}
-                          required
+                          min="0"
                           value={eqStockMinimo}
                           onChange={(e) => setEqStockMinimo(e.target.value)}
-                          placeholder="Mínimo requerido"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Valor adquisición total (USD)
+                          Valor de adquisición (USD $)
                         </label>
                         <input
                           type="number"
                           step="0.01"
-                          required
+                          min="0"
                           value={eqValorAdquisicion}
                           onChange={(e) =>
                             setEqValorAdquisicion(e.target.value)
                           }
-                          placeholder="Ej. 350.00"
+                          placeholder="0.00"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
@@ -7274,11 +7236,9 @@ export default function HomePage() {
                         </label>
                         <input
                           type="number"
-                          min={1}
-                          step="0.5"
+                          min="1"
                           value={eqVidaUtilAnios}
                           onChange={(e) => setEqVidaUtilAnios(e.target.value)}
-                          placeholder="5"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
@@ -7305,121 +7265,129 @@ export default function HomePage() {
                         </select>
                       </div>
 
-                      <div className="flex items-end">
+                      <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
                         <button
                           type="submit"
-                          className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 text-sm font-medium transition"
+                          className="rounded-lg bg-teal-600 text-white px-4 py-2 text-sm font-medium hover:bg-teal-700 transition"
                         >
-                          + Registrar equipo / instrumental
+                          + Guardar equipo / instrumental
                         </button>
                       </div>
                     </form>
 
-                    <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white overflow-hidden">
+                    <div className="space-y-2.5">
                       {equipos.map((eq) => {
-                        const depMensual = calcularDepreciacionMensualEquipo(eq);
-                        const alertaCompra = requiereNecesidadCompra(
+                        const necesitaCompra = requiereNecesidadCompra(
                           eq.cantidad,
                           eq.stockMinimo
                         );
+                        const deprMensual = calcularDepreciacionMensualEquipo(eq);
                         return (
-                          <li
+                          <div
                             key={eq.id}
-                            className={`p-3.5 flex flex-wrap items-center justify-between gap-3 ${
-                              alertaCompra ? "bg-rose-50/50" : ""
+                            className={`border rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                              necesitaCompra
+                                ? "border-rose-300 bg-rose-50/70"
+                                : "border-slate-200 bg-white"
                             }`}
                           >
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                               <div className="flex flex-wrap items-center gap-2">
-                                <strong className="text-slate-900">
+                                <p className="font-semibold text-slate-900">
                                   {eq.nombre}
-                                </strong>
-                                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                                  {eq.tipoBien}
+                                </p>
+                                <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                  {eq.tipoBien} · {eq.estado}
                                 </span>
-                                <span className="rounded-md bg-teal-50 border border-teal-200/80 px-2 py-0.5 text-[11px] font-medium text-teal-800">
-                                  {eq.estado}
-                                </span>
-                                {alertaCompra && (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
+                                {necesitaCompra && (
+                                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-rose-600 text-white">
                                     Necesidad de compra
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-slate-500">
-                                Cantidad: <strong>{eq.cantidad}</strong> · Stock
-                                mínimo: <strong>{eq.stockMinimo}</strong> · Valor:
-                                ${eq.valorAdquisicion.toFixed(2)} · Vida útil:{" "}
-                                {eq.vidaUtilAnios} años · Depreciación:{" "}
-                                <strong>${depMensual.toFixed(2)}/mes</strong>
+                              <p className="text-xs text-slate-600">
+                                Cantidad: <strong>{eq.cantidad}</strong> · Mínimo:{" "}
+                                <strong>{eq.stockMinimo}</strong> · Valor: $
+                                {eq.valorAdquisicion.toFixed(2)} · Vida:{" "}
+                                {eq.vidaUtilAnios} años · Depreciación: $
+                                {deprMensual.toFixed(2)}/mes
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  ajustarCantidadEquipo(eq.id, -1)
-                                }
-                                title="Descontar 1 unidad"
-                                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
+                                onClick={() => ajustarCantidadEquipo(eq.id, -1)}
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white font-semibold hover:bg-slate-50"
                               >
                                 -
                               </button>
-                              <span className="min-w-8 text-center text-xs font-bold text-slate-900">
-                                {eq.cantidad}
-                              </span>
                               <button
                                 type="button"
                                 onClick={() => ajustarCantidadEquipo(eq.id, 1)}
-                                title="Sumar 1 unidad"
-                                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white font-semibold hover:bg-slate-50"
                               >
                                 +
                               </button>
                               <button
                                 type="button"
-                                onClick={() => eliminarEquipoInstrumental(eq.id)}
-                                className="text-xs text-rose-600 hover:underline ml-2"
+                                onClick={() =>
+                                  eliminarEquipoInstrumental(eq.id)
+                                }
+                                className="text-xs text-rose-600 hover:underline ml-1"
                               >
                                 Quitar
                               </button>
                             </div>
-                          </li>
+                          </div>
                         );
                       })}
-                    </ul>
+                    </div>
                   </div>
                 )}
 
                 {tabInventario === "propiedades" && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 text-xs">
-                        <span className="text-slate-500 block">
-                          Valor total registrado en rubros y propiedades:
-                        </span>
-                        <strong className="text-slate-900 text-base">
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                        <p className="text-xs text-slate-500">
+                          Total rubros registrados (USD $)
+                        </p>
+                        <p className="text-lg font-semibold text-slate-900">
                           ${totalRubrosPropiedadUsd.toFixed(2)}
-                        </strong>
+                        </p>
                       </div>
-                      <div className="bg-teal-50/70 border border-teal-200/80 rounded-xl p-3.5 text-xs">
-                        <span className="text-teal-800 block">
-                          Prorrateo mensual integrado en costos fijos:
-                        </span>
-                        <strong className="text-teal-950 text-base">
+                      <div className="bg-teal-50/70 border border-teal-200/80 rounded-xl p-3.5">
+                        <p className="text-xs text-teal-800">
+                          Prorrateo mensual en costos fijos
+                        </p>
+                        <p className="text-lg font-semibold text-teal-950">
                           ${totalProrrateoMensualRubrosFijos.toFixed(2)}/mes
-                        </strong>
+                        </p>
                       </div>
                     </div>
 
                     <form
                       onSubmit={agregarRubroPropiedad}
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80"
                     >
-                      <div>
+                      <div className="sm:col-span-2">
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Categoría del rubro
+                          Concepto / título del rubro
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={rubTitulo}
+                          onChange={(e) => setRubTitulo(e.target.value)}
+                          placeholder="Ej. Dotación 5 uniformes, seguro contra demandas"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Categoría
                         </label>
                         <select
                           value={rubCategoria}
@@ -7440,25 +7408,11 @@ export default function HomePage() {
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Descripción / Concepto
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={rubTitulo}
-                          onChange={(e) => setRubTitulo(e.target.value)}
-                          placeholder="Ej. 5 uniformes antifluidos o Seguro demandas"
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Cantidad de unidades (ej. 5 uniformes)
+                          Unidades
                         </label>
                         <input
                           type="number"
-                          min={1}
+                          min="1"
                           value={rubCantidad}
                           onChange={(e) => setRubCantidad(e.target.value)}
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
@@ -7467,33 +7421,33 @@ export default function HomePage() {
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Costo por unidad o póliza (USD)
+                          Costo unitario / anual (USD $)
                         </label>
                         <input
                           type="number"
                           step="0.01"
-                          required
+                          min="0"
                           value={rubCostoUnitario}
                           onChange={(e) => setRubCostoUnitario(e.target.value)}
-                          placeholder="Ej. 25.00"
+                          placeholder="0.00"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1">
-                          Meses de prorrateo (ej. 12 meses)
+                          Meses de prorrateo
                         </label>
                         <input
                           type="number"
-                          min={1}
+                          min="1"
                           value={rubMesesProrrateo}
                           onChange={(e) => setRubMesesProrrateo(e.target.value)}
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
 
-                      <div className="bg-white border border-slate-200 rounded-lg p-2.5 flex items-center">
+                      <div className="flex items-center">
                         <label className="flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer">
                           <input
                             type="checkbox"
@@ -7503,70 +7457,76 @@ export default function HomePage() {
                             }
                             className="rounded border-slate-300"
                           />
-                          <span>Sumar cuota mensual a costos fijos</span>
+                          <span>Incluir prorrateo en costos fijos</span>
                         </label>
                       </div>
 
-                      <div className="sm:col-span-2">
+                      <div className="sm:col-span-2 lg:col-span-4">
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
+                          Notas o cobertura
+                        </label>
                         <input
                           type="text"
                           value={rubNotas}
                           onChange={(e) => setRubNotas(e.target.value)}
-                          placeholder="Observaciones adicionales (proveedor, vigencia de póliza, tallas...)"
+                          placeholder="Detalles adicionales"
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                         />
                       </div>
 
-                      <div>
+                      <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
                         <button
                           type="submit"
-                          className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 text-sm font-medium transition"
+                          className="rounded-lg bg-teal-600 text-white px-4 py-2 text-sm font-medium hover:bg-teal-700 transition"
                         >
-                          + Agregar rubro / propiedad
+                          + Guardar rubro
                         </button>
                       </div>
                     </form>
 
-                    <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white overflow-hidden">
+                    <div className="space-y-2.5">
                       {rubrosPropiedad.map((rub) => {
                         const totalUsd = calcularTotalRubroUsd(rub);
                         const mensualUsd = calcularMensualRubroUsd(rub);
                         return (
-                          <li
+                          <div
                             key={rub.id}
-                            className="p-3.5 flex flex-wrap items-center justify-between gap-2"
+                            className="border border-slate-200 rounded-xl p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                           >
                             <div className="space-y-0.5">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <strong className="text-slate-900">
-                                  {rub.titulo}
-                                </strong>
-                                <span className="rounded-md bg-teal-50 border border-teal-200/80 px-2 py-0.5 text-[11px] font-medium text-teal-800">
-                                  {rub.categoria}
+                              <p className="font-semibold text-slate-900">
+                                {rub.titulo}{" "}
+                                <span className="text-xs font-normal text-teal-700">
+                                  ({rub.categoria})
                                 </span>
-                              </div>
-                              <p className="text-xs text-slate-500">
-                                {rub.cantidadUnidades} unid. × $
-                                {rub.costoUnitarioUsd.toFixed(2)} ={" "}
-                                <strong>${totalUsd.toFixed(2)}</strong> ·
-                                Prorrateo ({rub.mesesProrrateo} meses):{" "}
-                                <strong className="text-emerald-800">
-                                  ${mensualUsd.toFixed(2)}/mes
-                                </strong>
-                                {rub.notas ? ` · ${rub.notas}` : ""}
                               </p>
+                              <p className="text-xs text-slate-600">
+                                {rub.cantidadUnidades} ud. × $
+                                {rub.costoUnitarioUsd.toFixed(2)} = Total $
+                                {totalUsd.toFixed(2)} · Prorrateo (
+                                {rub.mesesProrrateo} meses): $
+                                {mensualUsd.toFixed(2)}/mes
+                                {rub.incluirEnCostosFijos
+                                  ? " · En costos fijos"
+                                  : " · No en costos fijos"}
+                              </p>
+                              {rub.notas && (
+                                <p className="text-xs text-slate-500">
+                                  {rub.notas}
+                                </p>
+                              )}
                             </div>
                             <button
                               type="button"
                               onClick={() => eliminarRubroPropiedad(rub.id)}
-                              className="text-xs text-rose-600 hover:underline"
+                              className="text-xs text-rose-600 hover:underline self-start sm:self-center shrink-0"
                             >
                               Quitar
                             </button>
-                          </li>
+                          </div>
                         );
                       })}
-                    </ul>
+                    </div>
                   </div>
                 )}
               </div>
@@ -7580,21 +7540,21 @@ export default function HomePage() {
                 >
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Nombre del proveedor o empresa
+                      Nombre del proveedor o laboratorio
                     </label>
                     <input
                       type="text"
                       required
                       value={prvNombre}
                       onChange={(e) => setPrvNombre(e.target.value)}
-                      placeholder="Ej. Laboratorio Cerámico Quito / Agencia Digital"
+                      placeholder="Ej. Laboratorio Dental Sur"
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Rubro o categoría
+                      Rubro
                     </label>
                     <select
                       value={prvRubro}
@@ -7603,9 +7563,9 @@ export default function HomePage() {
                       }
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                     >
-                      {RUBROS_PROVEEDOR.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
+                      {RUBROS_PROVEEDOR.map((rub) => (
+                        <option key={rub} value={rub}>
+                          {rub}
                         </option>
                       ))}
                     </select>
@@ -7613,53 +7573,7 @@ export default function HomePage() {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Detalle de servicio o suministro
-                    </label>
-                    <input
-                      type="text"
-                      value={prvDetalle}
-                      onChange={(e) => setPrvDetalle(e.target.value)}
-                      placeholder="Ej. Manejo de redes sociales, pauta o prótesis"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Modalidad de pago
-                    </label>
-                    <select
-                      value={prvModalidad}
-                      onChange={(e) => setPrvModalidad(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    >
-                      <option value="Mensualidad fija">Mensualidad fija</option>
-                      <option value="Por trabajo / caso">Por trabajo / caso</option>
-                      <option value="Por pedido / factura">
-                        Por pedido / factura
-                      </option>
-                      <option value="Pago contra entrega">
-                        Pago contra entrega
-                      </option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Monto referencial (USD)
-                    </label>
-                    <input
-                      type="text"
-                      value={prvMonto}
-                      onChange={(e) => setPrvMonto(e.target.value)}
-                      placeholder="Ej. $180/mes o Según orden"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Teléfono / Contacto
+                      Teléfono o contacto
                     </label>
                     <input
                       type="text"
@@ -7671,21 +7585,63 @@ export default function HomePage() {
                   </div>
 
                   <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Servicio o producto que presta
+                    </label>
                     <input
                       type="text"
-                      value={prvNotas}
-                      onChange={(e) => setPrvNotas(e.target.value)}
-                      placeholder="Notas de entrega, tiempos de respuesta o acuerdos..."
+                      value={prvDetalle}
+                      onChange={(e) => setPrvDetalle(e.target.value)}
+                      placeholder="Ej. Prótesis fijas, gestión de redes sociales, insumos"
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                     />
                   </div>
 
                   <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Modalidad de pago
+                    </label>
+                    <input
+                      type="text"
+                      value={prvModalidad}
+                      onChange={(e) => setPrvModalidad(e.target.value)}
+                      placeholder="Ej. Mensualidad fija, por orden"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Monto referencial (USD $)
+                    </label>
+                    <input
+                      type="text"
+                      value={prvMonto}
+                      onChange={(e) => setPrvMonto(e.target.value)}
+                      placeholder="Ej. $150/mes o según trabajo"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Notas o acuerdos
+                    </label>
+                    <input
+                      type="text"
+                      value={prvNotas}
+                      onChange={(e) => setPrvNotas(e.target.value)}
+                      placeholder="Tiempos de entrega, condiciones, etc."
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 lg:col-span-3 flex justify-end">
                     <button
                       type="submit"
-                      className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm font-medium transition"
+                      className="rounded-lg bg-teal-600 text-white px-4 py-2 text-sm font-medium hover:bg-teal-700 transition"
                     >
-                      + Registrar proveedor
+                      + Guardar proveedor
                     </button>
                   </div>
                 </form>
@@ -7694,61 +7650,41 @@ export default function HomePage() {
                   {proveedores.map((prv) => (
                     <div
                       key={prv.id}
-                      className="border border-slate-200 rounded-xl p-4 bg-white space-y-2"
+                      className="border border-slate-200 rounded-xl p-4 bg-white space-y-1.5"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <span className="inline-block rounded-md bg-teal-50 border border-teal-200/80 px-2 py-0.5 text-[11px] font-semibold text-teal-800 mb-1">
-                            {prv.rubro}
-                          </span>
-                          <h3 className="font-semibold text-slate-900">
+                          <p className="font-semibold text-slate-900">
                             {prv.nombre}
-                          </h3>
-                          <p className="text-xs text-slate-600">
-                            {prv.detalleServicio}
+                          </p>
+                          <p className="text-xs font-medium text-teal-700">
+                            {prv.rubro}
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => eliminarProveedor(prv.id)}
-                          className="text-xs text-rose-600 hover:underline"
+                          className="text-xs text-rose-600 hover:underline shrink-0"
                         >
-                          Quitar
+                          Eliminar
                         </button>
                       </div>
-
-                      <div className="text-xs bg-slate-50/70 border border-slate-200/80 rounded-lg p-2.5 space-y-0.5">
-                        <p>
-                          <span className="text-slate-500">Pago:</span>{" "}
-                          <strong>{prv.modalidadPago}</strong> (
-                          {prv.montoReferencial})
-                        </p>
-                        <p>
-                          <span className="text-slate-500">Contacto:</span>{" "}
-                          <strong>{prv.contacto}</strong>
-                        </p>
-                        {prv.notas && (
-                          <p className="text-slate-500">{prv.notas}</p>
-                        )}
-                      </div>
+                      <p className="text-xs text-slate-700">
+                        <strong>Servicio:</strong> {prv.detalleServicio}
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        <strong>Pago:</strong> {prv.modalidadPago} ·{" "}
+                        <strong>Referencia:</strong> {prv.montoReferencial}
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        <strong>Contacto:</strong> {prv.contacto}
+                      </p>
+                      {prv.notas && (
+                        <p className="text-xs text-slate-500">{prv.notas}</p>
+                      )}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {moduloActivo === "pagos" && (
-              <div className="space-y-2 text-sm text-slate-700">
-                <p>
-                  Los presupuestos en dólares ($) se generan desde los planes de
-                  tratamiento de cada paciente utilizando los precios normales o
-                  de convenio de la <strong>Cartera de Servicios</strong>.
-                </p>
-                <p className="text-xs text-slate-500">
-                  Cuando lo indiques, conectamos la emisión automática de
-                  presupuestos y registro de abonos en USD ($) desde el plan de
-                  tratamiento.
-                </p>
               </div>
             )}
           </section>
