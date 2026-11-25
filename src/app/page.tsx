@@ -5927,7 +5927,67 @@ export default function HomePage() {
                                     }
                                     className="text-rose-600 hover:underline shrink-0"
                                   >
-                               
+                                    Quitar
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(() => {
+                      const idxActual = pestanasHc.findIndex(
+                        (p) => p.id === seccionHc
+                      );
+                      const mostrarAtras = idxActual > 0;
+                      const esCierreOdontograma = seccionHc === "odontograma";
+                      const mostrarSiguiente =
+                        !esCierreOdontograma && idxActual < pestanasHc.length - 1;
+
+                      return (
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          {mostrarAtras ? (
+                            <button
+                              type="button"
+                              onClick={retrocederPestana}
+                              className="rounded-lg border border-slate-200 bg-white text-slate-700 px-4 py-2 text-xs font-medium hover:bg-slate-50 transition"
+                            >
+                              Atrás
+                            </button>
+                          ) : (
+                            <div />
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            {mostrarSiguiente && (
+                              <button
+                                type="button"
+                                onClick={guardarYAvanzarPestana}
+                                className="rounded-lg bg-teal-600 text-white px-4 py-2 text-xs font-medium hover:bg-teal-700 transition"
+                              >
+                                Siguiente
+                              </button>
+                            )}
+
+                            {esCierreOdontograma && (
+                              <button
+                                type="button"
+                                onClick={guardarYAvanzarPestana}
+                                className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-xs font-medium hover:bg-emerald-700 transition"
+                              >
+                                Finalizar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
             {moduloActivo === "agenda" && (
               <div className="space-y-4">
                 <form
